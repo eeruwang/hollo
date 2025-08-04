@@ -89,7 +89,7 @@ export function Post({ post, shared, pinned, quoted }: PostProps) {
           ) : (
             <h5>{authorName}</h5>
           )}
-          <p style="font-size: 60%;">
+          <p style="font-size: 12px">
             <small style="user-select: all;">{account.handle}</small>
             {post.replyTarget != null && (
               <>
