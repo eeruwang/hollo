@@ -13,13 +13,13 @@ export function Profile({ accountOwner }: ProfileProps) {
   const url = account.url ?? account.iri;
   return (
     <div>
-      {account.coverUrl && (
+      {/* {account.coverUrl && (
         <img
           src={account.coverUrl}
           alt=""
           style="margin-bottom: 1em; width: 100%;"
         />
-      )}
+      )} */}
       <hgroup>
         {account.avatarUrl && (
           <img
