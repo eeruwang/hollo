@@ -50,7 +50,19 @@ export function Profile({ accountOwner }: ProfileProps) {
         </p>
       </hgroup>
       {/* biome-ignore lint/security/noDangerouslySetInnerHtml: no xss */}
-      <div dangerouslySetInnerHTML={{ __html: bioHtml }} />
+      <div
+        style={{
+          fontSize: "90%",
+          lineHeight: "1.3",
+          margin: "1em 0",
+        }}
+        dangerouslySetInnerHTML={{
+          __html: bioHtml.replace(
+            /<p>/g,
+            '<p style="display:inline; margin:0; padding:0">'
+          ),
+        }}
+      />
       {account.fieldHtmls && (
         <div class="overflow-auto">
           <table>
