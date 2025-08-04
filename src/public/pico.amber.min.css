@@ -159,7 +159,7 @@ details summary[role=button]:not(.outline)::after{
 }
 :root:not([data-theme=dark]),[data-theme=light]{
   --pico-background-color:#fff;
-  --pico-color:#5a5f68;
+  --pico-color:#212121;
   --pico-text-selection-color:rgba(183, 136, 0, 0.25);
   --pico-muted-color:#000000;
   --pico-muted-border-color:#e7eaf0;
@@ -194,7 +194,7 @@ details summary[role=button]:not(.outline)::after{
   --pico-contrast-focus:rgba(93, 107, 137, 0.25);
   --pico-contrast-inverse:#fff;
   --pico-box-shadow:0.0145rem 0.029rem 0.174rem rgba(129, 145, 181, 0.01698),0.0335rem 0.067rem 0.402rem rgba(129, 145, 181, 0.024),0.0625rem 0.125rem 0.75rem rgba(129, 145, 181, 0.03),0.1125rem 0.225rem 1.35rem rgba(129, 145, 181, 0.036),0.2085rem 0.417rem 2.502rem rgba(129, 145, 181, 0.04302),0.5rem 1rem 6rem rgba(129, 145, 181, 0.06),0 0 0 0.0625rem rgba(129, 145, 181, 0.015);
-  --pico-h1-color:#444;
+  --pico-h1-color:#2d3138;
   --pico-h2-color:#373c44;
   --pico-h3-color:#424751;
   --pico-h4-color:#4d535e;
@@ -304,7 +304,7 @@ details summary[role=button]:not(.outline)::after{
     --pico-contrast-focus:rgba(207, 213, 226, 0.25);
     --pico-contrast-inverse:#000;
     --pico-box-shadow:0.0145rem 0.029rem 0.174rem rgba(7, 9, 12, 0.01698),0.0335rem 0.067rem 0.402rem rgba(7, 9, 12, 0.024),0.0625rem 0.125rem 0.75rem rgba(7, 9, 12, 0.03),0.1125rem 0.225rem 1.35rem rgba(7, 9, 12, 0.036),0.2085rem 0.417rem 2.502rem rgba(7, 9, 12, 0.04302),0.5rem 1rem 6rem rgba(7, 9, 12, 0.06),0 0 0 0.0625rem rgba(7, 9, 12, 0.015);
-    --pico-h1-color:#444;
+    --pico-h1-color:#f0f1f3;
     --pico-h2-color:#e0e3e7;
     --pico-h3-color:#c2c7d0;
     --pico-h4-color:#b3b9c5;
@@ -654,98 +654,100 @@ hgroup>*{
 margin-top:0;
 margin-bottom:0}
 hgroup>:not(:first-child):last-child{
-
---pico-color:var(--pico-muted-color);
---pico-font-weight:unset;
-font-size:1rem}
+  --pico-color:var(--pico-muted-color);
+  --pico-font-weight:unset;
+  /* font-size:1rem */
+}
+hgroup > p {
+  font-size: 12px;
+}
 :where(ol,ul) li{
-
-margin-bottom:calc(var(--pico-typography-spacing-vertical) * .25)}
+  margin-bottom:calc(var(--pico-typography-spacing-vertical) * .25)
+}
 :where(dl,ol,ul) :where(dl,ol,ul){
-
-margin:0;
-margin-top:calc(var(--pico-typography-spacing-vertical) * .25)}
+  margin:0;margin-top:calc(var(--pico-typography-spacing-vertical) * .25)
+}
 ul li{
-
-list-style:square}
+  list-style:square
+}
 mark{
-
-padding:.125rem .25rem;
-background-color:var(--pico-mark-background-color);
-color:var(--pico-mark-color);
-vertical-align:baseline}
+  padding:.125rem .25rem;
+  background-color:var(--pico-mark-background-color);
+  color:var(--pico-mark-color);
+  vertical-align:baseline
+}
 blockquote{
-
-display:block;
-margin:var(--pico-typography-spacing-vertical) 0;
-padding:var(--pico-spacing);
-border-right:none;
-border-left:.25rem solid var(--pico-blockquote-border-color);
-border-inline-start:0.25rem solid var(--pico-blockquote-border-color);
-border-inline-end:none}
+  display:block;
+  margin:var(--pico-typography-spacing-vertical) 0;
+  padding:var(--pico-spacing);
+  border-right:none;
+  border-left:.25rem solid var(--pico-blockquote-border-color);
+  border-inline-start:0.25rem solid var(--pico-blockquote-border-color);
+  border-inline-end:none
+}
 blockquote footer{
-
-margin-top:calc(var(--pico-typography-spacing-vertical) * .5);
-color:var(--pico-blockquote-footer-color)}
+  margin-top:calc(var(--pico-typography-spacing-vertical) * .5);
+  color:var(--pico-blockquote-footer-color)
+}
 abbr[title]{
-
-border-bottom:1px dotted;
-text-decoration:none;
-cursor:help}
+  border-bottom:1px dotted;
+  text-decoration:none;
+  cursor:help
+}
 ins{
-
-color:var(--pico-ins-color);
-text-decoration:none}
+  color:var(--pico-ins-color);
+  text-decoration:none
+}
 del{
-
-color:var(--pico-del-color)}
+  color:var(--pico-del-color)
+}
 ::-moz-selection{
-
-background-color:var(--pico-text-selection-color)}
+  background-color:var(--pico-text-selection-color)
+}
 ::selection{
-
-background-color:var(--pico-text-selection-color)}
+  background-color:var(--pico-text-selection-color)
+}
 :where(a:not([role=button])),[role=link]{
-
---pico-color:var(--pico-primary);
---pico-background-color:transparent;
---pico-underline:var(--pico-primary-underline);
-outline:0;
-background-color:var(--pico-background-color);
-color:var(--pico-color);
--webkit-text-decoration:var(--pico-text-decoration);
-text-decoration:var(--pico-text-decoration);
-text-decoration-color:var(--pico-underline);
-text-underline-offset:0.125em;
-transition:background-color var(--pico-transition),color var(--pico-transition),box-shadow var(--pico-transition),-webkit-text-decoration var(--pico-transition);
-transition:background-color var(--pico-transition),color var(--pico-transition),text-decoration var(--pico-transition),box-shadow var(--pico-transition);
-transition:background-color var(--pico-transition),color var(--pico-transition),text-decoration var(--pico-transition),box-shadow var(--pico-transition),-webkit-text-decoration var(--pico-transition)}
+  --pico-color:var(--pico-primary);
+  --pico-background-color:transparent;
+  --pico-underline:var(--pico-primary-underline);
+  outline:0;
+  background-color:var(--pico-background-color);
+  color:var(--pico-color);
+  -webkit-text-decoration:var(--pico-text-decoration);
+  text-decoration:var(--pico-text-decoration);
+  text-decoration-color:var(--pico-underline);
+  text-underline-offset:0.125em;
+  transition:background-color var(--pico-transition),color var(--pico-transition),box-shadow var(--pico-transition),-webkit-text-decoration var(--pico-transition);
+  transition:background-color var(--pico-transition),color var(--pico-transition),text-decoration var(--pico-transition),box-shadow var(--pico-transition);
+  transition:background-color var(--pico-transition),color var(--pico-transition),text-decoration var(--pico-transition),box-shadow var(--pico-transition),-webkit-text-decoration var(--pico-transition)
+}
 :where(a:not([role=button])):is([aria-current]:not([aria-current=false]),:hover,:active,:focus),[role=link]:is([aria-current]:not([aria-current=false]),:hover,:active,:focus){
-
---pico-color:var(--pico-primary-hover);
---pico-underline:var(--pico-primary-hover-underline);
---pico-text-decoration:underline}
+  --pico-color:var(--pico-primary-hover);
+  --pico-underline:var(--pico-primary-hover-underline);
+  --pico-text-decoration:underline
+}
 :where(a:not([role=button])):focus-visible,[role=link]:focus-visible{
-
-box-shadow:0 0 0 var(--pico-outline-width) var(--pico-primary-focus)}
+  box-shadow:0 0 0 var(--pico-outline-width) var(--pico-primary-focus)
+}
 :where(a:not([role=button])).secondary,[role=link].secondary{
-
---pico-color:var(--pico-secondary);
---pico-underline:var(--pico-secondary-underline)}
+  --pico-color:var(--pico-secondary);
+  --pico-underline:var(--pico-secondary-underline)
+}
 :where(a:not([role=button])).secondary:is([aria-current]:not([aria-current=false]),:hover,:active,:focus),[role=link].secondary:is([aria-current]:not([aria-current=false]),:hover,:active,:focus){
-
---pico-color:var(--pico-secondary-hover);
---pico-underline:var(--pico-secondary-hover-underline)}
+  --pico-color:var(--pico-secondary-hover);
+  --pico-underline:var(--pico-secondary-hover-underline)
+}
 :where(a:not([role=button])).contrast,[role=link].contrast{
-
---pico-color:var(--pico-contrast);
---pico-underline:var(--pico-contrast-underline)}
+  --pico-color:var(--pico-contrast);
+  --pico-underline:var(--pico-contrast-underline)
+}
 :where(a:not([role=button])).contrast:is([aria-current]:not([aria-current=false]),:hover,:active,:focus),[role=link].contrast:is([aria-current]:not([aria-current=false]),:hover,:active,:focus){
   --pico-color:var(--pico-contrast-hover);
   --pico-underline:var(--pico-contrast-hover-underline)
 }
 a[role=button]{
-display:inline-block
+  display:inline-block
 }
 button{
   margin:0;
@@ -974,22 +976,28 @@ legend{
   white-space:normal
 }
 textarea{
-overflow:auto}
+  overflow:auto
+}
 [type=checkbox],[type=radio]{
-padding:0}
+  padding:0
+}
 ::-webkit-inner-spin-button,::-webkit-outer-spin-button{
-height:auto}
+  height:auto
+}
 [type=search]{
--webkit-appearance:textfield;
-outline-offset:-2px}
+  -webkit-appearance:textfield;
+  outline-offset:-2px
+}
 [type=search]::-webkit-search-decoration{
--webkit-appearance:none}
+  -webkit-appearance:none
+}
 ::-webkit-file-upload-button{
--webkit-appearance:button;
-font:inherit}
+  -webkit-appearance:button;
+  font:inherit
+}
 ::-moz-focus-inner{
-padding:0;
-border-style:none}
+  padding:0;
+  border-style:none}
 :-moz-focusring{
 outline:0}
 :-moz-ui-invalid{
@@ -1018,38 +1026,47 @@ fieldset legend,label{
   font-weight:var(--pico-form-label-font-weight,var(--pico-font-weight))
 }
 fieldset legend{
-margin-bottom:calc(var(--pico-spacing) * .5)}
+  margin-bottom:calc(var(--pico-spacing) * .5)
+}
 button[type=submit],input:not([type=checkbox],[type=radio]),select,textarea{
-width:100%}
+  width:100%
+}
 input:not([type=checkbox],[type=radio],[type=range],[type=file]),select,textarea{
--webkit-appearance:none;
--moz-appearance:none;
-appearance:none;
-padding:var(--pico-form-element-spacing-vertical) var(--pico-form-element-spacing-horizontal)}
+  -webkit-appearance:none;
+  -moz-appearance:none;
+  appearance:none;
+  padding:var(--pico-form-element-spacing-vertical) var(--pico-form-element-spacing-horizontal)
+}
 input,select,textarea{
---pico-background-color:var(--pico-form-element-background-color);
---pico-border-color:var(--pico-form-element-border-color);
---pico-color:var(--pico-form-element-color);
---pico-box-shadow:none;
-border:var(--pico-border-width) solid var(--pico-border-color);
-border-radius:var(--pico-border-radius);
-outline:0;
-background-color:var(--pico-background-color);
-box-shadow:var(--pico-box-shadow);
-color:var(--pico-color);
-font-weight:var(--pico-font-weight);
-transition:background-color var(--pico-transition),border-color var(--pico-transition),color var(--pico-transition),box-shadow var(--pico-transition)}
+  --pico-background-color:var(--pico-form-element-background-color);
+  --pico-border-color:var(--pico-form-element-border-color);
+  --pico-color:var(--pico-form-element-color);
+  --pico-box-shadow:none;
+  border:var(--pico-border-width) solid var(--pico-border-color);
+  border-radius:var(--pico-border-radius);
+  outline:0;
+  background-color:var(--pico-background-color);
+  box-shadow:var(--pico-box-shadow);
+  color:var(--pico-color);
+  font-weight:var(--pico-font-weight);
+  transition:background-color var(--pico-transition),border-color var(--pico-transition),color var(--pico-transition),box-shadow var(--pico-transition)
+}
 :where(select,textarea):not([readonly]):is(:active,:focus),input:not([type=submit],[type=button],[type=reset],[type=checkbox],[type=radio],[readonly]):is(:active,:focus){
---pico-background-color:var(--pico-form-element-active-background-color)}
+  --pico-background-color:var(--pico-form-element-active-background-color)
+}
 :where(select,textarea):not([readonly]):is(:active,:focus),input:not([type=submit],[type=button],[type=reset],[role=switch],[readonly]):is(:active,:focus){
---pico-border-color:var(--pico-form-element-active-border-color)}
+  --pico-border-color:var(--pico-form-element-active-border-color)
+}
 :where(select,textarea):not([readonly]):focus,input:not([type=submit],[type=button],[type=reset],[type=range],[type=file],[readonly]):focus{
---pico-box-shadow:0 0 0 var(--pico-outline-width) var(--pico-form-element-focus-color)}
+  --pico-box-shadow:0 0 0 var(--pico-outline-width) var(--pico-form-element-focus-color)
+}
 :where(fieldset[disabled]) :is(input:not([type=submit],[type=button],[type=reset]),select,textarea),input:not([type=submit],[type=button],[type=reset])[disabled],label[aria-disabled=true],select[disabled],textarea[disabled]{
-opacity:var(--pico-form-element-disabled-opacity);
-pointer-events:none}
+  opacity:var(--pico-form-element-disabled-opacity);
+  pointer-events:none
+}
 label[aria-disabled=true] input[disabled]{
-opacity:1}
+  opacity:1
+}
 :where(input,select,textarea):not([type=checkbox],[type=radio],[type=date],[type=datetime-local],[type=month],[type=time],[type=week],[type=range])[aria-invalid]{
 padding-right:calc(var(--pico-form-element-spacing-horizontal) + 1.5rem)!important;
 padding-left:var(--pico-form-element-spacing-horizontal);
@@ -1648,172 +1665,139 @@ dialog article{
   }
 }
 dialog article>header>*{
-  margin-bottom:0
-}
+margin-bottom:0}
 dialog article>header .close,dialog article>header :is(a,button)[rel=prev]{
-  margin:0;
-  margin-left:var(--pico-spacing);
-  padding:0;
-  float:right
-}
+margin:0;
+margin-left:var(--pico-spacing);
+padding:0;
+float:right}
 dialog article>footer{
-  text-align:right
-}
+text-align:right}
 dialog article>footer [role=button],dialog article>footer button{
-  margin-bottom:0
-}
+margin-bottom:0}
 dialog article>footer [role=button]:not(:first-of-type),dialog article>footer button:not(:first-of-type){
-  margin-left:calc(var(--pico-spacing) * .5)
-}
+margin-left:calc(var(--pico-spacing) * .5)}
 dialog article .close,dialog article :is(a,button)[rel=prev]{
-  display:block;
-  width:1rem;
-  height:1rem;
-  margin-top:calc(var(--pico-spacing) * -1);
-  margin-bottom:var(--pico-spacing);
-  margin-left:auto;
-  border:none;
-  background-image:var(--pico-icon-close);
-  background-position:center;
-  background-size:auto 1rem;
-  background-repeat:no-repeat;
-  background-color:transparent;
-  opacity:.5;
-  transition:opacity var(--pico-transition)
-}
+display:block;
+width:1rem;
+height:1rem;
+margin-top:calc(var(--pico-spacing) * -1);
+margin-bottom:var(--pico-spacing);
+margin-left:auto;
+border:none;
+background-image:var(--pico-icon-close);
+background-position:center;
+background-size:auto 1rem;
+background-repeat:no-repeat;
+background-color:transparent;
+opacity:.5;
+transition:opacity var(--pico-transition)}
 dialog article .close:is([aria-current]:not([aria-current=false]),:hover,:active,:focus),dialog article :is(a,button)[rel=prev]:is([aria-current]:not([aria-current=false]),:hover,:active,:focus){
-  opacity:1
-}
+opacity:1}
 dialog:not([open]),dialog[open=false]{
-  display:none
-}
+display:none}
 .modal-is-open{
-  padding-right:var(--pico-scrollbar-width,0);
-  overflow:hidden;
-  pointer-events:none;
-  touch-action:none
-}
+padding-right:var(--pico-scrollbar-width,0);
+overflow:hidden;
+pointer-events:none;
+touch-action:none}
 .modal-is-open dialog{
-  pointer-events:auto;
-  touch-action:auto}
-  :where(.modal-is-opening,.modal-is-closing) dialog,:where(.modal-is-opening,.modal-is-closing) dialog>article{
-  animation-duration:.2s;
-  animation-timing-function:ease-in-out;
-  animation-fill-mode:both}
-  :where(.modal-is-opening,.modal-is-closing) dialog{
-  animation-duration:.8s;
-  animation-name:modal-overlay}
-  :where(.modal-is-opening,.modal-is-closing) dialog>article{
-  animation-delay:.2s;
-  animation-name:modal
-}
-  .modal-is-closing dialog,.modal-is-closing dialog>article{
-  animation-delay:0s;
-  animation-direction:reverse
-}
+pointer-events:auto;
+touch-action:auto}
+:where(.modal-is-opening,.modal-is-closing) dialog,:where(.modal-is-opening,.modal-is-closing) dialog>article{
+animation-duration:.2s;
+animation-timing-function:ease-in-out;
+animation-fill-mode:both}
+:where(.modal-is-opening,.modal-is-closing) dialog{
+animation-duration:.8s;
+animation-name:modal-overlay}
+:where(.modal-is-opening,.modal-is-closing) dialog>article{
+animation-delay:.2s;
+animation-name:modal}
+.modal-is-closing dialog,.modal-is-closing dialog>article{
+animation-delay:0s;
+animation-direction:reverse}
 @keyframes modal-overlay{
-  from{
-    -webkit-backdrop-filter:none;
-    backdrop-filter:none;
-    background-color:transparent
-  }
+from{
+-webkit-backdrop-filter:none;
+backdrop-filter:none;
+background-color:transparent}
 }
 @keyframes modal{
-  from{
-  transform:translateY(-100%);
-  opacity:0
-  }
+from{
+transform:translateY(-100%);
+opacity:0}
 }
 :where(nav li)::before{
-  float:left;
-  content:"​"
-}
+float:left;
+content:"​"}
 nav,nav ul{
-  display:flex
-}
+display:flex}
 nav{
-  justify-content:space-between;
-  overflow:visible}
-  nav ol,nav ul{
-  align-items:center;
-  margin-bottom:0;
-  padding:0;
-  list-style:none
-}
+justify-content:space-between;
+overflow:visible}
+nav ol,nav ul{
+align-items:center;
+margin-bottom:0;
+padding:0;
+list-style:none}
 nav ol:first-of-type,nav ul:first-of-type{
-  margin-left:calc(var(--pico-nav-element-spacing-horizontal) * -1)
-}
+margin-left:calc(var(--pico-nav-element-spacing-horizontal) * -1)}
 nav ol:last-of-type,nav ul:last-of-type{
-  margin-right:calc(var(--pico-nav-element-spacing-horizontal) * -1)
-}
+margin-right:calc(var(--pico-nav-element-spacing-horizontal) * -1)}
 nav li{
-  display:inline-block;
-  margin:0;
-  padding:var(--pico-nav-element-spacing-vertical) var(--pico-nav-element-spacing-horizontal)
-}
+display:inline-block;
+margin:0;
+padding:var(--pico-nav-element-spacing-vertical) var(--pico-nav-element-spacing-horizontal)}
 nav li :where(a,[role=link]){
-  display:inline-block;
-  margin:calc(var(--pico-nav-link-spacing-vertical) * -1) calc(var(--pico-nav-link-spacing-horizontal) * -1);
-  padding:var(--pico-nav-link-spacing-vertical) var(--pico-nav-link-spacing-horizontal);
-  border-radius:var(--pico-border-radius)
-}
+display:inline-block;
+margin:calc(var(--pico-nav-link-spacing-vertical) * -1) calc(var(--pico-nav-link-spacing-horizontal) * -1);
+padding:var(--pico-nav-link-spacing-vertical) var(--pico-nav-link-spacing-horizontal);
+border-radius:var(--pico-border-radius)}
 nav li :where(a,[role=link]):not(:hover){
-  text-decoration:none
-}
+text-decoration:none}
 nav li [role=button],nav li [type=button],nav li button,nav li input:not([type=checkbox],[type=radio],[type=range],[type=file]),nav li select{
-  height:auto;
-  margin-right:inherit;
-  margin-bottom:0;
-  margin-left:inherit;
-  padding:calc(var(--pico-nav-link-spacing-vertical) - var(--pico-border-width) * 2) var(--pico-nav-link-spacing-horizontal)
-}
+height:auto;
+margin-right:inherit;
+margin-bottom:0;
+margin-left:inherit;
+padding:calc(var(--pico-nav-link-spacing-vertical) - var(--pico-border-width) * 2) var(--pico-nav-link-spacing-horizontal)}
 nav[aria-label=breadcrumb]{
-  align-items:center;
-  justify-content:start
-}
+align-items:center;
+justify-content:start}
 nav[aria-label=breadcrumb] ul li:not(:first-child){
-  margin-inline-start:var(--pico-nav-link-spacing-horizontal)
-}
+margin-inline-start:var(--pico-nav-link-spacing-horizontal)}
 nav[aria-label=breadcrumb] ul li a{
-  margin:calc(var(--pico-nav-link-spacing-vertical) * -1) 0;
-  margin-inline-start:calc(var(--pico-nav-link-spacing-horizontal) * -1)
-}
+margin:calc(var(--pico-nav-link-spacing-vertical) * -1) 0;
+margin-inline-start:calc(var(--pico-nav-link-spacing-horizontal) * -1)}
 nav[aria-label=breadcrumb] ul li:not(:last-child)::after{
-  display:inline-block;
-  position:absolute;
-  width:calc(var(--pico-nav-link-spacing-horizontal) * 4);
-  margin:0 calc(var(--pico-nav-link-spacing-horizontal) * -1);
-  content:var(--pico-nav-breadcrumb-divider);
-  color:var(--pico-muted-color);
-  text-align:center;
-  text-decoration:none;
-  white-space:nowrap
-}
+display:inline-block;
+position:absolute;
+width:calc(var(--pico-nav-link-spacing-horizontal) * 4);
+margin:0 calc(var(--pico-nav-link-spacing-horizontal) * -1);
+content:var(--pico-nav-breadcrumb-divider);
+color:var(--pico-muted-color);
+text-align:center;
+text-decoration:none;
+white-space:nowrap}
 nav[aria-label=breadcrumb] a[aria-current]:not([aria-current=false]){
-  background-color:transparent;
-  color:inherit;
-  text-decoration:none;
-  pointer-events:none
-}
+background-color:transparent;
+color:inherit;
+text-decoration:none;
+pointer-events:none}
 aside li,aside nav,aside ol,aside ul{
-  display:block
-}
+display:block}
 aside li{
-  padding:calc(var(--pico-nav-element-spacing-vertical) * .5) var(--pico-nav-element-spacing-horizontal)
-}
+padding:calc(var(--pico-nav-element-spacing-vertical) * .5) var(--pico-nav-element-spacing-horizontal)}
 aside li a{
-  display:block
-}
+display:block}
 aside li [role=button]{
-  margin:inherit
-}
+margin:inherit}
 [dir=rtl] nav[aria-label=breadcrumb] ul li:not(:last-child) ::after{
-  content:"\\"
-}
+content:"\\"}
 progress{
-  display:inline-block;
-  vertical-align:baseline
-}
+display:inline-block;
+vertical-align:baseline}
 progress{
   -webkit-appearance:none;
   -moz-appearance:none;
