@@ -1419,7 +1419,6 @@ article>footer,article>header{
   margin-left:calc(var(--pico-block-spacing-horizontal) * -1);
   padding:calc(var(--pico-block-spacing-vertical) * .66) var(--pico-block-spacing-horizontal);
   background-color:var(--pico-card-sectioning-background-color);
-  display: none;
 }
 article>header{
   margin-top:calc(var(--pico-block-spacing-vertical) * -1);
