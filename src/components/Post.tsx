@@ -130,7 +130,7 @@ export function Post({ post, shared, pinned, quoted }: PostProps) {
           )}
           <a href={post.url ?? post.iri}>
             <small>
-              Published at{" "}
+              {" "}
               <time dateTime={(post.published ?? post.updated).toISOString()}>
                 {(post.published ?? post.updated).toLocaleString("en", {
                   dateStyle: "medium",
