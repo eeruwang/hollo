@@ -54,7 +54,7 @@ export function Profile({ accountOwner }: ProfileProps) {
         style={{
           fontSize: "60%",
           lineHeight: "1.3",
-          margin: "1em 0",
+          margin: "0 8em",
         }}
         dangerouslySetInnerHTML={{
           __html: (() => {
