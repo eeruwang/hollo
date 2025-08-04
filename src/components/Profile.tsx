@@ -1,7 +1,8 @@
 import { escape } from "es-toolkit";
 import type { Account, AccountOwner } from "../schema";
 import { renderCustomEmojis } from "../text";
-import { useEffect } from "preact/hooks"; // preact 기준
+import { useEffect } from "react";
+
 
 export interface ProfileProps {
   accountOwner: AccountOwner & { account: Account };
