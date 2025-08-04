@@ -43,7 +43,7 @@ export function Layout(props: PropsWithChildren<LayoutProps>) {
           />
         ))}
         <link rel="stylesheet" href={`/public/pico.${themeColor}.min.css`} />
-        <link rel="stylesheet" href="/public/pico.colors.min.css" />
+        <link rel="stylesheet" href="/public/pico.amber.min.css" />
         <link rel="stylesheet" href="/public/hollo.css" />
         <link
           rel="icon"
