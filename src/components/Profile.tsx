@@ -57,10 +57,18 @@ export function Profile({ accountOwner }: ProfileProps) {
           margin: "1em 0",
         }}
         dangerouslySetInnerHTML={{
-          __html: bioHtml
-            .replace(/<p>/g, '<span style="display:inline; margin:0; padding:0">')
-            .replace(/<\/p>/g, '</span>')
-            .replace(/<\/span>(?!$)/g, '</span> · '), // 마지막 span이 아니면 · 추가
+          __html: (() => {
+            const spans = bioHtml
+              .replace(/<p>/g, '<span style="display:inline; margin:0; padding:0">')
+              .replace(/<\/p>/g, '</span>')
+              .split('</span>');
+
+            return spans
+              .map((part, index) =>
+                index < spans.length - 1 ? part + '</span> · ' : part + '</span>'
+              )
+              .join('');
+          })(),
         }}
       />
       {account.fieldHtmls && (
