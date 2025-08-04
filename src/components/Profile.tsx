@@ -58,11 +58,11 @@ export function Profile({ accountOwner }: ProfileProps) {
         }}
         dangerouslySetInnerHTML={{
           __html: bioHtml
-            .replace(/<p>/g, '<p style="display:inline; margin:0; padding:0">')
-            .replace(/<\/p>/g, '</p> · '), // 공백 + 구분 기호 추가
+            .replace(/<p>/g, '<span style="display:inline; margin:0; padding:0">')
+            .replace(/<\/p>/g, '</span>')
+            .replace(/<\/span>(?!$)/g, '</span> · '), // 마지막 span이 아니면 · 추가
         }}
       />
-
       {account.fieldHtmls && (
         <div class="overflow-auto">
           <table>
