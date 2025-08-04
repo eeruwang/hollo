@@ -69,8 +69,8 @@ export function Post({ post, shared, pinned, quoted }: PostProps) {
         pinned
           ? "border: 1px solid silver;"
           : quoted
-            ? "border: calc(var(--pico-border-width)*4) solid var(--pico-background-color);"
-            : ""
+            ? "font-size: 80%; border: calc(var(--pico-border-width)*4) solid var(--pico-background-color);"
+            : "font-size: 80%;"
       }
     >
       <header>
@@ -89,7 +89,7 @@ export function Post({ post, shared, pinned, quoted }: PostProps) {
           ) : (
             <h5>{authorName}</h5>
           )}
-          <p>
+          <p style="font-size: 60%;">
             <small style="user-select: all;">{account.handle}</small>
             {post.replyTarget != null && (
               <>
