@@ -57,12 +57,12 @@ export function Profile({ accountOwner }: ProfileProps) {
           margin: "1em 0",
         }}
         dangerouslySetInnerHTML={{
-          __html: bioHtml.replace(
-            /<p>/g,
-            '<p style="display:inline; margin:0; padding:0">'
-          ),
+          __html: bioHtml
+            .replace(/<p>/g, '<p style="display:inline; margin:0; padding:0">')
+            .replace(/<\/p>/g, '</p> · '), // 공백 + 구분 기호 추가
         }}
       />
+
       {account.fieldHtmls && (
         <div class="overflow-auto">
           <table>
