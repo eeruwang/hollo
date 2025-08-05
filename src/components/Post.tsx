@@ -89,7 +89,7 @@ export function Post({ post, shared, pinned, quoted }: PostProps) {
           ) : (
             <h5>{authorName}</h5>
           )}
-          <p style="font-size: 12px">
+          <p style="font-size: 60%;">
             <small style="user-select: all;">{account.handle}</small>
             {post.replyTarget != null && (
               <>
@@ -151,7 +151,7 @@ export function Post({ post, shared, pinned, quoted }: PostProps) {
             </small>
           )}
           {post.reactions.length > 0 && (
-            <small>
+            <small style="display: inline-flex; gap: 0.3em; vertical-align: middle;">
               {" "}
               &middot;{" "}
               {Object.entries(groupByEmojis(post.reactions)).map(
