@@ -52,9 +52,9 @@ export function Profile({ accountOwner }: ProfileProps) {
       {/* biome-ignore lint/security/noDangerouslySetInnerHtml: no xss */}
       <div
         style={{
-          fontSize: "60%",
+          fontSize: 70%",
           lineHeight: "1.3",
-          margin: "0 8em",
+          margin: "0 6em",
         }}
         dangerouslySetInnerHTML={{
           __html: (() => {
