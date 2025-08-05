@@ -52,7 +52,7 @@ export function Profile({ accountOwner }: ProfileProps) {
       {/* biome-ignore lint/security/noDangerouslySetInnerHtml: no xss */}
       <div
         style={{
-          fontSize: 70%",
+          fontSize: "70%",
           lineHeight: "1.3",
           margin: "0 6em",
         }}
