@@ -64,13 +64,12 @@ export function Profile({ accountOwner }: ProfileProps) {
               .split('</span>');
 
             return spans
-              .map((part, index) =>
-                index < spans.length - 1 ? part + '</span> · ' : part + '</span>'
-              )
+              .map((part) => part + '</span>')
               .join('');
           })(),
         }}
       />
+
       {account.fieldHtmls && (
         <div class="overflow-auto">
           <table>
