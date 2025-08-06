@@ -4,7 +4,7 @@ import { Layout } from "../../components/Layout.tsx";
 import db from "../../db.ts";
 import { renderCustomEmojis } from "../../text.ts";
 
-const homePage = new Hono().basePath("/");
+const homePage = new Hono().basePath("/hollo");
 
 homePage.get("/", async (c) => {
   const credential = await db.query.credentials.findFirst();
