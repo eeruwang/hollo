@@ -14,7 +14,7 @@ import tags from "./tags";
 const page = new Hono();
 
 page.use(trimTrailingSlash());
-page.route("/hollo", home);
+page.route("/", home);
 page.route("/:handle{@[^/]+}", profile);
 page.route("/login", login);
 page.route("/logout", logout);
