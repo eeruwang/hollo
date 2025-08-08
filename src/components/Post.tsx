@@ -69,8 +69,8 @@ export function Post({ post, shared, pinned, quoted }: PostProps) {
         pinned
           ? "border: 1px solid silver;"
           : quoted
-            ? "font-size: 80% word-spacing: 0.05em; border: calc(var(--pico-border-width)*4) solid var(--pico-background-color);"
-            : "font-size: 80% word-spacing: 0.05em;"
+            ? "font-size: 80%;word-spacing: 0.05em;letter-spacing: 0.015em; border: calc(var(--pico-border-width)*4) solid var(--pico-background-color);"
+            : "font-size: 80%;word-spacing: 0.05em;letter-spacing: 0.015em;"
       }
     >
       <header>
