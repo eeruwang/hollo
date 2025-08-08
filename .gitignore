@@ -5,6 +5,9 @@ fedify-hollo-*.tgz
 node_modules/
 tmp/
 mise.local.toml
+"compose.yaml"
+"Caddyfile"
+".dockerignore"
 
 coverage/**
 !coverage/.gitkeep
