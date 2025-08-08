@@ -8,8 +8,12 @@ mise.local.toml
 compose.yaml
 Caddyfile
 .dockerignore
+.gitignore
 
 coverage/**
 !coverage/.gitkeep
 
 **/.claude/settings.local.json
+compose.yaml
+Caddyfile
+.dockerignore
