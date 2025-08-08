@@ -3,33 +3,37 @@
 /* Light */
 @font-face {
     font-family: 'paybooc';
-    src: url('/fonts/paybooc-Light.woff') format('woff');
-    font-weight: 400; /* Light */
+    src: url('./paybooc-Light.woff') format('woff');
+    font-weight: 300 400; /* 300~400 모두 Light로 */
     font-style: normal;
+    font-display: swap;
 }
 
 /* Medium */
 @font-face {
     font-family: 'paybooc';
-    src: url('/fonts/paybooc-Medium.woff') format('woff');
+    src: url('./paybooc-Medium.woff') format('woff');
     font-weight: 500; /* Medium */
     font-style: normal;
+    font-display: swap;
 }
 
 /* Bold */
 @font-face {
     font-family: 'paybooc';
-    src: url('/fonts/paybooc-Bold.woff') format('woff');
+    src: url('./paybooc-Bold.woff') format('woff');
     font-weight: 700; /* Bold */
     font-style: normal;
+    font-display: swap;
 }
 
 /* ExtraBold */
 @font-face {
     font-family: 'paybooc';
-    src: url('/fonts/paybooc-ExtraBold.woff') format('woff');
+    src: url('./paybooc-ExtraBold.woff') format('woff');
     font-weight: 800; /* ExtraBold */
     font-style: normal;
+    font-display: swap;
 }
 
 /*!
@@ -44,7 +48,7 @@
   --pico-font-family-monospace:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace,var(--pico-font-family-emoji);
   --pico-font-family:var(--pico-font-family-sans-serif);
   --pico-line-height:1.5;
-  --pico-font-weight:400;
+  --pico-font-weight:300;
   --pico-font-size:100%;
   --pico-text-underline-offset:0.1rem;
   --pico-border-radius:0.25rem;
