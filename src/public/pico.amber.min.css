@@ -2,7 +2,7 @@
 
 @font-face {
     font-family: 'paybooc-Bold';
-    src: url('/fonts/paybooc-Bold.woff') format('woff');
+    src: url('./paybooc-Bold.woff') format('woff');
     font-weight: normal;
     font-style: normal;
 }
