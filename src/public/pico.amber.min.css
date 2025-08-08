@@ -151,7 +151,7 @@ h6{
   --pico-typography-spacing-top:1.5rem
 }
 tfoot td,tfoot th,thead td,thead th{
-  --pico-font-weight:600;
+  --pico-font-weight:500;
   --pico-border-width:0.1875rem
 }
 
