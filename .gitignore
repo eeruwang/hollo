@@ -8,6 +8,7 @@ mise.local.toml
 compose.yaml
 Caddyfile
 .dockerignore
+.DS_Store
 .gitignore
 
 coverage/**

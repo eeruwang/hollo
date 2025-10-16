@@ -1467,7 +1467,7 @@ article>header{
   border-bottom:var(--pico-border-width) solid var(--pico-card-border-color);
   border-top-right-radius:var(--pico-border-radius);
   border-top-left-radius:var(--pico-border-radius);
-  visibility: hidden;
+  /* visibility: hidden; */
 }
 
 article>footer{
