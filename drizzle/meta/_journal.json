@@ -491,6 +491,83 @@
       "when": 1749309918513,
       "tag": "0069_repair-application-confidentiality",
       "breakpoints": true
+    },
+    {
+      "idx": 70,
+      "version": "7",
+      "when": 1762503335902,
+      "tag": "0070_tiresome_whiplash",
+      "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1763189315335,
+      "tag": "0071_add_notification_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1763197014422,
+      "tag": "0072_add_notifications_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1763197100000,
+      "tag": "0073_backfill_notifications",
+      "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1764082678447,
+      "tag": "0074_import_jobs",
+      "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1767260002740,
+      "tag": "0075_cleanup_duplicate_notifications",
+      "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "7",
+      "when": 1768573113452,
+      "tag": "0076_fair_frank_castle",
+      "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1769516009056,
+      "tag": "0077_add_fetched_to_accounts",
+      "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1770422400000,
+      "tag": "0078_add_quotes_count",
+      "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "7",
+      "when": 1775993648845,
+      "tag": "0079_account_owners_expand_spoilers",
+      "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "7",
+      "when": 1776278400000,
+      "tag": "0080_add_eeruwang_theme",
+      "breakpoints": true
     }
   ]
 }

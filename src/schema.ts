@@ -140,6 +140,7 @@ export const themeColorEnum = pgEnum("theme_color", [
   "azure",
   "blue",
   "cyan",
+  "eeruwang",
   "fuchsia",
   "green",
   "grey",
