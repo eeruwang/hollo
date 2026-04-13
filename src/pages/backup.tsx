@@ -1,3 +1,5 @@
+import { Buffer } from "node:buffer";
+import { getLogger } from "@logtape/logtape";
 import { desc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { stream } from "hono/streaming";
@@ -8,6 +10,7 @@ import {
   accountOwners,
   follows,
   likes,
+  media,
   posts,
   reactions,
   bookmarks,
@@ -18,6 +21,9 @@ import {
   filterKeywords,
   webhooks,
 } from "../schema.ts";
+import { drive } from "../storage.ts";
+
+const logger = getLogger(["hollo", "backup"]);
 
 const backup = new Hono();
 
@@ -66,9 +72,18 @@ backup.get("/", async (c) => {
         Includes posts, followers, likes, reactions, filters, webhooks,
         and account settings.
       </p>
-      <a role="button" href="/backup/full">
-        Download Full Backup (JSON)
-      </a>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <a role="button" href="/backup/full">
+          Download Full Backup (JSON)
+        </a>
+        <a role="button" href="/backup/full-with-media" class="secondary">
+          Download with Media (large file)
+        </a>
+      </div>
+      <small>
+        Media backup includes all images as base64 data.
+        This may take a while and produce a large file.
+      </small>
     </DashboardLayout>,
   );
 });
@@ -310,6 +325,118 @@ backup.get("/full", async (c) => {
   };
 
   const filename = `hollo-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  return c.json(fullBackup, 200, {
+    "Content-Disposition": `attachment; filename="${filename}"`,
+  });
+});
+
+// Full backup with media files
+backup.get("/full-with-media", async (c) => {
+  const owner = await db.query.accountOwners.findFirst({
+    with: { account: true },
+  });
+  if (owner == null) return c.json({ error: "No account" }, 404);
+
+  const allPosts = await db.query.posts.findMany({
+    where: eq(posts.accountId, owner.id),
+    with: {
+      media: true,
+      poll: { with: { options: true } },
+      reactions: true,
+      mentions: true,
+    },
+    orderBy: [desc(posts.published)],
+  });
+
+  // Collect all media from posts
+  const allMedia = allPosts.flatMap((post) => post.media);
+
+  // Download media files and encode as base64
+  const disk = drive.use();
+  const mediaFiles: Record<
+    string,
+    { type: string; filename: string; data: string }
+  > = {};
+
+  for (const m of allMedia) {
+    try {
+      // Extract the storage key from the URL (part after /assets/)
+      const urlObj = new URL(m.url);
+      const key = urlObj.pathname.replace(/^\/assets\//, "");
+      const bytes = await disk.getBytes(key);
+      mediaFiles[m.id] = {
+        type: m.type,
+        filename: key,
+        data: Buffer.from(bytes).toString("base64"),
+      };
+      // Also get thumbnail
+      if (m.thumbnailUrl && m.thumbnailUrl !== m.url) {
+        const thumbUrl = new URL(m.thumbnailUrl);
+        const thumbKey = thumbUrl.pathname.replace(/^\/assets\//, "");
+        try {
+          const thumbBytes = await disk.getBytes(thumbKey);
+          mediaFiles[`${m.id}_thumb`] = {
+            type: m.thumbnailType,
+            filename: thumbKey,
+            data: Buffer.from(thumbBytes).toString("base64"),
+          };
+        } catch {
+          // Thumbnail might not exist separately
+        }
+      }
+    } catch (error) {
+      logger.warn("Failed to read media {id}: {error}", {
+        id: m.id,
+        error,
+      });
+    }
+  }
+
+  // Also backup avatar and cover if they exist
+  const avatarUrl = owner.account.avatarUrl;
+  const coverUrl = owner.account.coverUrl;
+  for (const [label, url] of [
+    ["avatar", avatarUrl],
+    ["cover", coverUrl],
+  ] as const) {
+    if (url) {
+      try {
+        const urlObj = new URL(url);
+        const key = urlObj.pathname.replace(/^\/assets\//, "");
+        const bytes = await disk.getBytes(key);
+        mediaFiles[label] = {
+          type: "image",
+          filename: key,
+          data: Buffer.from(bytes).toString("base64"),
+        };
+      } catch {
+        // External URL or missing file
+      }
+    }
+  }
+
+  const fullBackup = {
+    version: "1.0",
+    type: "hollo-backup-with-media",
+    exported_at: new Date().toISOString(),
+    account: {
+      id: owner.id,
+      handle: owner.account.handle,
+      name: owner.account.name,
+      bio: owner.account.bioHtml,
+      language: owner.account.language,
+      visibility: owner.visibility,
+      themeColor: owner.themeColor,
+      avatarUrl: owner.account.avatarUrl,
+      coverUrl: owner.account.coverUrl,
+      fields: owner.account.fieldHtmls,
+    },
+    posts: allPosts,
+    media_files: mediaFiles,
+    media_count: Object.keys(mediaFiles).length,
+  };
+
+  const filename = `hollo-backup-media-${new Date().toISOString().slice(0, 10)}.json`;
   return c.json(fullBackup, 200, {
     "Content-Disposition": `attachment; filename="${filename}"`,
   });
