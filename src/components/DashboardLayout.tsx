@@ -2,7 +2,7 @@ import type { PropsWithChildren } from "hono/jsx";
 import metadata from "../../package.json";
 import { Layout, type LayoutProps } from "./Layout";
 
-export type Menu = "accounts" | "emojis" | "federation" | "auth";
+export type Menu = "social" | "accounts" | "emojis" | "federation" | "auth";
 
 export interface DashboardLayoutProps extends LayoutProps {
   selectedMenu?: Menu;
@@ -33,6 +33,15 @@ export function DashboardLayout(
             </li>
           </ul>
           <ul>
+            <li>
+              {props.selectedMenu === "social" ? (
+                <a href="/social" class="contrast">
+                  <strong>Social</strong>
+                </a>
+              ) : (
+                <a href="/social">Social</a>
+              )}
+            </li>
             <li>
               {props.selectedMenu === "accounts" ? (
                 <a href="/accounts" class="contrast">

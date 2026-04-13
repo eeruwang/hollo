@@ -9,6 +9,7 @@ import login from "./login";
 import logout from "./logout";
 import profile from "./profile";
 import setup from "./setup";
+import social from "./social";
 import tags from "./tags";
 
 const page = new Hono();
@@ -23,6 +24,7 @@ page.route("/auth", auth);
 page.route("/accounts", accounts);
 page.route("/emojis", emojis);
 page.route("/federation", federation);
+page.route("/social", social);
 page.route("/tags", tags);
 
 export default page;
