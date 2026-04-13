@@ -88,7 +88,35 @@ backup.get("/", async (c) => {
   );
 });
 
-// Archive backup — JSON
+// Helper: read media file as base64
+async function readMediaBase64(
+  url: string,
+): Promise<{ data: string; type: string } | null> {
+  try {
+    const urlObj = new URL(url);
+    const key = urlObj.pathname.replace(/^\/assets\//, "");
+    const disk = drive.use();
+    const bytes = await disk.getBytes(key);
+    const ext = key.split(".").pop()?.toLowerCase() ?? "bin";
+    const mimeMap: Record<string, string> = {
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      png: "image/png",
+      gif: "image/gif",
+      webp: "image/webp",
+      mp4: "video/mp4",
+      webm: "video/webm",
+    };
+    return {
+      data: Buffer.from(bytes).toString("base64"),
+      type: mimeMap[ext] ?? "application/octet-stream",
+    };
+  } catch {
+    return null;
+  }
+}
+
+// Archive backup — JSON (with media)
 backup.get("/archive/json", async (c) => {
   const owner = await db.query.accountOwners.findFirst({
     with: { account: true },
@@ -106,6 +134,17 @@ backup.get("/archive/json", async (c) => {
     orderBy: [desc(posts.published)],
   });
 
+  // Read all media files
+  const mediaCache = new Map<string, { data: string; type: string }>();
+  for (const post of allPosts) {
+    for (const m of post.media) {
+      if (!mediaCache.has(m.url)) {
+        const result = await readMediaBase64(m.url);
+        if (result) mediaCache.set(m.url, result);
+      }
+    }
+  }
+
   const archive = {
     exported_at: new Date().toISOString(),
     account: {
@@ -116,6 +155,7 @@ backup.get("/archive/json", async (c) => {
       cover: owner.account.coverUrl,
     },
     posts_count: allPosts.length,
+    media_count: mediaCache.size,
     posts: allPosts.map((post) => ({
       id: post.id,
       type: post.type,
@@ -128,13 +168,17 @@ backup.get("/archive/json", async (c) => {
       updated: post.updated?.toISOString(),
       url: post.url ?? post.iri,
       tags: post.tags,
-      media: post.media.map((m) => ({
-        url: m.url,
-        type: m.mediaType,
-        description: m.description,
-        width: m.width,
-        height: m.height,
-      })),
+      media: post.media.map((m) => {
+        const cached = mediaCache.get(m.url);
+        return {
+          url: m.url,
+          description: m.description,
+          width: m.width,
+          height: m.height,
+          data: cached?.data ?? null,
+          data_type: cached?.type ?? null,
+        };
+      }),
       poll: post.poll
         ? {
             options: post.poll.options.map((o) => ({
@@ -167,7 +211,7 @@ backup.get("/archive/json", async (c) => {
   });
 });
 
-// Archive backup — Markdown
+// Archive backup — Markdown (with embedded images as data URIs)
 backup.get("/archive/markdown", async (c) => {
   const owner = await db.query.accountOwners.findFirst({
     with: { account: true },
@@ -183,10 +227,22 @@ backup.get("/archive/markdown", async (c) => {
     orderBy: [desc(posts.published)],
   });
 
+  // Pre-load all media
+  const mediaCache = new Map<string, { data: string; type: string }>();
+  for (const post of allPosts) {
+    for (const m of post.media) {
+      if (!mediaCache.has(m.url)) {
+        const result = await readMediaBase64(m.url);
+        if (result) mediaCache.set(m.url, result);
+      }
+    }
+  }
+
   let md = `# ${owner.account.name} — Hollo Archive\n\n`;
   md += `Exported: ${new Date().toISOString()}\n`;
   md += `Handle: ${owner.account.handle}\n`;
-  md += `Total posts: ${allPosts.length}\n\n---\n\n`;
+  md += `Total posts: ${allPosts.length}\n`;
+  md += `Total media: ${mediaCache.size}\n\n---\n\n`;
 
   for (const post of allPosts) {
     const date = post.published ?? post.updated;
@@ -200,7 +256,12 @@ backup.get("/archive/markdown", async (c) => {
 
     if (post.media.length > 0) {
       for (const m of post.media) {
-        md += `![${m.description ?? ""}](${m.url})\n\n`;
+        const cached = mediaCache.get(m.url);
+        if (cached) {
+          md += `![${m.description ?? ""}](data:${cached.type};base64,${cached.data})\n\n`;
+        } else {
+          md += `![${m.description ?? ""}](${m.url})\n\n`;
+        }
       }
     }
 
