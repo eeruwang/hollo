@@ -24,11 +24,13 @@ import {
 import { type Account, accounts, posts } from "../../schema";
 import { uuid } from "../../uuid";
 import { postMedia } from "../v1/media";
+import filtersApi from "./filters";
 import instance from "./instance";
 import notifications from "./notifications";
 
 const app = new Hono<{ Variables: Variables }>();
 
+app.route("/filters", filtersApi);
 app.route("/instance", instance);
 app.route("/notifications", notifications);
 

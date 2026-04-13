@@ -11,6 +11,7 @@ import profile from "./profile";
 import setup from "./setup";
 import social from "./social";
 import tags from "./tags";
+import webhookPages from "./webhooks";
 
 const page = new Hono();
 
@@ -26,5 +27,6 @@ page.route("/emojis", emojis);
 page.route("/federation", federation);
 page.route("/social", social);
 page.route("/tags", tags);
+page.route("/webhooks", webhookPages);
 
 export default page;

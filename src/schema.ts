@@ -1285,6 +1285,7 @@ export const listPostRelations = relations(listPosts, ({ one }) => ({
   }),
 }));
 
+<<<<<<< HEAD
 // Import Job Status Enum
 export const importJobStatusEnum = pgEnum("import_job_status", [
   "pending",
@@ -1375,5 +1376,118 @@ export const importJobItemRelations = relations(importJobItems, ({ one }) => ({
   job: one(importJobs, {
     fields: [importJobItems.jobId],
     references: [importJobs.id],
+  }),
+}));
+
+// Webhooks
+export const webhookEventEnum = pgEnum("webhook_event", [
+  "mention",
+  "reblog",
+  "follow",
+  "favourite",
+  "emoji_reaction",
+  "poll",
+  "status",
+]);
+
+export type WebhookEvent = (typeof webhookEventEnum.enumValues)[number];
+
+export const webhooks = pgTable("webhooks", {
+  id: uuid("id")
+    .$type<Uuid>()
+    .primaryKey()
+    .$defaultFn(() => sql`gen_random_uuid()`),
+  accountOwnerId: uuid("account_owner_id")
+    .$type<Uuid>()
+    .notNull()
+    .references(() => accountOwners.id, { onDelete: "cascade" }),
+  url: text("url").notNull(),
+  events: jsonb("events").$type<WebhookEvent[]>().notNull(),
+  active: boolean("active").notNull().default(true),
+  created: timestamp("created", { withTimezone: true })
+    .notNull()
+    .default(currentTimestamp),
+});
+
+export type Webhook = typeof webhooks.$inferSelect;
+export type NewWebhook = typeof webhooks.$inferInsert;
+
+export const webhookRelations = relations(webhooks, ({ one }) => ({
+  owner: one(accountOwners, {
+    fields: [webhooks.accountOwnerId],
+    references: [accountOwners.id],
+  }),
+}));
+
+// Filters v2
+export const filterActionEnum = pgEnum("filter_action", [
+  "warn",
+  "hide",
+]);
+
+export type FilterAction = (typeof filterActionEnum.enumValues)[number];
+
+export const filterContextEnum = pgEnum("filter_context", [
+  "home",
+  "notifications",
+  "public",
+  "thread",
+  "account",
+]);
+
+export type FilterContext = (typeof filterContextEnum.enumValues)[number];
+
+export const filters = pgTable("filters", {
+  id: uuid("id")
+    .$type<Uuid>()
+    .primaryKey()
+    .$defaultFn(() => sql`gen_random_uuid()`),
+  accountOwnerId: uuid("account_owner_id")
+    .$type<Uuid>()
+    .notNull()
+    .references(() => accountOwners.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  context: jsonb("context").$type<FilterContext[]>().notNull(),
+  filterAction: filterActionEnum("filter_action").notNull().default("warn"),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  created: timestamp("created", { withTimezone: true })
+    .notNull()
+    .default(currentTimestamp),
+});
+
+export type Filter = typeof filters.$inferSelect;
+export type NewFilter = typeof filters.$inferInsert;
+
+export const filterRelations = relations(filters, ({ one, many }) => ({
+  owner: one(accountOwners, {
+    fields: [filters.accountOwnerId],
+    references: [accountOwners.id],
+  }),
+  keywords: many(filterKeywords),
+}));
+
+export const filterKeywords = pgTable("filter_keywords", {
+  id: uuid("id")
+    .$type<Uuid>()
+    .primaryKey()
+    .$defaultFn(() => sql`gen_random_uuid()`),
+  filterId: uuid("filter_id")
+    .$type<Uuid>()
+    .notNull()
+    .references(() => filters.id, { onDelete: "cascade" }),
+  keyword: text("keyword").notNull(),
+  wholeWord: boolean("whole_word").notNull().default(false),
+  created: timestamp("created", { withTimezone: true })
+    .notNull()
+    .default(currentTimestamp),
+});
+
+export type FilterKeyword = typeof filterKeywords.$inferSelect;
+export type NewFilterKeyword = typeof filterKeywords.$inferInsert;
+
+export const filterKeywordRelations = relations(filterKeywords, ({ one }) => ({
+  filter: one(filters, {
+    fields: [filterKeywords.filterId],
+    references: [filters.id],
   }),
 }));
