@@ -10,6 +10,7 @@ Hollo
 [![Matrix][Matrix badge]][Matrix]
 [![Discord][Discord badge]][Discord]
 [![Official Hollo][Official Hollo badge]][Official Hollo]
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/template?repo=https://github.com/eeruwang/hollo)
 
 Hollo is a federated single-user microblogging software powered by [Fedify].
 Although it is for single-user, it is designed to be federated through
