@@ -141,6 +141,7 @@ export const themeColorEnum = pgEnum("theme_color", [
   "azure",
   "blue",
   "cyan",
+  "eeruwang",
   "fuchsia",
   "green",
   "grey",
@@ -1285,7 +1286,6 @@ export const listPostRelations = relations(listPosts, ({ one }) => ({
   }),
 }));
 
-<<<<<<< HEAD
 // Import Job Status Enum
 export const importJobStatusEnum = pgEnum("import_job_status", [
   "pending",
