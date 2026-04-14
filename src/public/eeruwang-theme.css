@@ -547,10 +547,12 @@ main.container > div > img[style*="width: 100%"] {
 
 /* Profile hgroup — fully on cover with natural vignette */
 main.container > div > img[style*="width: 100%"] + hgroup {
-  margin-top: -180px;
+  margin-top: -160px;
+  min-height: 160px;
+  box-sizing: border-box;
   position: relative;
   z-index: 1;
-  padding: 56px var(--indent) 24px;
+  padding: 32px var(--indent) 16px;
   background: linear-gradient(
     to top,
     rgba(0, 0, 0, 0.75) 0%,
@@ -591,20 +593,22 @@ main.container > div > img[style*="width: 100%"] + hgroup [data-tooltip] {
 
 /* --- Profile page posts — hide author, promote date to header --- */
 
-/* Target posts only on profile page (div with h1 hgroup exists) */
-main.container > div:has(> hgroup > h1) ~ article {
+/* Scope: .profile-timeline wraps all posts on /@handle and /@handle/tagged */
+
+/* Flex column so footer can be reordered to top */
+.profile-timeline article,
+.profile-timeline .thread > article {
   display: flex;
   flex-direction: column;
 }
 
 /* Hide post header (avatar + name + handle) — single-user instance */
-main.container > div:has(> hgroup > h1) ~ article > header {
+.profile-timeline article > header {
   display: none;
 }
 
 /* Promote footer (with date) to top, styled like blog .date */
-main.container > div:has(> hgroup > h1) ~ .thread > article > footer,
-main.container > div:has(> hgroup > h1) ~ article > footer {
+.profile-timeline article > footer {
   order: -1;
   margin: 0 0 14px;
   padding: 0 0 4px;
@@ -616,41 +620,29 @@ main.container > div:has(> hgroup > h1) ~ article > footer {
   color: #333;
   letter-spacing: 0.05em;
 }
-main.container > div:has(> hgroup > h1) ~ .thread > article > footer p,
-main.container > div:has(> hgroup > h1) ~ article > footer p {
+.profile-timeline article > footer p {
   margin: 0;
 }
-main.container > div:has(> hgroup > h1) ~ .thread > article > footer a,
-main.container > div:has(> hgroup > h1) ~ .thread > article > footer small,
-main.container > div:has(> hgroup > h1) ~ article > footer a,
-main.container > div:has(> hgroup > h1) ~ article > footer small {
+.profile-timeline article > footer a,
+.profile-timeline article > footer small {
   color: #333 !important;
   font-size: inherit !important;
   text-decoration: none !important;
 }
 
-/* Apply the flex reorder to thread children too */
-main.container > div:has(> hgroup > h1) ~ .thread > article {
-  display: flex;
-  flex-direction: column;
-}
-main.container > div:has(> hgroup > h1) ~ .thread > article > header {
-  display: none;
-}
-
 /* ==== Thread: connect reply posts to parent ==== */
-main.container > .thread {
+.profile-timeline .thread {
   position: relative;
   margin-bottom: 0;
 }
 
-/* Parent post in a thread: keep normal */
-main.container > .thread > article:first-child {
+/* Parent post in a thread keeps its normal styling */
+.profile-timeline .thread > article:first-child {
   margin-bottom: 0;
 }
 
 /* Reply posts: indent with left connecting line */
-main.container > .thread > article:not(:first-child) {
+.profile-timeline .thread > article:not(:first-child) {
   margin-left: 1.75rem;
   padding-left: calc(var(--indent) - 0.25rem);
   border-left: 2px solid var(--line);
@@ -658,17 +650,17 @@ main.container > .thread > article:not(:first-child) {
 }
 
 /* Subtler date header on replies */
-main.container > div:has(> hgroup > h1) ~ .thread > article:not(:first-child) > footer {
+.profile-timeline .thread > article:not(:first-child) > footer {
   border-bottom-color: var(--line);
   color: #888;
 }
-main.container > div:has(> hgroup > h1) ~ .thread > article:not(:first-child) > footer a,
-main.container > div:has(> hgroup > h1) ~ .thread > article:not(:first-child) > footer small {
+.profile-timeline .thread > article:not(:first-child) > footer a,
+.profile-timeline .thread > article:not(:first-child) > footer small {
   color: #888 !important;
 }
 
-/* Thread hover: keep .note-style padding shift on parent only */
-main.container > .thread > article:not(:first-child):hover {
+/* Thread hover: keep .note-style padding shift on replies */
+.profile-timeline .thread > article:not(:first-child):hover {
   padding-left: calc(var(--indent) - 0.5rem);
   border-left: 2px solid black;
 }
@@ -697,7 +689,9 @@ main.container > div > hgroup + div {
 /* ==== Post cards (CSS-only override of upstream article) ==== */
 
 /* Override inline font-size: 80% — match blog .note style */
-main.container > article {
+main.container > article,
+.profile-timeline > article,
+.profile-timeline > .thread > article {
   font-size: 100% !important;
   word-spacing: normal !important;
   letter-spacing: normal !important;
@@ -709,13 +703,15 @@ main.container > article {
   transition: padding-left 0.1s ease, border-left 0.1s ease;
   margin-bottom: 0;
 }
-main.container > article:hover {
+main.container > article:hover,
+.profile-timeline > article:hover {
   padding-left: calc(var(--indent) - 2px);
   border-left: 2px solid black;
 }
 
 /* Pinned post */
-main.container > article[style*="border: 1px solid silver"] {
+main.container > article[style*="border: 1px solid silver"],
+.profile-timeline > article[style*="border: 1px solid silver"] {
   border: none !important;
   border-left: 2px solid var(--anthropic-clay) !important;
   border-bottom: 1px solid var(--line) !important;
@@ -880,7 +876,8 @@ main.container > div[style*="justify-content"] a:hover {
   /* Profile hero — adjusted overlap on mobile */
   main.container > div > img[style*="width: 100%"] + hgroup {
     margin-top: -140px;
-    padding: 40px var(--indent) 18px;
+    min-height: 140px;
+    padding: 24px var(--indent) 14px;
   }
 }
 

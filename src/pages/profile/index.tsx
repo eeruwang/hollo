@@ -482,31 +482,37 @@ function ProfilePage({
       themeColor={accountOwner.themeColor}
     >
       <Profile accountOwner={accountOwner} />
-      {tag != null && <h2>Posts tagged #{tag}</h2>}
-      {featuredTags.length > 0 && (
-        <p>
-          Featured tags:{" "}
-          {featuredTags.map((tag) => (
-            <>
-              <a
-                href={`/@${accountOwner.handle}/tagged/${encodeURIComponent(tag.name)}`}
-              >
-                #{tag.name}
-              </a>{" "}
-            </>
-          ))}
-        </p>
-      )}
-      {tag == null &&
-        pinnedPosts.map((post) => <PostView post={post} pinned={true} />)}
-      {posts.map((post) => (
-        <div class={post.replies.length > 0 ? "thread" : undefined}>
-          <PostView post={post} />
-          {post.replies.map((reply) => (
-            <PostView post={reply} />
-          ))}
-        </div>
-      ))}
+      <section class="profile-timeline">
+        {tag != null && <h2>Posts tagged #{tag}</h2>}
+        {featuredTags.length > 0 && (
+          <p>
+            Featured tags:{" "}
+            {featuredTags.map((tag) => (
+              <>
+                <a
+                  href={`/@${accountOwner.handle}/tagged/${encodeURIComponent(tag.name)}`}
+                >
+                  #{tag.name}
+                </a>{" "}
+              </>
+            ))}
+          </p>
+        )}
+        {tag == null &&
+          pinnedPosts.map((post) => <PostView post={post} pinned={true} />)}
+        {posts.map((post) =>
+          post.replies.length > 0 ? (
+            <div class="thread">
+              <PostView post={post} />
+              {post.replies.map((reply) => (
+                <PostView post={reply} />
+              ))}
+            </div>
+          ) : (
+            <PostView post={post} />
+          ),
+        )}
+      </section>
       <div style={{ display: "flex", justifyContent: "space-between" }}>
         <div>{newerUrl && <a href={newerUrl}>&larr; Newer</a>}</div>
         <div>{olderUrl && <a href={olderUrl}>Older &rarr;</a>}</div>
