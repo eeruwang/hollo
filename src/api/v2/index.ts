@@ -4,7 +4,7 @@ import {
   lookupObject,
   Note,
   type Object,
-} from "@fedify/fedify";
+} from "@fedify/vocab";
 import { zValidator } from "@hono/zod-validator";
 import { getLogger } from "@logtape/logtape";
 import { and, desc, eq, ilike, inArray, lte, or, sql } from "drizzle-orm";
