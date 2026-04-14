@@ -170,22 +170,13 @@ header {
   margin-bottom: 1.5rem;
 }
 
-/* ==== Article (Posts) ==== */
+/* ==== Article — generic (dashboard cards) ==== */
 article {
-  display: block;
-  text-decoration: none;
-  color: #000;
-  border-bottom: 1px solid var(--line);
-  padding: 24px 20px;
   background: #f9f8f8;
-  margin-bottom: 0;
-  border-radius: 0;
-  box-shadow: none;
-  transition: border-left 0.15s ease;
-  border-left: 3px solid transparent;
-}
-article:hover {
-  border-left: 3px solid var(--anthropic-clay);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
 }
 
 article header {
@@ -397,6 +388,37 @@ a[role="button"] {
   cursor: pointer;
   text-decoration: none;
   transition: background 0.15s ease;
+}
+
+/* Button group (Pico CSS pattern) */
+div[role="group"] {
+  display: flex;
+  gap: 0;
+}
+div[role="group"] > a[role="button"],
+div[role="group"] > button {
+  display: flex !important;
+  flex: 1;
+  border-radius: 0;
+  justify-content: center;
+}
+div[role="group"] > :first-child {
+  border-radius: 6px 0 0 6px;
+}
+div[role="group"] > :last-child {
+  border-radius: 0 6px 6px 0;
+}
+
+/* Contrast (secondary) button */
+a[role="button"].contrast,
+button.contrast,
+a.contrast[role="button"] {
+  background: #555;
+  color: #fff;
+}
+a[role="button"].contrast:hover,
+button.contrast:hover {
+  background: #333;
 }
 button:hover,
 [role="button"]:hover,
