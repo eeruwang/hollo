@@ -686,69 +686,66 @@ main.container > div > img[style*="width: 100%"] + hgroup [data-tooltip] {
   content: none;
 }
 
-/* ==== Thread: parent as .paper, replies as .note ==== */
+/* ==== Thread: bold parent + normal replies as one .note item ==== */
+
+/* Thread container is the single .note card */
 .profile-timeline .thread {
   position: relative;
+  padding: 14px 16px 14px var(--indent);
+  background: #f9f8f8;
+  border-bottom: 1px solid var(--line);
   margin-bottom: 0;
-}
-
-/* Parent post in a thread — blog .paper style (tan highlight) */
-.profile-timeline .thread > article:first-child {
-  background: hsla(32, 44%, 86%, 1) !important;
-  padding: 22px 16px 22px var(--indent) !important;
-  border: none !important;
-  border-bottom: 1px solid var(--line) !important;
-  border-radius: 0 !important;
-  margin-bottom: 0;
-}
-.profile-timeline .thread > article:first-child:hover {
-  padding-left: calc(var(--indent) - 2px) !important;
-  border-left: 2px solid black !important;
-}
-
-/* Parent content: larger, more prominent */
-.profile-timeline .thread > article:first-child > div {
-  font-size: 1em;
-  line-height: 1.6;
-}
-
-/* Reply posts — blog .note style (compact grey list, no indent) */
-.profile-timeline .thread > article:not(:first-child) {
-  margin-left: 0;
-  padding: 14px 16px 14px var(--indent) !important;
-  background: #f9f8f8 !important;
-  border: none !important;
-  border-bottom: 1px solid var(--line) !important;
-}
-.profile-timeline .thread > article:not(:first-child):hover {
-  padding-left: calc(var(--indent) - 2px) !important;
-  border-left: 2px solid black !important;
-}
-
-/* Hide date header on replies for clean list look */
-.profile-timeline .thread > article:not(:first-child) > footer {
-  display: none;
-}
-
-/* Reply content: compact, inline-feel */
-.profile-timeline .thread > article:not(:first-child) > div {
   font-size: 0.92em;
-  line-height: 1.5;
+  line-height: 1.6;
+  transition: padding-left 0.1s ease, border-left 0.1s ease;
 }
-.profile-timeline .thread > article:not(:first-child) > div > p:first-child {
-  font-weight: bold;
+.profile-timeline .thread:hover {
+  padding-left: calc(var(--indent) - 2px);
+  border-left: 2px solid black;
+}
+
+/* All articles in thread: transparent, inline so they flow as one */
+.profile-timeline .thread > article {
+  background: transparent !important;
+  padding: 0 !important;
+  border: none !important;
+  margin: 0 !important;
+  display: inline !important;
+}
+
+/* Parent content: bold (acts as note "title") */
+.profile-timeline .thread > article:first-child > div {
   display: inline;
 }
-.profile-timeline .thread > article:not(:first-child) > div > p:first-child::after {
+.profile-timeline .thread > article:first-child > div > p {
+  display: inline;
+  font-weight: bold;
+  margin: 0;
+}
+
+/* " – " separator after parent content */
+.profile-timeline .thread > article:first-child::after {
   content: " \2013  ";
   opacity: 0.5;
-  margin-left: 2px;
-  margin-right: 2px;
+  margin: 0 2px;
   font-weight: normal;
 }
-.profile-timeline .thread > article:not(:first-child) > div > p:nth-child(n + 2) {
+
+/* Reply content: normal, inline (acts as note "description") */
+.profile-timeline .thread > article:not(:first-child) > div {
+  display: inline;
+}
+.profile-timeline .thread > article:not(:first-child) > div > p {
   display: inline;
   font-weight: normal;
+  margin: 0;
+}
+
+/* Spacing between replies */
+.profile-timeline .thread > article:not(:first-child) + article:not(:first-child)::before {
+  content: " \00B7  ";
+  opacity: 0.4;
+  margin: 0 4px;
 }
 
 /* Bio */
