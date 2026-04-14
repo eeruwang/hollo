@@ -17,51 +17,56 @@ export function Profile({ accountOwner }: ProfileProps) {
         <img
           src={account.coverUrl}
           alt=""
-          class="profile-cover"
+          style="margin-bottom: 1em; width: 100%;"
         />
       )}
-      <div class="profile-header">
+      <hgroup>
         {account.avatarUrl && (
           <img
             src={account.avatarUrl}
             alt={`${account.name}'s avatar`}
-            class="profile-avatar"
             width={72}
             height={72}
+            style="float: left; margin-right: 1em;"
           />
         )}
-        <div>
-          <h1 class="profile-name">
-            <a dangerouslySetInnerHTML={{ __html: nameHtml }} href={url} />
-          </h1>
-          <p class="profile-handle">
+        <h1>
+          <a dangerouslySetInnerHTML={{ __html: nameHtml }} href={url} />
+        </h1>
+        <p>
+          <span
+            style="user-select: all;"
+            data-tooltip="Use this handle to reach out to this account on your fediverse server!"
+            data-placement="bottom"
+          >
             {account.handle}
-            <span class="profile-stats">
-              {` · ${account.followingCount} following · `}
-              {account.followersCount === 1
-                ? "1 follower"
-                : `${account.followersCount} followers`}
-            </span>
-          </p>
-        </div>
-      </div>
-      {bioHtml && (
-        <div
-          class="profile-bio"
-          dangerouslySetInnerHTML={{ __html: bioHtml }}
-        />
-      )}
-      {account.fieldHtmls && Object.keys(account.fieldHtmls).length > 0 && (
-        <div class="profile-fields">
-          {Object.entries(account.fieldHtmls).map(([key, value]) => (
-            <div class="profile-field">
-              <span class="profile-field-key">{key}</span>
-              <span
-                class="profile-field-value"
-                dangerouslySetInnerHTML={{ __html: value }}
-              />
-            </div>
-          ))}
+          </span>{" "}
+          &middot; {`${account.followingCount} following `}
+          &middot;{" "}
+          {account.followersCount === 1
+            ? "1 follower"
+            : `${account.followersCount} followers`}
+        </p>
+      </hgroup>
+      <div dangerouslySetInnerHTML={{ __html: bioHtml }} />
+      {account.fieldHtmls && (
+        <div class="overflow-auto">
+          <table>
+            <thead>
+              <tr>
+                {Object.keys(account.fieldHtmls).map((key) => (
+                  <th>{key}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                {Object.values(account.fieldHtmls).map((value) => (
+                  <td dangerouslySetInnerHTML={{ __html: value }} />
+                ))}
+              </tr>
+            </tbody>
+          </table>
         </div>
       )}
     </div>

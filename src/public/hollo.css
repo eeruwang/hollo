@@ -6,31 +6,6 @@ a:hover {
   text-decoration: none;
 }
 
-/* Profile & Post component classes (Pico theme fallback) */
-.profile-cover img { width: 100%; height: auto; }
-.profile-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
-.profile-avatar { border-radius: 50%; }
-.profile-name { margin: 0; }
-.profile-handle { margin: 0; }
-.profile-bio { margin-bottom: 1rem; }
-.profile-fields { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
-.profile-field { display: flex; gap: 0.5rem; font-size: 0.9em; }
-.profile-field-key { font-weight: 600; }
-.profile-field-key::after { content: ":"; }
-.post-author { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
-.post-avatar { border-radius: 50%; }
-.post-author-info { display: flex; flex-direction: column; }
-.post-author-name { font-weight: 600; }
-.post-author-handle { font-size: 0.85em; opacity: 0.7; }
-.post-reply-info { font-size: 0.85em; opacity: 0.7; margin-bottom: 0.5rem; }
-.post-media-img { max-width: 100%; height: auto; border-radius: 4px; }
-.post-footer { font-size: 0.85em; opacity: 0.7; margin-top: 0.5rem; }
-.post-reaction-emoji { height: 20px; vertical-align: text-bottom; }
-.poll-option { position: relative; padding: 0.5rem; margin-bottom: 0.25rem; border: 1px solid var(--pico-muted-border-color, #ddd); border-radius: 4px; overflow: hidden; }
-.poll-bar { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(0,0,0,0.05); }
-.poll-label { position: relative; z-index: 1; }
-.poll-count { position: relative; z-index: 1; float: right; }
-
 .logout-form {
   display: inline-flex;
   margin: 0;

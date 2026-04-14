@@ -429,247 +429,159 @@ footer {
   text-align: center;
 }
 
-/* ==== Profile Page ==== */
-.profile-cover {
-  margin: -24px -20px 1.5rem;
-  overflow: hidden;
-}
-.profile-cover img {
-  width: 100%;
-  height: auto;
-  display: block;
+/* ==== Profile (CSS-only override of upstream HTML) ==== */
+
+/* Cover image */
+main.container > div > img[style*="width: 100%"] {
+  border-radius: 8px !important;
+  margin-bottom: 1.5rem !important;
 }
 
-.profile-header {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.profile-avatar {
-  border-radius: 50%;
+/* Avatar */
+main.container img[style*="float: left"] {
+  border-radius: 50% !important;
+  float: left !important;
   border: 3px solid #fff;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
-  flex-shrink: 0;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 }
 
-.profile-info {
-  min-width: 0;
+/* Profile name */
+main.container > div > hgroup > h1 {
+  font-size: 220% !important;
+  font-weight: 900 !important;
+  margin-top: 4px !important;
 }
-
-.profile-name {
-  font-size: 180%;
-  font-weight: 900;
-  margin: 0 0 0.15rem;
-  line-height: 1.2;
-}
-.profile-name a {
+main.container > div > hgroup > h1 a {
   color: #000 !important;
 }
 
-.profile-handle {
+/* Profile handle and stats */
+main.container > div > hgroup > p {
   color: #888;
   font-size: 0.85em;
-  margin: 0;
+  clear: left;
+  padding-top: 0.25rem;
 }
 
-.profile-stats {
-  color: #aaa;
-}
-
-.profile-bio {
-  margin-bottom: 1.5rem;
+/* Bio */
+main.container > div > hgroup + div {
+  clear: both;
+  margin: 1.5rem 0;
   line-height: 1.7;
   color: #444;
 }
 
-.profile-fields {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-bottom: 2rem;
-  padding: 1rem;
-  background: var(--anthropic-ivory);
-  border-radius: 6px;
-  border: 1px solid var(--anthropic-oat);
+/* Fields table */
+.overflow-auto {
+  overflow: auto;
 }
-.profile-field {
-  display: flex;
-  gap: 0.5rem;
+.overflow-auto table {
   font-size: 0.9em;
+  margin-bottom: 1.5rem;
 }
-.profile-field-key {
-  font-weight: 600;
+.overflow-auto th {
   color: #555;
-}
-.profile-field-key::after {
-  content: ":";
-}
-.profile-field-value a {
-  color: var(--anthropic-clay);
+  font-weight: 600;
 }
 
-/* ==== Post Cards ==== */
-.post {
-  display: block;
-  border-bottom: 1px solid var(--line);
-  padding: 1.25rem 1.25rem;
+/* ==== Post cards (CSS-only override of upstream article) ==== */
+
+/* Override inline font-size: 80% */
+main.container > article {
+  font-size: 100% !important;
+  word-spacing: normal !important;
+  letter-spacing: normal !important;
+  padding: 1.25rem !important;
   background: #fafafa;
-  margin-bottom: 0;
-  border-radius: 0;
-  box-shadow: none;
+  border-bottom: 1px solid var(--line);
   border-left: 3px solid transparent;
   transition: border-color 0.15s ease, background 0.15s ease;
+  margin-bottom: 0;
 }
-.post:hover {
+main.container > article:hover {
   border-left-color: var(--anthropic-clay);
   background: #f5f4f3;
 }
 
-.post-pinned {
-  border-left-color: var(--anthropic-clay) !important;
-  background: var(--anthropic-background);
+/* Pinned post */
+main.container > article[style*="border: 1px solid silver"] {
+  border: none !important;
+  border-left: 3px solid var(--anthropic-clay) !important;
+  background: var(--anthropic-background) !important;
 }
 
-.post-quoted {
-  font-size: 0.9em;
-  margin: 1rem 0;
-  border: 1px solid var(--anthropic-oat);
-  border-radius: 6px;
-  border-left: 3px solid var(--anthropic-oat);
-  background: var(--anthropic-ivory);
+/* Post avatar */
+article img[style*="float: left"][width="48"],
+article img[style*="float: left"][width="40"] {
+  border-radius: 50% !important;
 }
 
-.post-author {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  margin-bottom: 0.75rem;
+/* Post author name */
+article header hgroup h5 {
+  font-size: 1em !important;
+  font-weight: 600 !important;
+  margin: 0 !important;
 }
-
-.post-avatar {
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.post-author-info {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.post-author-name {
-  font-weight: 600;
-  font-size: 0.95em;
-  line-height: 1.3;
-}
-.post-author-name a {
+article header hgroup h5 a,
+article header hgroup h6 a {
   color: #000 !important;
 }
 
-.post-author-handle {
+/* Post handle */
+article header hgroup p {
+  font-size: 0.8em !important;
   color: #999;
-  font-size: 0.8em;
+  margin: 0 !important;
 }
 
-.post-reply-info {
-  font-size: 0.8em;
-  color: #999;
-  margin-bottom: 0.5rem;
-}
-.post-reply-info a {
-  color: var(--anthropic-clay);
-}
-
-.post-body {
+/* Post header */
+article header {
   margin-bottom: 0.75rem;
+  padding: 0 !important;
+  border: none !important;
+  background: none !important;
 }
 
-.post-content {
-  line-height: 1.65;
-}
-
-.post-media {
+/* Post footer */
+article footer {
   margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.04);
+  font-size: 0.85em;
+  color: #aaa;
+}
+article footer a {
+  color: var(--anthropic-clay) !important;
 }
 
-.post-media-img {
+/* Post media images */
+article img[src]:not([width="48"]):not([width="40"]):not([width="72"]):not([style*="float"]):not([style*="height: 22px"]) {
   max-width: 100%;
   height: auto;
   border-radius: 6px;
   border: 1px solid var(--line);
 }
 
-.post-alt {
-  margin-top: 0.25rem;
-  font-size: 0.8em;
-  color: #999;
+/* Quoted post */
+article article {
+  font-size: 0.9em !important;
+  margin: 1rem 0 !important;
+  border: 1px solid var(--anthropic-oat) !important;
+  border-radius: 6px !important;
+  border-left: 3px solid var(--anthropic-oat) !important;
+  background: var(--anthropic-ivory) !important;
+  padding: 1rem !important;
 }
 
-.post-footer {
-  font-size: 0.8em;
-  color: #aaa;
-  padding-top: 0.75rem;
-  border-top: 1px solid rgba(0, 0, 0, 0.04);
+/* Pagination */
+main.container > div[style*="justify-content"] {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
 }
-
-.post-time {
+main.container > div[style*="justify-content"] a {
   color: var(--anthropic-clay) !important;
-}
-
-.post-meta {
-  color: #bbb;
-}
-
-.post-reactions {
-  display: inline-flex;
-  gap: 0.25rem;
-  vertical-align: middle;
-}
-
-.post-reaction-emoji {
-  height: 20px;
-  vertical-align: text-bottom;
-}
-
-/* Poll */
-.post-poll {
-  margin: 0.75rem 0;
-}
-.poll-option {
-  position: relative;
-  padding: 0.5rem 0.75rem;
-  margin-bottom: 0.35rem;
-  background: var(--anthropic-ivory);
-  border-radius: 4px;
-  border: 1px solid var(--anthropic-oat);
-  overflow: hidden;
-}
-.poll-bar {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  background: var(--anthropic-oat);
-  z-index: 0;
-  border-radius: 4px;
-}
-.poll-label {
-  position: relative;
-  z-index: 1;
-  font-weight: 500;
-}
-.poll-count {
-  position: relative;
-  z-index: 1;
-  float: right;
-  color: #888;
-  font-size: 0.9em;
-}
-
-.overflow-auto {
-  overflow: auto;
+  font-weight: 600;
 }
 
 /* ==== Tooltip (Pico data-tooltip) ==== */
