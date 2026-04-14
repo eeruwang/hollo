@@ -548,7 +548,7 @@ main.container > div:has(> img[style*="width: 100%"])::after {
   top: 0;
   left: 0;
   right: 0;
-  aspect-ratio: 5 / 2;
+  height: 280px;
   background: linear-gradient(
     to top,
     rgba(0, 0, 0, 0.7) 0%,
@@ -562,26 +562,28 @@ main.container > div:has(> img[style*="width: 100%"])::after {
   z-index: 1;
 }
 
-/* Cover image — cinematic crop */
+/* Cover image — fixed height, object-fit crop */
 main.container > div > img[style*="width: 100%"] {
   border-radius: 16px !important;
   margin-bottom: 0 !important;
-  aspect-ratio: 5 / 2;
+  width: 100%;
+  height: 280px;
   object-fit: cover;
   display: block;
   position: relative;
   z-index: 0;
 }
 
-/* Profile hgroup — transparent, sits on darkened cover bottom */
+/* Profile hgroup — sits inside cover's bottom 150px */
 main.container > div > img[style*="width: 100%"] + hgroup {
   margin-top: -150px;
-  min-height: 150px;
+  height: 150px;
   box-sizing: border-box;
   position: relative;
   z-index: 2;
   padding: 32px var(--indent) 16px;
   background: transparent;
+  overflow: hidden;
 }
 
 /* Avatar on cover — stronger shadow */
@@ -893,10 +895,16 @@ main.container > div[style*="justify-content"] a:hover {
     grid-template-columns: 1fr;
   }
 
-  /* Profile hero — adjusted overlap on mobile */
+  /* Profile hero — fixed height on mobile */
+  main.container > div:has(> img[style*="width: 100%"])::after {
+    height: 200px;
+  }
+  main.container > div > img[style*="width: 100%"] {
+    height: 200px;
+  }
   main.container > div > img[style*="width: 100%"] + hgroup {
     margin-top: -130px;
-    min-height: 130px;
+    height: 130px;
     padding: 24px var(--indent) 14px;
   }
 }
