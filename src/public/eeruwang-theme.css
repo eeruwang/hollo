@@ -635,14 +635,14 @@ main.container > div > .overflow-auto {
   display: none;
 }
 
-/* Profile name — top heading (blog h1 exact) */
+/* Profile name — top heading (blog h1 style) */
 main.container > div > hgroup > h1 {
   font-size: 250% !important;
   font-weight: 900 !important;
   line-height: 1.15 !important;
   color: #000 !important;
   text-shadow: none !important;
-  margin: 12px 0 0 !important;
+  margin: 50px 0 0 !important;
   text-wrap: balance;
 }
 main.container > div > hgroup > h1 a {
@@ -974,12 +974,15 @@ main.container > div[style*="justify-content"]:not(:has(a)) {
 }
 
 /* ==== Responsive ==== */
-@media only screen and (max-width: 750px) {
+/* Tablet/iPad: remove side-offset, container flush with viewport edges */
+@media only screen and (max-width: 1200px) {
   main.container {
     margin-inline-start: var(--indent);
     margin-inline-end: var(--indent);
   }
+}
 
+@media only screen and (max-width: 750px) {
   h1 {
     font-size: 200%;
   }
