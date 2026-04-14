@@ -667,7 +667,7 @@ main.container > div > hgroup > h1 a {
 
 /* Month group header (blog .date style) */
 .profile-timeline .date-group {
-  padding-bottom: 2px;
+  padding: 0 0 2px var(--indent);
   text-transform: uppercase;
   font-weight: bold;
   font-size: 0.72em;
@@ -974,11 +974,21 @@ main.container > div[style*="justify-content"]:not(:has(a)) {
 }
 
 /* ==== Responsive ==== */
-/* Tablet/iPad: remove side-offset, container flush with viewport edges */
+/* Tablet/iPad: container edge-to-edge, content inside gets indent */
 @media only screen and (max-width: 1200px) {
   main.container {
-    margin-inline-start: var(--indent);
-    margin-inline-end: var(--indent);
+    margin-inline-start: 0;
+    margin-inline-end: 0;
+    max-inline-size: 100%;
+  }
+
+  /* Text content needs padding-left since container is edge-to-edge */
+  main.container > div > hgroup > h1,
+  .profile-timeline > h2,
+  main.container > div > hgroup + div,
+  .profile-footer {
+    padding-left: var(--indent);
+    padding-right: var(--indent);
   }
 }
 
