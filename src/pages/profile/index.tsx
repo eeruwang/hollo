@@ -541,10 +541,12 @@ function ProfilePage({
           </>
         ))}
       </section>
-      <div style={{ display: "flex", justifyContent: "space-between" }}>
-        <div>{newerUrl && <a href={newerUrl}>&larr; Newer</a>}</div>
-        <div>{olderUrl && <a href={olderUrl}>Older &rarr;</a>}</div>
-      </div>
+      {(newerUrl || olderUrl) && (
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <div>{newerUrl && <a href={newerUrl}>&larr; Newer</a>}</div>
+          <div>{olderUrl && <a href={olderUrl}>Older &rarr;</a>}</div>
+        </div>
+      )}
       <footer class="profile-footer">
         <h3>Contact</h3>
         <div class="contact-grid">
