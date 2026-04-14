@@ -12,61 +12,59 @@ export function Profile({ accountOwner }: ProfileProps) {
   const bioHtml = renderCustomEmojis(account.bioHtml ?? "", account.emojis);
   const url = account.url ?? account.iri;
   return (
-    <div>
+    <div className="profile">
       {account.coverUrl && (
-        <img
-          src={account.coverUrl}
-          alt=""
-          style="margin-bottom: 1em; width: 100%;"
-        />
+        <div className="profile-cover">
+          <img src={account.coverUrl} alt="" />
+        </div>
       )}
-      <hgroup>
+      <div className="profile-header">
         {account.avatarUrl && (
           <img
             src={account.avatarUrl}
             alt={`${account.name}'s avatar`}
-            width={72}
-            height={72}
-            style="float: left; margin-right: 1em;"
+            className="profile-avatar"
+            width={80}
+            height={80}
           />
         )}
-        <h1>
-          <a dangerouslySetInnerHTML={{ __html: nameHtml }} href={url} />
-        </h1>
-        <p>
-          <span
-            style="user-select: all;"
-            data-tooltip="Use this handle to reach out to this account on your fediverse server!"
-            data-placement="bottom"
-          >
-            {account.handle}
-          </span>{" "}
-          &middot; {`${account.followingCount} following `}
-          &middot;{" "}
-          {account.followersCount === 1
-            ? "1 follower"
-            : `${account.followersCount} followers`}
-        </p>
-      </hgroup>
-      <div dangerouslySetInnerHTML={{ __html: bioHtml }} />
-      {account.fieldHtmls && (
-        <div class="overflow-auto">
-          <table>
-            <thead>
-              <tr>
-                {Object.keys(account.fieldHtmls).map((key) => (
-                  <th>{key}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                {Object.values(account.fieldHtmls).map((value) => (
-                  <td dangerouslySetInnerHTML={{ __html: value }} />
-                ))}
-              </tr>
-            </tbody>
-          </table>
+        <div className="profile-info">
+          <h1 className="profile-name">
+            <a dangerouslySetInnerHTML={{ __html: nameHtml }} href={url} />
+          </h1>
+          <p className="profile-handle">
+            <span
+              data-tooltip="Use this handle to reach out to this account on your fediverse server!"
+              data-placement="bottom"
+            >
+              {account.handle}
+            </span>
+            <span className="profile-stats">
+              {` · ${account.followingCount} following · `}
+              {account.followersCount === 1
+                ? "1 follower"
+                : `${account.followersCount} followers`}
+            </span>
+          </p>
+        </div>
+      </div>
+      {bioHtml && (
+        <div
+          className="profile-bio"
+          dangerouslySetInnerHTML={{ __html: bioHtml }}
+        />
+      )}
+      {account.fieldHtmls && Object.keys(account.fieldHtmls).length > 0 && (
+        <div className="profile-fields">
+          {Object.entries(account.fieldHtmls).map(([key, value]) => (
+            <div className="profile-field">
+              <span className="profile-field-key">{key}</span>
+              <span
+                className="profile-field-value"
+                dangerouslySetInnerHTML={{ __html: value }}
+              />
+            </div>
+          ))}
         </div>
       )}
     </div>
