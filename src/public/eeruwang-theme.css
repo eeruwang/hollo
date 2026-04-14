@@ -500,18 +500,7 @@ footer {
 
 /* ==== Profile (CSS-only override of upstream HTML) ==== */
 
-/* Cover image */
-main.container > div > img[style*="width: 100%"] {
-  border-radius: 8px !important;
-  margin-bottom: 0 !important;
-}
-
-/* Pull hgroup up to overlap cover — only when cover image exists */
-main.container > div > img[style*="width: 100%"] + hgroup {
-  margin-top: -36px;
-  position: relative;
-  z-index: 1;
-}
+/* --- Generic styles (no cover / fallback) --- */
 
 /* Avatar */
 main.container img[style*="float: left"] {
@@ -539,6 +528,56 @@ main.container > div > hgroup > p {
   font-size: 0.85em;
   clear: left;
   padding-top: 0.25rem;
+}
+
+/* --- 2026 hero cover — profile info fully on cover --- */
+
+/* Cover image — cinematic crop */
+main.container > div > img[style*="width: 100%"] {
+  border-radius: 16px !important;
+  margin-bottom: 0 !important;
+  aspect-ratio: 5 / 2;
+  object-fit: cover;
+  display: block;
+}
+
+/* Profile hgroup — fully overlaid on cover with gradient */
+main.container > div > img[style*="width: 100%"] + hgroup {
+  margin-top: -120px;
+  position: relative;
+  z-index: 1;
+  padding: 40px var(--indent) 16px;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.55) 0%,
+    rgba(0, 0, 0, 0.15) 65%,
+    transparent 100%
+  );
+  border-radius: 0 0 16px 16px;
+}
+
+/* Avatar on cover — stronger shadow */
+main.container > div > img[style*="width: 100%"] + hgroup img[style*="float: left"] {
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.3);
+}
+
+/* Name — white on cover */
+main.container > div > img[style*="width: 100%"] + hgroup > h1 {
+  color: #fff !important;
+}
+main.container > div > img[style*="width: 100%"] + hgroup > h1 a {
+  color: #fff !important;
+  text-decoration: none !important;
+}
+
+/* Handle — semi-transparent white on cover */
+main.container > div > img[style*="width: 100%"] + hgroup > p {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+/* Tooltip on cover — light underline */
+main.container > div > img[style*="width: 100%"] + hgroup [data-tooltip] {
+  border-bottom-color: rgba(255, 255, 255, 0.4);
 }
 
 /* Bio */
@@ -743,6 +782,12 @@ main.container > div[style*="justify-content"] a:hover {
 
   fieldset.grid {
     grid-template-columns: 1fr;
+  }
+
+  /* Profile hero — smaller overlap on mobile */
+  main.container > div > img[style*="width: 100%"] + hgroup {
+    margin-top: -100px;
+    padding: 30px var(--indent) 12px;
   }
 }
 
