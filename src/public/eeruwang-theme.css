@@ -635,14 +635,14 @@ main.container > div > .overflow-auto {
   display: none;
 }
 
-/* Profile name — top heading (blog h1 style: 250%, weight 900) */
+/* Profile name — top heading (blog h1 style with extra breathing room) */
 main.container > div > hgroup > h1 {
   font-size: 250% !important;
   font-weight: 900 !important;
   line-height: 1.15 !important;
   color: #000 !important;
   text-shadow: none !important;
-  margin: 80px 0 0 !important;
+  margin: 140px 0 0 !important;
   text-wrap: balance;
 }
 main.container > div > hgroup > h1 a {
@@ -657,6 +657,12 @@ main.container > div > hgroup > h1 a {
 /* Hide post header (avatar + name + handle) — single-user instance */
 .profile-timeline article > header {
   display: none;
+}
+
+/* Posts section heading — extra breathing room like blog */
+.profile-timeline > h2 {
+  margin-top: 140px;
+  margin-bottom: 0;
 }
 
 /* Month group header (blog .date style) */
@@ -899,11 +905,11 @@ article article {
   padding: 1rem !important;
 }
 
-/* Pagination */
+/* Pagination — no top border (would show as empty line when no pages) */
 main.container > div[style*="justify-content"] {
   margin-top: 2rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--line);
+  padding-top: 0;
+  border-top: none;
 }
 main.container > div[style*="justify-content"] a {
   color: #333;
@@ -912,6 +918,10 @@ main.container > div[style*="justify-content"] a {
 }
 main.container > div[style*="justify-content"] a:hover {
   text-decoration: underline;
+}
+main.container > div[style*="justify-content"]:empty,
+main.container > div[style*="justify-content"]:not(:has(a)) {
+  display: none;
 }
 
 /* ==== Tooltip (Pico data-tooltip) ==== */
@@ -1056,8 +1066,10 @@ article header {
 }
 
 /* Last article card removes bottom border */
-article:last-child {
-  border-bottom: none;
+article:last-child,
+.profile-timeline > article:last-child,
+.profile-timeline > .thread:last-child {
+  border-bottom: none !important;
 }
 
 /* Space above standalone buttons/links after article cards */
