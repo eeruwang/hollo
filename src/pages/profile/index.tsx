@@ -545,6 +545,43 @@ function ProfilePage({
         <div>{newerUrl && <a href={newerUrl}>&larr; Newer</a>}</div>
         <div>{olderUrl && <a href={olderUrl}>Older &rarr;</a>}</div>
       </div>
+      <footer class="profile-footer">
+        <h3>Contact</h3>
+        <div class="contact-grid">
+          <div class="contact-item">
+            <label>Handle</label>
+            <p style="user-select: all;">@{accountOwner.handle}</p>
+          </div>
+          <div class="contact-item">
+            <label>Following</label>
+            <p>{accountOwner.account.followingCount}</p>
+          </div>
+          <div class="contact-item">
+            <label>Followers</label>
+            <p>
+              {accountOwner.account.followersCount === 1
+                ? "1"
+                : accountOwner.account.followersCount}
+            </p>
+          </div>
+        </div>
+        {accountOwner.account.fieldHtmls != null &&
+          Object.keys(accountOwner.account.fieldHtmls).length > 0 && (
+            <>
+              <h3>Links</h3>
+              <div class="contact-grid">
+                {Object.entries(accountOwner.account.fieldHtmls).map(
+                  ([key, value]) => (
+                    <div class="contact-item">
+                      <label>{key}</label>
+                      <div dangerouslySetInnerHTML={{ __html: value }} />
+                    </div>
+                  ),
+                )}
+              </div>
+            </>
+          )}
+      </footer>
     </Layout>
   );
 }

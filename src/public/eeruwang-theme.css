@@ -502,6 +502,47 @@ footer {
   color: #999;
 }
 
+/* ==== Profile footer (contact info section) ==== */
+.profile-footer {
+  margin-top: 80px;
+  padding-top: 40px;
+  border-top: 1px solid var(--line);
+  font-size: 0.92em;
+}
+.profile-footer h3 {
+  font-weight: bold;
+  font-size: 1em;
+  margin: 0 0 1.5rem;
+  color: #000;
+}
+.profile-footer .contact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem 2rem;
+  margin: 0 0 2.5rem;
+}
+.profile-footer .contact-item label {
+  display: block;
+  color: #999;
+  font-size: 0.85em;
+  font-weight: normal;
+  margin: 0 0 0.2rem;
+}
+.profile-footer .contact-item p,
+.profile-footer .contact-item > div {
+  margin: 0;
+  color: #000;
+}
+.profile-footer .contact-item a {
+  color: #000;
+  text-decoration: underline;
+  text-decoration-color: rgba(0, 0, 0, 0.2);
+  text-underline-offset: 2px;
+}
+.profile-footer .contact-item a:hover {
+  text-decoration-color: #000;
+}
+
 /* ==== Profile (CSS-only override of upstream HTML) ==== */
 
 /* --- Generic styles (no cover / fallback) --- */
@@ -534,65 +575,56 @@ main.container > div > hgroup > p {
   padding-top: 0.25rem;
 }
 
-/* --- 2026 editorial cover — flat edges, natural vignette --- */
+/* --- Profile: no cover, minimal header, info goes to footer --- */
 
-/* Profile wrapper: relative positioning for absolute gradient overlay */
-main.container > div:has(> img[style*="width: 100%"]) {
-  position: relative;
-}
-
-/* Natural gradient overlay ON the cover image itself (pseudo-element) */
-main.container > div:has(> img[style*="width: 100%"])::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 280px;
-  background: linear-gradient(
-    to top,
-    rgba(0, 0, 0, 0.55) 0%,
-    rgba(0, 0, 0, 0.45) 20%,
-    rgba(0, 0, 0, 0.35) 40%,
-    rgba(0, 0, 0, 0.18) 65%,
-    rgba(0, 0, 0, 0.05) 85%,
-    transparent 100%
-  );
-  pointer-events: none;
-  z-index: 1;
-}
-
-/* Cover image — flat edges (editorial 2026), fixed height */
+/* Hide cover image */
 main.container > div > img[style*="width: 100%"] {
-  border-radius: 0 !important;
-  margin-bottom: 0 !important;
-  width: 100%;
-  height: 280px;
-  object-fit: cover;
-  display: block;
-  position: relative;
-  z-index: 0;
+  display: none !important;
 }
 
-/* Profile hgroup — absolute positioned on cover, space below */
+/* Hide gradient overlay (was tied to cover) */
+main.container > div:has(> img[style*="width: 100%"])::after {
+  display: none;
+}
+
+/* hgroup flows naturally (no more absolute positioning) */
 main.container > div > img[style*="width: 100%"] + hgroup {
-  position: absolute;
-  top: 100px;
-  left: 0;
-  right: 0;
-  height: 140px;
-  box-sizing: border-box;
-  margin: 0;
-  z-index: 2;
-  padding: 24px var(--indent) 16px;
-  background: transparent;
-  overflow: hidden;
+  position: static;
+  height: auto;
+  margin: 0 0 1rem;
+  padding: 0;
+  overflow: visible;
 }
 
-/* Bio sits below cover (cover takes full 280px height) */
-main.container > div > img[style*="width: 100%"] + hgroup + div {
-  margin-top: 1.5rem !important;
-  clear: none;
+/* Hide handle/stats from top — moved to profile-footer */
+main.container > div > hgroup > p {
+  display: none;
+}
+
+/* Hide fields table from top — moved to profile-footer */
+main.container > div > .overflow-auto {
+  display: none;
+}
+
+/* Profile name — top heading */
+main.container > div > hgroup > h1 {
+  font-size: 250% !important;
+  font-weight: 900 !important;
+  color: #000 !important;
+  text-shadow: none;
+  margin: 0 0 0.5rem !important;
+}
+main.container > div > hgroup > h1 a {
+  color: #000 !important;
+  text-decoration: none !important;
+}
+
+/* Small avatar next to name */
+main.container > div > hgroup > img[style*="float: left"] {
+  width: 48px !important;
+  height: 48px !important;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
 /* Avatar on cover — stronger shadow */
@@ -956,17 +988,9 @@ main.container > div[style*="justify-content"] a:hover {
     grid-template-columns: 1fr;
   }
 
-  /* Profile hero — fixed height on mobile */
-  main.container > div:has(> img[style*="width: 100%"])::after {
-    height: 200px;
-  }
-  main.container > div > img[style*="width: 100%"] {
-    height: 200px;
-  }
-  main.container > div > img[style*="width: 100%"] + hgroup {
-    top: 70px;
-    height: 115px;
-    padding: 18px var(--indent) 12px;
+  /* Profile footer: single column on mobile */
+  .profile-footer .contact-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -985,10 +1009,6 @@ main.container:has(> header:first-child) {
   margin-block: clamp(16px, 3vw, 32px);
 }
 
-/* Reduce top margin on profile pages (cover should be near the top) */
-main.container:has(> div > img[style*="width: 100%"]) {
-  margin-block-start: clamp(16px, 2vw, 32px);
-}
 
 header nav {
   margin-bottom: 0.5rem;
