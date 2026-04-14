@@ -1,8 +1,8 @@
-nav a {
+a {
   text-decoration: none;
 }
 
-a[role="button"] {
+a:hover {
   text-decoration: none;
 }
 
