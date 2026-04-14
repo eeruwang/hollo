@@ -180,6 +180,10 @@ nav ul {
 nav ul li {
   margin: 0;
 }
+/* Hide the 50x50 logo image — keep "Hollo" text only */
+nav picture {
+  display: none;
+}
 nav a {
   color: #888;
   text-decoration: none;
@@ -801,6 +805,11 @@ main.container > div[style*="justify-content"] a:hover {
 }
 
 /* ==== Dashboard page consistency ==== */
+/* Reduce top margin when dashboard header is present */
+main.container:has(> header:first-child) {
+  margin-block: clamp(16px, 3vw, 32px);
+}
+
 header nav {
   margin-bottom: 0.5rem;
   padding: 0.5rem 0;
