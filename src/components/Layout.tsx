@@ -11,6 +11,8 @@ export interface LayoutProps {
   themeColor?: ThemeColor;
 }
 
+const ASSET_VERSION = "2";
+
 export function Layout(props: PropsWithChildren<LayoutProps>) {
   const themeColor = props.themeColor ?? "azure";
   return (
@@ -43,7 +45,10 @@ export function Layout(props: PropsWithChildren<LayoutProps>) {
           />
         ))}
         {themeColor === "eeruwang" ? (
-          <link rel="stylesheet" href="/public/eeruwang-theme.css" />
+          <link
+            rel="stylesheet"
+            href={`/public/eeruwang-theme.css?v=${ASSET_VERSION}`}
+          />
         ) : (
           <>
             <link
