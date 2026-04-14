@@ -52,7 +52,7 @@ body {
 /* ==== Container ==== */
 main.container {
   max-inline-size: 700px;
-  margin-block: clamp(48px, 10vw, 100px);
+  margin-block: clamp(24px, 4vw, 48px);
   margin-inline-start: max(var(--indent), var(--side-offset));
   margin-inline-end: var(--indent);
   padding-inline-start: env(safe-area-inset-left, 0px);
@@ -73,7 +73,7 @@ h1 {
 }
 
 h2 {
-  margin-top: 80px;
+  margin-top: 32px;
   font-size: 170%;
   line-height: 1.2;
   color: #000;
@@ -509,6 +509,50 @@ img[style*="float: left"] {
   fieldset.grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ==== Dashboard page consistency ==== */
+header nav {
+  margin-bottom: 0.5rem;
+  padding: 0.5rem 0;
+}
+
+hgroup {
+  margin-bottom: 1.5rem;
+}
+
+hgroup h1 {
+  margin-bottom: 0.25rem;
+}
+
+hgroup + form,
+hgroup + article,
+hgroup + table,
+hgroup + div {
+  margin-top: 0;
+}
+
+/* Pico-compatible contrast class for active nav */
+a.contrast {
+  color: #000;
+  font-weight: 700;
+}
+
+/* Select and input consistent sizing */
+select {
+  cursor: pointer;
+}
+
+/* Article cards in dashboard */
+article header h3 {
+  margin: 0;
+  font-size: 1.1em;
+}
+
+article header {
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid var(--line);
 }
 
 .pico-color-eeruwang-500 {

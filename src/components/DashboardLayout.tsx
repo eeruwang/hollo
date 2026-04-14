@@ -91,9 +91,9 @@ export function DashboardLayout(
       {props.children}
       <footer>
         <p>
-          <strong>Hollo</strong>
+          <strong>Hollo eeruwang fork</strong>
           <br />
-          Version {metadata.version}
+          v0.1.0
         </p>
       </footer>
     </Layout>
