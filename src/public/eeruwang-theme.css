@@ -635,14 +635,14 @@ main.container > div > .overflow-auto {
   display: none;
 }
 
-/* Profile name — top heading (blog h1 style with extra breathing room) */
+/* Profile name — top heading (blog h1 exact) */
 main.container > div > hgroup > h1 {
   font-size: 250% !important;
   font-weight: 900 !important;
   line-height: 1.15 !important;
   color: #000 !important;
   text-shadow: none !important;
-  margin: 140px 0 0 !important;
+  margin: 12px 0 0 !important;
   text-wrap: balance;
 }
 main.container > div > hgroup > h1 a {
@@ -659,9 +659,9 @@ main.container > div > hgroup > h1 a {
   display: none;
 }
 
-/* Posts section heading — extra breathing room like blog */
+/* Posts section heading — blog default (80px from h2) */
 .profile-timeline > h2 {
-  margin-top: 140px;
+  margin-top: 80px;
   margin-bottom: 0;
 }
 
