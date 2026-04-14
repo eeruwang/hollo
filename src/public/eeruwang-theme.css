@@ -503,7 +503,14 @@ footer {
 /* Cover image */
 main.container > div > img[style*="width: 100%"] {
   border-radius: 8px !important;
-  margin-bottom: 1.5rem !important;
+  margin-bottom: 0 !important;
+}
+
+/* Pull hgroup up to overlap cover — only when cover image exists */
+main.container > div > img[style*="width: 100%"] + hgroup {
+  margin-top: -36px;
+  position: relative;
+  z-index: 1;
 }
 
 /* Avatar */
@@ -512,6 +519,8 @@ main.container img[style*="float: left"] {
   float: left !important;
   border: 3px solid #fff;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  position: relative;
+  z-index: 2;
 }
 
 /* Profile name */
