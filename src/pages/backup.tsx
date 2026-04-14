@@ -43,7 +43,7 @@ backup.get("/", async (c) => {
   return c.html(
     <DashboardLayout
       title="Backup — Hollo"
-      selectedMenu="backup"
+      selectedMenu="settings"
       themeColor={owner.themeColor}
     >
       <hgroup>

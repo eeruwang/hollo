@@ -2,7 +2,7 @@ import type { PropsWithChildren } from "hono/jsx";
 import metadata from "../../package.json";
 import { Layout, type LayoutProps } from "./Layout";
 
-export type Menu = "social" | "accounts" | "emojis" | "federation" | "webhooks" | "backup" | "auth";
+export type Menu = "social" | "accounts" | "emojis" | "federation" | "settings";
 
 export interface DashboardLayoutProps extends LayoutProps {
   selectedMenu?: Menu;
@@ -29,7 +29,7 @@ export function DashboardLayout(
                   alt=""
                 />
               </picture>
-              Hollo Dashboard
+              Hollo
             </li>
           </ul>
           <ul>
@@ -54,10 +54,10 @@ export function DashboardLayout(
             <li>
               {props.selectedMenu === "emojis" ? (
                 <a href="/emojis" class="contrast">
-                  <strong>Custom emojis</strong>
+                  <strong>Emojis</strong>
                 </a>
               ) : (
-                <a href="/emojis">Custom emojis</a>
+                <a href="/emojis">Emojis</a>
               )}
             </li>
             <li>
@@ -70,30 +70,12 @@ export function DashboardLayout(
               )}
             </li>
             <li>
-              {props.selectedMenu === "webhooks" ? (
-                <a href="/webhooks" class="contrast">
-                  <strong>Webhooks</strong>
+              {props.selectedMenu === "settings" ? (
+                <a href="/settings" class="contrast">
+                  <strong>Settings</strong>
                 </a>
               ) : (
-                <a href="/webhooks">Webhooks</a>
-              )}
-            </li>
-            <li>
-              {props.selectedMenu === "backup" ? (
-                <a href="/backup" class="contrast">
-                  <strong>Backup</strong>
-                </a>
-              ) : (
-                <a href="/backup">Backup</a>
-              )}
-            </li>
-            <li>
-              {props.selectedMenu === "auth" ? (
-                <a href="/auth" class="contrast">
-                  <strong>Auth</strong>
-                </a>
-              ) : (
-                <a href="/auth">Auth</a>
+                <a href="/settings">Settings</a>
               )}
             </li>
             <li>

@@ -37,7 +37,7 @@ webhookPages.get("/", async (c) => {
   return c.html(
     <DashboardLayout
       title="Webhooks — Hollo"
-      selectedMenu="webhooks"
+      selectedMenu="settings"
       themeColor={owner.themeColor}
     >
       <hgroup>
