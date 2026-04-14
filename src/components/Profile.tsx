@@ -12,34 +12,31 @@ export function Profile({ accountOwner }: ProfileProps) {
   const bioHtml = renderCustomEmojis(account.bioHtml ?? "", account.emojis);
   const url = account.url ?? account.iri;
   return (
-    <div className="profile">
+    <div>
       {account.coverUrl && (
-        <div className="profile-cover">
-          <img src={account.coverUrl} alt="" />
-        </div>
+        <img
+          src={account.coverUrl}
+          alt=""
+          class="profile-cover"
+        />
       )}
-      <div className="profile-header">
+      <div class="profile-header">
         {account.avatarUrl && (
           <img
             src={account.avatarUrl}
             alt={`${account.name}'s avatar`}
-            className="profile-avatar"
-            width={80}
-            height={80}
+            class="profile-avatar"
+            width={72}
+            height={72}
           />
         )}
-        <div className="profile-info">
-          <h1 className="profile-name">
+        <div>
+          <h1 class="profile-name">
             <a dangerouslySetInnerHTML={{ __html: nameHtml }} href={url} />
           </h1>
-          <p className="profile-handle">
-            <span
-              data-tooltip="Use this handle to reach out to this account on your fediverse server!"
-              data-placement="bottom"
-            >
-              {account.handle}
-            </span>
-            <span className="profile-stats">
+          <p class="profile-handle">
+            {account.handle}
+            <span class="profile-stats">
               {` · ${account.followingCount} following · `}
               {account.followersCount === 1
                 ? "1 follower"
@@ -50,17 +47,17 @@ export function Profile({ accountOwner }: ProfileProps) {
       </div>
       {bioHtml && (
         <div
-          className="profile-bio"
+          class="profile-bio"
           dangerouslySetInnerHTML={{ __html: bioHtml }}
         />
       )}
       {account.fieldHtmls && Object.keys(account.fieldHtmls).length > 0 && (
-        <div className="profile-fields">
+        <div class="profile-fields">
           {Object.entries(account.fieldHtmls).map(([key, value]) => (
-            <div className="profile-field">
-              <span className="profile-field-key">{key}</span>
+            <div class="profile-field">
+              <span class="profile-field-key">{key}</span>
               <span
-                className="profile-field-value"
+                class="profile-field-value"
                 dangerouslySetInnerHTML={{ __html: value }}
               />
             </div>

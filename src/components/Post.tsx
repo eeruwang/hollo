@@ -61,37 +61,35 @@ export function Post({ post, shared, pinned, quoted }: PostProps) {
   const authorUrl = account.url ?? account.iri;
   return (
     <article
-      className={`post ${pinned ? "post-pinned" : ""} ${quoted ? "post-quoted" : ""}`}
+      class={`post${pinned ? " post-pinned" : ""}${quoted ? " post-quoted" : ""}`}
     >
-      <div className="post-author">
+      <div class="post-author">
         {account.avatarUrl && (
           <img
             src={account.avatarUrl}
             alt={`${account.name}'s avatar`}
-            className="post-avatar"
-            width={quoted ? 32 : 40}
-            height={quoted ? 32 : 40}
+            class="post-avatar"
+            width={quoted ? 28 : 36}
+            height={quoted ? 28 : 36}
           />
         )}
-        <div className="post-author-info">
-          <span className="post-author-name">
-            <a
-              dangerouslySetInnerHTML={{ __html: authorNameHtml }}
-              href={authorUrl}
-            />
+        <span class="post-author-name">
+          <a
+            dangerouslySetInnerHTML={{ __html: authorNameHtml }}
+            href={authorUrl}
+          />
+        </span>
+        <span class="post-author-handle">{account.handle}</span>
+        {post.replyTarget != null && (
+          <span class="post-reply-info">
+            · Reply to{" "}
+            <a href={post.replyTarget.url ?? post.replyTarget.iri}>
+              {post.replyTarget.account.name}
+            </a>
           </span>
-          <span className="post-author-handle">{account.handle}</span>
-        </div>
+        )}
       </div>
-      {post.replyTarget != null && (
-        <div className="post-reply-info">
-          Reply to{" "}
-          <a href={post.replyTarget.url ?? post.replyTarget.iri}>
-            {post.replyTarget.account.name}'s post
-          </a>
-        </div>
-      )}
-      <div className="post-body">
+      <div class="post-body">
         {post.summary == null || post.summary.trim() === "" ? (
           <PostContent post={post} />
         ) : (
@@ -101,9 +99,9 @@ export function Post({ post, shared, pinned, quoted }: PostProps) {
           </details>
         )}
       </div>
-      <div className="post-footer">
+      <div class="post-footer">
         {shared != null && (
-          <span className="post-meta">
+          <>
             Shared{" "}
             <time dateTime={shared.toISOString()}>
               {shared.toLocaleString("en", {
@@ -112,9 +110,9 @@ export function Post({ post, shared, pinned, quoted }: PostProps) {
               })}
             </time>
             {" · "}
-          </span>
+          </>
         )}
-        <a href={post.url ?? post.iri} className="post-time">
+        <a href={post.url ?? post.iri} class="post-time">
           <time dateTime={(post.published ?? post.updated).toISOString()}>
             {(post.published ?? post.updated).toLocaleString("en", {
               dateStyle: "medium",
@@ -123,13 +121,10 @@ export function Post({ post, shared, pinned, quoted }: PostProps) {
           </time>
         </a>
         {post.likesCount != null && post.likesCount > 0 && (
-          <span className="post-meta">
-            {" · "}
-            {post.likesCount} {post.likesCount < 2 ? "like" : "likes"}
-          </span>
+          <>{" · "}{post.likesCount} {post.likesCount < 2 ? "like" : "likes"}</>
         )}
         {post.reactions.length > 0 && (
-          <span className="post-reactions">
+          <span class="post-reactions">
             {" · "}
             {Object.entries(groupByEmojis(post.reactions)).map(
               ([emoji, { src, count }]) =>
@@ -140,19 +135,16 @@ export function Post({ post, shared, pinned, quoted }: PostProps) {
                     src={src}
                     alt={emoji}
                     title={`${emoji} × ${count}`}
-                    className="post-reaction-emoji"
+                    class="post-reaction-emoji"
                   />
                 ),
             )}
           </span>
         )}
         {post.sharesCount != null && post.sharesCount > 0 && (
-          <span className="post-meta">
-            {" · "}
-            {post.sharesCount} {post.sharesCount < 2 ? "share" : "shares"}
-          </span>
+          <>{" · "}{post.sharesCount} {post.sharesCount < 2 ? "share" : "shares"}</>
         )}
-        {pinned && <span className="post-meta"> · Pinned</span>}
+        {pinned && <>{" · "}Pinned</>}
       </div>
     </article>
   );
@@ -200,17 +192,26 @@ function PostContent({ post }: PostContentProps) {
           // biome-ignore lint/security/noDangerouslySetInnerHtml: xss
           dangerouslySetInnerHTML={{ __html: contentHtml ?? "" }}
           lang={post.language ?? undefined}
-          className="post-content"
+          class="post-content"
         />
       )}
       {post.poll != null && <Poll poll={post.poll} />}
       {post.media.length > 0 && (
-        <div className="post-media">
+        <div class="post-media">
           {post.media.map((medium) => (
-            <div className="post-media-item">
-              <Medium medium={medium} />
+            <div>
+              <a href={medium.url}>
+                <img
+                  key={medium.id}
+                  src={medium.thumbnailUrl}
+                  alt={medium.description ?? ""}
+                  width={medium.thumbnailWidth}
+                  height={medium.thumbnailHeight}
+                  class="post-media-img"
+                />
+              </a>
               {medium.description && medium.description.trim() !== "" && (
-                <details className="post-alt">
+                <details class="post-alt">
                   <summary>ALT</summary>
                   {medium.description}
                 </details>
@@ -241,41 +242,22 @@ function Poll({ poll }: PollProps) {
     0,
   );
   return (
-    <div className="post-poll">
+    <div class="post-poll">
       {options.map((option) => {
         const percent =
           option.votesCount <= 0
             ? 0
             : Math.round((option.votesCount / totalVotes) * 100);
         return (
-          <div className="poll-option" key={option.index}>
-            <div className="poll-bar" style={`width: ${percent}%`} />
-            <span className="poll-label">{option.title}</span>
-            <span className="poll-count">
+          <div class="poll-option" key={option.index}>
+            <div class="poll-bar" style={`width: ${percent}%`} />
+            <span class="poll-label">{option.title}</span>
+            <span class="poll-count">
               {option.votesCount} ({percent}%)
             </span>
           </div>
         );
       })}
     </div>
-  );
-}
-
-interface MediumProps {
-  readonly medium: DbMedium;
-}
-
-function Medium({ medium }: MediumProps) {
-  return (
-    <a href={medium.url}>
-      <img
-        key={medium.id}
-        src={medium.thumbnailUrl}
-        alt={medium.description ?? ""}
-        width={medium.thumbnailWidth}
-        height={medium.thumbnailHeight}
-        className="post-media-img"
-      />
-    </a>
   );
 }
