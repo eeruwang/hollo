@@ -603,6 +603,7 @@ main.container > div:has(> hgroup > h1) ~ article > header {
 }
 
 /* Promote footer (with date) to top, styled like blog .date */
+main.container > div:has(> hgroup > h1) ~ .thread > article > footer,
 main.container > div:has(> hgroup > h1) ~ article > footer {
   order: -1;
   margin: 0 0 14px;
@@ -615,14 +616,61 @@ main.container > div:has(> hgroup > h1) ~ article > footer {
   color: #333;
   letter-spacing: 0.05em;
 }
+main.container > div:has(> hgroup > h1) ~ .thread > article > footer p,
 main.container > div:has(> hgroup > h1) ~ article > footer p {
   margin: 0;
 }
+main.container > div:has(> hgroup > h1) ~ .thread > article > footer a,
+main.container > div:has(> hgroup > h1) ~ .thread > article > footer small,
 main.container > div:has(> hgroup > h1) ~ article > footer a,
 main.container > div:has(> hgroup > h1) ~ article > footer small {
   color: #333 !important;
   font-size: inherit !important;
   text-decoration: none !important;
+}
+
+/* Apply the flex reorder to thread children too */
+main.container > div:has(> hgroup > h1) ~ .thread > article {
+  display: flex;
+  flex-direction: column;
+}
+main.container > div:has(> hgroup > h1) ~ .thread > article > header {
+  display: none;
+}
+
+/* ==== Thread: connect reply posts to parent ==== */
+main.container > .thread {
+  position: relative;
+  margin-bottom: 0;
+}
+
+/* Parent post in a thread: keep normal */
+main.container > .thread > article:first-child {
+  margin-bottom: 0;
+}
+
+/* Reply posts: indent with left connecting line */
+main.container > .thread > article:not(:first-child) {
+  margin-left: 1.75rem;
+  padding-left: calc(var(--indent) - 0.25rem);
+  border-left: 2px solid var(--line);
+  background: #fff;
+}
+
+/* Subtler date header on replies */
+main.container > div:has(> hgroup > h1) ~ .thread > article:not(:first-child) > footer {
+  border-bottom-color: var(--line);
+  color: #888;
+}
+main.container > div:has(> hgroup > h1) ~ .thread > article:not(:first-child) > footer a,
+main.container > div:has(> hgroup > h1) ~ .thread > article:not(:first-child) > footer small {
+  color: #888 !important;
+}
+
+/* Thread hover: keep .note-style padding shift on parent only */
+main.container > .thread > article:not(:first-child):hover {
+  padding-left: calc(var(--indent) - 0.5rem);
+  border-left: 2px solid black;
 }
 
 /* Bio */

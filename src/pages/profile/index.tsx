@@ -1,4 +1,4 @@
-import { and, count, desc, eq, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, isNull, or, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import xss from "xss";
 import { Layout } from "../../components/Layout.tsx";
@@ -58,6 +58,7 @@ profile.get<"/:handle">(async (c) => {
       and(
         eq(posts.accountId, owner.id),
         or(eq(posts.visibility, "public"), eq(posts.visibility, "unlisted")),
+        isNull(posts.replyTargetId),
       ),
     );
   const maxPage = Math.ceil(totalPosts / PAGE_SIZE);
@@ -68,6 +69,7 @@ profile.get<"/:handle">(async (c) => {
     where: and(
       eq(posts.accountId, owner.id),
       or(eq(posts.visibility, "public"), eq(posts.visibility, "unlisted")),
+      isNull(posts.replyTargetId),
     ),
     orderBy: desc(posts.id),
     limit: PAGE_SIZE,
@@ -76,6 +78,47 @@ profile.get<"/:handle">(async (c) => {
       account: true,
       media: true,
       poll: { with: { options: true } },
+      replies: {
+        where: or(
+          eq(posts.visibility, "public"),
+          eq(posts.visibility, "unlisted"),
+        ),
+        orderBy: posts.id,
+        with: {
+          account: true,
+          media: true,
+          poll: { with: { options: true } },
+          replyTarget: { with: { account: true } },
+          quoteTarget: {
+            with: {
+              account: true,
+              media: true,
+              poll: { with: { options: true } },
+              replyTarget: { with: { account: true } },
+              reactions: true,
+            },
+          },
+          reactions: true,
+          sharing: {
+            with: {
+              account: true,
+              media: true,
+              poll: { with: { options: true } },
+              replyTarget: { with: { account: true } },
+              quoteTarget: {
+                with: {
+                  account: true,
+                  media: true,
+                  poll: { with: { options: true } },
+                  replyTarget: { with: { account: true } },
+                  reactions: true,
+                },
+              },
+              reactions: true,
+            },
+          },
+        },
+      },
       sharing: {
         with: {
           account: true,
@@ -228,6 +271,47 @@ profile.get("/tagged/:tag", async (c) => {
       account: true,
       media: true,
       poll: { with: { options: true } },
+      replies: {
+        where: or(
+          eq(posts.visibility, "public"),
+          eq(posts.visibility, "unlisted"),
+        ),
+        orderBy: posts.id,
+        with: {
+          account: true,
+          media: true,
+          poll: { with: { options: true } },
+          replyTarget: { with: { account: true } },
+          quoteTarget: {
+            with: {
+              account: true,
+              media: true,
+              poll: { with: { options: true } },
+              replyTarget: { with: { account: true } },
+              reactions: true,
+            },
+          },
+          reactions: true,
+          sharing: {
+            with: {
+              account: true,
+              media: true,
+              poll: { with: { options: true } },
+              replyTarget: { with: { account: true } },
+              quoteTarget: {
+                with: {
+                  account: true,
+                  media: true,
+                  poll: { with: { options: true } },
+                  replyTarget: { with: { account: true } },
+                  reactions: true,
+                },
+              },
+              reactions: true,
+            },
+          },
+        },
+      },
       sharing: {
         with: {
           account: true,
@@ -278,42 +362,46 @@ profile.get("/tagged/:tag", async (c) => {
   );
 });
 
+type PostWithDetails = Post & {
+  account: Account;
+  media: Medium[];
+  poll: (Poll & { options: PollOption[] }) | null;
+  sharing:
+    | (Post & {
+        account: Account;
+        media: Medium[];
+        poll: (Poll & { options: PollOption[] }) | null;
+        replyTarget: (Post & { account: Account }) | null;
+        quoteTarget:
+          | (Post & {
+              account: Account;
+              media: Medium[];
+              poll: (Poll & { options: PollOption[] }) | null;
+              replyTarget: (Post & { account: Account }) | null;
+              reactions: Reaction[];
+            })
+          | null;
+        reactions: Reaction[];
+      })
+    | null;
+  replyTarget: (Post & { account: Account }) | null;
+  quoteTarget:
+    | (Post & {
+        account: Account;
+        media: Medium[];
+        poll: (Poll & { options: PollOption[] }) | null;
+        replyTarget: (Post & { account: Account }) | null;
+        reactions: Reaction[];
+      })
+    | null;
+  reactions: Reaction[];
+};
+
 interface ProfilePageProps {
   readonly accountOwner: AccountOwner & { account: Account };
   readonly tag?: string;
-  readonly posts: (Post & {
-    account: Account;
-    media: Medium[];
-    poll: (Poll & { options: PollOption[] }) | null;
-    sharing:
-      | (Post & {
-          account: Account;
-          media: Medium[];
-          poll: (Poll & { options: PollOption[] }) | null;
-          replyTarget: (Post & { account: Account }) | null;
-          quoteTarget:
-            | (Post & {
-                account: Account;
-                media: Medium[];
-                poll: (Poll & { options: PollOption[] }) | null;
-                replyTarget: (Post & { account: Account }) | null;
-                reactions: Reaction[];
-              })
-            | null;
-          reactions: Reaction[];
-        })
-      | null;
-    replyTarget: (Post & { account: Account }) | null;
-    quoteTarget:
-      | (Post & {
-          account: Account;
-          media: Medium[];
-          poll: (Poll & { options: PollOption[] }) | null;
-          replyTarget: (Post & { account: Account }) | null;
-          reactions: Reaction[];
-        })
-      | null;
-    reactions: Reaction[];
+  readonly posts: (PostWithDetails & {
+    replies: PostWithDetails[];
   })[];
   readonly pinnedPosts: (Post & {
     account: Account;
@@ -412,7 +500,12 @@ function ProfilePage({
       {tag == null &&
         pinnedPosts.map((post) => <PostView post={post} pinned={true} />)}
       {posts.map((post) => (
-        <PostView post={post} />
+        <div class={post.replies.length > 0 ? "thread" : undefined}>
+          <PostView post={post} />
+          {post.replies.map((reply) => (
+            <PostView post={reply} />
+          ))}
+        </div>
       ))}
       <div style={{ display: "flex", justifyContent: "space-between" }}>
         <div>{newerUrl && <a href={newerUrl}>&larr; Newer</a>}</div>
