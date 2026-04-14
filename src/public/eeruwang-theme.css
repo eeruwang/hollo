@@ -534,7 +534,33 @@ main.container > div > hgroup > p {
   padding-top: 0.25rem;
 }
 
-/* --- 2026 hero cover — natural vignette gradient --- */
+/* --- 2026 hero cover — seamless vignette overlay --- */
+
+/* Profile wrapper: relative positioning for absolute gradient overlay */
+main.container > div:has(> img[style*="width: 100%"]) {
+  position: relative;
+}
+
+/* Natural gradient overlay ON the cover image itself (pseudo-element) */
+main.container > div:has(> img[style*="width: 100%"])::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  aspect-ratio: 5 / 2;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.7) 0%,
+    rgba(0, 0, 0, 0.5) 15%,
+    rgba(0, 0, 0, 0.25) 40%,
+    rgba(0, 0, 0, 0.05) 70%,
+    transparent 85%
+  );
+  border-radius: 16px;
+  pointer-events: none;
+  z-index: 1;
+}
 
 /* Cover image — cinematic crop */
 main.container > div > img[style*="width: 100%"] {
@@ -543,25 +569,19 @@ main.container > div > img[style*="width: 100%"] {
   aspect-ratio: 5 / 2;
   object-fit: cover;
   display: block;
+  position: relative;
+  z-index: 0;
 }
 
-/* Profile hgroup — fully on cover with natural vignette */
+/* Profile hgroup — transparent, sits on darkened cover bottom */
 main.container > div > img[style*="width: 100%"] + hgroup {
-  margin-top: -160px;
-  min-height: 160px;
+  margin-top: -150px;
+  min-height: 150px;
   box-sizing: border-box;
   position: relative;
-  z-index: 1;
+  z-index: 2;
   padding: 32px var(--indent) 16px;
-  background: linear-gradient(
-    to top,
-    rgba(0, 0, 0, 0.75) 0%,
-    rgba(0, 0, 0, 0.55) 25%,
-    rgba(0, 0, 0, 0.3) 55%,
-    rgba(0, 0, 0, 0.08) 85%,
-    transparent 100%
-  );
-  border-radius: 0 0 16px 16px;
+  background: transparent;
 }
 
 /* Avatar on cover — stronger shadow */
@@ -875,8 +895,8 @@ main.container > div[style*="justify-content"] a:hover {
 
   /* Profile hero — adjusted overlap on mobile */
   main.container > div > img[style*="width: 100%"] + hgroup {
-    margin-top: -140px;
-    min-height: 140px;
+    margin-top: -130px;
+    min-height: 130px;
     padding: 24px var(--indent) 14px;
   }
 }
