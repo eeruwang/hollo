@@ -534,7 +534,7 @@ main.container > div > hgroup > p {
   padding-top: 0.25rem;
 }
 
-/* --- 2026 hero cover — seamless vignette overlay --- */
+/* --- 2026 editorial cover — flat edges, natural vignette --- */
 
 /* Profile wrapper: relative positioning for absolute gradient overlay */
 main.container > div:has(> img[style*="width: 100%"]) {
@@ -551,20 +551,20 @@ main.container > div:has(> img[style*="width: 100%"])::after {
   height: 280px;
   background: linear-gradient(
     to top,
-    rgba(0, 0, 0, 0.7) 0%,
-    rgba(0, 0, 0, 0.5) 15%,
-    rgba(0, 0, 0, 0.25) 40%,
-    rgba(0, 0, 0, 0.05) 70%,
-    transparent 85%
+    rgba(0, 0, 0, 0.55) 0%,
+    rgba(0, 0, 0, 0.45) 20%,
+    rgba(0, 0, 0, 0.35) 40%,
+    rgba(0, 0, 0, 0.18) 65%,
+    rgba(0, 0, 0, 0.05) 85%,
+    transparent 100%
   );
-  border-radius: 16px;
   pointer-events: none;
   z-index: 1;
 }
 
-/* Cover image — fixed height, object-fit crop */
+/* Cover image — flat edges (editorial 2026), fixed height */
 main.container > div > img[style*="width: 100%"] {
-  border-radius: 16px !important;
+  border-radius: 0 !important;
   margin-bottom: 0 !important;
   width: 100%;
   height: 280px;
@@ -574,16 +574,25 @@ main.container > div > img[style*="width: 100%"] {
   z-index: 0;
 }
 
-/* Profile hgroup — sits inside cover's bottom 150px */
+/* Profile hgroup — absolute positioned on cover, space below */
 main.container > div > img[style*="width: 100%"] + hgroup {
-  margin-top: -150px;
-  height: 150px;
+  position: absolute;
+  top: 100px;
+  left: 0;
+  right: 0;
+  height: 140px;
   box-sizing: border-box;
-  position: relative;
+  margin: 0;
   z-index: 2;
-  padding: 32px var(--indent) 16px;
+  padding: 24px var(--indent) 16px;
   background: transparent;
   overflow: hidden;
+}
+
+/* Bio sits below cover (cover takes full 280px height) */
+main.container > div > img[style*="width: 100%"] + hgroup + div {
+  margin-top: 1.5rem !important;
+  clear: none;
 }
 
 /* Avatar on cover — stronger shadow */
@@ -971,9 +980,9 @@ main.container > div[style*="justify-content"] a:hover {
     height: 200px;
   }
   main.container > div > img[style*="width: 100%"] + hgroup {
-    margin-top: -130px;
-    height: 130px;
-    padding: 24px var(--indent) 14px;
+    top: 70px;
+    height: 115px;
+    padding: 18px var(--indent) 12px;
   }
 }
 
