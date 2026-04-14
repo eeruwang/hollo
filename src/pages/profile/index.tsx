@@ -506,7 +506,7 @@ function ProfilePage({
     >
       <Profile accountOwner={accountOwner} />
       <section class="profile-timeline">
-        {tag != null && <h2>Posts tagged #{tag}</h2>}
+        <h2>{tag != null ? `Posts tagged #${tag}` : "Posts"}</h2>
         {featuredTags.length > 0 && (
           <p>
             Featured tags:{" "}

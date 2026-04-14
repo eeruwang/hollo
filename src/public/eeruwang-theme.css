@@ -518,9 +518,14 @@ footer {
 }
 .profile-footer .contact-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 1.2rem;
   margin: 0 0 2rem;
+}
+@media (max-width: 500px) {
+  .profile-footer .contact-grid {
+    grid-template-columns: 1fr;
+  }
 }
 .profile-footer .contact-item label {
   display: block;
@@ -637,7 +642,7 @@ main.container > div > hgroup > h1 {
   line-height: 1.15 !important;
   color: #000 !important;
   text-shadow: none !important;
-  margin: 12px 0 0 !important;
+  margin: 80px 0 0 !important;
   text-wrap: balance;
 }
 main.container > div > hgroup > h1 a {
@@ -981,10 +986,6 @@ main.container > div[style*="justify-content"] a:hover {
     grid-template-columns: 1fr;
   }
 
-  /* Profile footer: single column on mobile */
-  .profile-footer .contact-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
