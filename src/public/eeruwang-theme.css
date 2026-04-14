@@ -690,8 +690,11 @@ main.container > div > hgroup > h1 a {
 .profile-timeline > article {
   padding: 14px 16px 14px var(--indent) !important;
   background: #f9f8f8 !important;
-  border: none !important;
-  border-bottom: 1px solid var(--line) !important;
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-bottom: 1px solid #d8d8d8 !important;
+  border-radius: 0 !important;
 }
 
 /* Compact content with bold first paragraph + " – " separator */
