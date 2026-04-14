@@ -622,47 +622,34 @@ main.container > div > img[style*="width: 100%"] + hgroup [data-tooltip] {
   border-bottom-color: rgba(255, 255, 255, 0.4);
 }
 
-/* --- Profile page posts — hide author, promote date to header --- */
+/* --- Profile page posts — hide author, use month group headers --- */
 
 /* Scope: .profile-timeline wraps all posts on /@handle and /@handle/tagged */
-
-/* Flex column so footer can be reordered to top */
-.profile-timeline article,
-.profile-timeline .thread > article {
-  display: flex;
-  flex-direction: column;
-}
 
 /* Hide post header (avatar + name + handle) — single-user instance */
 .profile-timeline article > header {
   display: none;
 }
 
-/* Date header (blog .date style) — on thread parent and standalone posts */
-.profile-timeline .thread > article:first-child > footer,
-.profile-timeline > article > footer {
-  order: -1;
-  margin: 0 0 14px;
-  padding: 0 0 4px;
-  border-top: none;
-  border-bottom: 1px solid #333;
-  font-size: 0.72em;
+/* Month group header (blog .date style) */
+.profile-timeline .date-group {
+  padding-bottom: 2px;
   text-transform: uppercase;
   font-weight: bold;
+  font-size: 0.72em;
   color: #333;
+  border-bottom: 1px solid #333;
+  margin-top: 60px;
+  margin-bottom: 0;
   letter-spacing: 0.05em;
 }
-.profile-timeline .thread > article:first-child > footer p,
-.profile-timeline > article > footer p {
-  margin: 0;
+.profile-timeline .date-group:first-of-type {
+  margin-top: 24px;
 }
-.profile-timeline .thread > article:first-child > footer a,
-.profile-timeline .thread > article:first-child > footer small,
-.profile-timeline > article > footer a,
-.profile-timeline > article > footer small {
-  color: #333 !important;
-  font-size: inherit !important;
-  text-decoration: none !important;
+
+/* Hide per-post date footer on profile timeline (date shown in group header) */
+.profile-timeline article > footer {
+  display: none;
 }
 
 /* Standalone posts (no replies) — blog .note style with date header */
@@ -999,6 +986,11 @@ main.container > div[style*="justify-content"] a:hover {
 /* Reduce top margin when dashboard header is present */
 main.container:has(> header:first-child) {
   margin-block: clamp(16px, 3vw, 32px);
+}
+
+/* Reduce top margin on profile pages (cover should be near the top) */
+main.container:has(> div > img[style*="width: 100%"]) {
+  margin-block-start: clamp(16px, 2vw, 32px);
 }
 
 header nav {

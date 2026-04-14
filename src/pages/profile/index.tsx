@@ -397,6 +397,29 @@ type PostWithDetails = Post & {
   reactions: Reaction[];
 };
 
+function groupByMonth<T extends { published: Date | null; updated: Date }>(
+  items: T[],
+): { label: string; posts: T[] }[] {
+  const groups: { label: string; posts: T[] }[] = [];
+  let currentKey: string | null = null;
+  for (const item of items) {
+    const date = item.published ?? item.updated;
+    const key = `${date.getFullYear()}-${date.getMonth()}`;
+    if (key !== currentKey) {
+      groups.push({
+        label: date.toLocaleDateString("en-US", {
+          month: "long",
+          year: "numeric",
+        }),
+        posts: [],
+      });
+      currentKey = key;
+    }
+    groups[groups.length - 1].posts.push(item);
+  }
+  return groups;
+}
+
 interface ProfilePageProps {
   readonly accountOwner: AccountOwner & { account: Account };
   readonly tag?: string;
@@ -500,18 +523,23 @@ function ProfilePage({
         )}
         {tag == null &&
           pinnedPosts.map((post) => <PostView post={post} pinned={true} />)}
-        {posts.map((post) =>
-          post.replies.length > 0 ? (
-            <div class="thread">
-              <PostView post={post} />
-              {post.replies.map((reply) => (
-                <PostView post={reply} />
-              ))}
-            </div>
-          ) : (
-            <PostView post={post} />
-          ),
-        )}
+        {groupByMonth(posts).map((group) => (
+          <>
+            <div class="date-group">{group.label}</div>
+            {group.posts.map((post) =>
+              post.replies.length > 0 ? (
+                <div class="thread">
+                  <PostView post={post} />
+                  {post.replies.map((reply) => (
+                    <PostView post={reply} />
+                  ))}
+                </div>
+              ) : (
+                <PostView post={post} />
+              ),
+            )}
+          </>
+        ))}
       </section>
       <div style={{ display: "flex", justifyContent: "space-between" }}>
         <div>{newerUrl && <a href={newerUrl}>&larr; Newer</a>}</div>
