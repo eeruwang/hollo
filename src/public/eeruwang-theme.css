@@ -688,7 +688,7 @@ main.container > div > hgroup > h1 a {
 
 /* Standalone posts (no replies) — blog .note style with date header */
 .profile-timeline > article {
-  padding: 18px 16px 22px var(--indent) !important;
+  padding: 18px 16px 30px var(--indent) !important;
   background: #f9f8f8 !important;
   border: none !important;
   border-bottom: 1px solid var(--line) !important;
@@ -726,7 +726,7 @@ main.container > div > hgroup > h1 a {
 /* Thread container is the single .note card */
 .profile-timeline .thread {
   position: relative;
-  padding: 18px 16px 22px var(--indent);
+  padding: 18px 16px 30px var(--indent);
   background: #f9f8f8;
   border-bottom: 1px solid var(--line);
   margin-bottom: 0;
@@ -815,7 +815,7 @@ main.container > article,
   font-size: 100% !important;
   word-spacing: normal !important;
   letter-spacing: normal !important;
-  padding: 18px 16px 22px var(--indent);
+  padding: 18px 16px 30px var(--indent);
   background: #f9f8f8;
   border: none;
   border-bottom: 1px solid var(--line);
