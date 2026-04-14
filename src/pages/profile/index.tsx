@@ -550,7 +550,17 @@ function ProfilePage({
         <div class="contact-grid">
           <div class="contact-item">
             <label>Handle</label>
-            <p style="user-select: all;">@{accountOwner.handle}</p>
+            <div class="handle-with-avatar">
+              {accountOwner.account.avatarUrl && (
+                <img
+                  src={accountOwner.account.avatarUrl}
+                  alt=""
+                  width={16}
+                  height={16}
+                />
+              )}
+              <span style="user-select: all;">@{accountOwner.handle}</span>
+            </div>
           </div>
           <div class="contact-item">
             <label>Following</label>
@@ -558,11 +568,7 @@ function ProfilePage({
           </div>
           <div class="contact-item">
             <label>Followers</label>
-            <p>
-              {accountOwner.account.followersCount === 1
-                ? "1"
-                : accountOwner.account.followersCount}
-            </p>
+            <p>{accountOwner.account.followersCount}</p>
           </div>
         </div>
         {accountOwner.account.fieldHtmls != null &&
