@@ -688,10 +688,16 @@ main.container > div > hgroup > h1 a {
 
 /* Standalone posts (no replies) — blog .note style with date header */
 .profile-timeline > article {
-  padding: 18px 16px 30px var(--indent) !important;
+  padding: 14px 16px 14px var(--indent) !important;
   background: #f9f8f8 !important;
   border: none !important;
   border-bottom: 1px solid var(--line) !important;
+  margin-bottom: 16px !important;
+}
+
+/* Same vertical gap after thread blocks */
+.profile-timeline > .thread {
+  margin-bottom: 16px;
 }
 
 /* Compact content with bold first paragraph + " – " separator */
@@ -726,7 +732,7 @@ main.container > div > hgroup > h1 a {
 /* Thread container is the single .note card */
 .profile-timeline .thread {
   position: relative;
-  padding: 18px 16px 30px var(--indent);
+  padding: 14px 16px 14px var(--indent);
   background: #f9f8f8;
   border-bottom: 1px solid var(--line);
   margin-bottom: 0;
@@ -815,7 +821,7 @@ main.container > article,
   font-size: 100% !important;
   word-spacing: normal !important;
   letter-spacing: normal !important;
-  padding: 18px 16px 30px var(--indent);
+  padding: 14px 16px 14px var(--indent);
   background: #f9f8f8;
   border: none;
   border-bottom: 1px solid var(--line);
