@@ -866,6 +866,12 @@ article:last-child {
   border-bottom: none;
 }
 
+/* Space above standalone buttons/links after article cards */
+article ~ a[role="button"],
+article ~ form {
+  margin-top: 1.5rem;
+}
+
 .pico-color-eeruwang-500 {
   color: #d97757;
 }
