@@ -1,5 +1,6 @@
 import type { PropsWithChildren } from "hono/jsx";
-import metadata from "../../package.json";
+import db from "../db";
+import { accountOwners } from "../schema";
 import { Layout, type LayoutProps } from "./Layout";
 
 export type Menu = "social" | "accounts" | "emojis" | "federation" | "settings";
@@ -8,11 +9,17 @@ export interface DashboardLayoutProps extends LayoutProps {
   selectedMenu?: Menu;
 }
 
-export function DashboardLayout(
+export async function DashboardLayout(
   props: PropsWithChildren<DashboardLayoutProps>,
 ) {
+  let themeColor = props.themeColor;
+  if (themeColor == null) {
+    const owner = await db.query.accountOwners.findFirst();
+    themeColor = owner?.themeColor ?? "azure";
+  }
+
   return (
-    <Layout {...props}>
+    <Layout {...props} themeColor={themeColor}>
       <header>
         <nav>
           <ul>
