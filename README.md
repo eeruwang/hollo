@@ -4,30 +4,55 @@
 </picture>
 
 
-Hollo
-=====
+Hollo eeruwang fork
+===================
 
-[![Matrix][Matrix badge]][Matrix]
-[![Discord][Discord badge]][Discord]
-[![Official Hollo][Official Hollo badge]][Official Hollo]
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/template?repo=https://github.com/eeruwang/hollo)
 
-Hollo is a federated single-user microblogging software powered by [Fedify].
-Although it is for single-user, it is designed to be federated through
-[ActivityPub], which means that you can follow and be followed by other users
-from other instances, even from other software that supports ActivityPub like
-Mastodon, Misskey, and so on.
+A customized fork of [Hollo](https://github.com/fedify-dev/hollo), a federated
+single-user microblogging software powered by [Fedify] and [ActivityPub].
 
-Hollo does not have its own web interface.  Instead, it implements
-Mastodon-compatible APIs so that you can integrate it with the most of
-the [existing Mastodon clients](https://docs.hollo.social/clients/).
+This fork adds the following features on top of the original Hollo:
 
-[Matrix badge]: https://img.shields.io/matrix/hollo-users%3Amatrix.org?logo=matrix
-[Matrix]: https://matrix.to/#/%23hollo-users:matrix.org
-[Discord badge]: https://img.shields.io/discord/1295652627505217647?logo=discord&cacheSeconds=60
-[Discord]: https://discord.gg/hGXXxUq2jK
-[Official Hollo]: https://hollo.social/@hollo
-[Official Hollo badge]: https://fedi-badge.deno.dev/@hollo@hollo.social/followers.svg
+### eeruwang Theme
+- Custom theme inspired by the [alignment.anthropic.com](https://alignment.anthropic.com) aesthetic
+- Anthropic-inspired color palette (clay, ivory, oat)
+- Left-aligned container layout with clean typography
+- Post cards with hover border effects
+- Selectable from the dashboard theme picker
+
+### Dashboard Social Tab
+- Compose and publish posts directly from the dashboard
+- View recent posts timeline
+- No need for a separate Mastodon client for basic posting
+
+### Webhook Notifications
+- Configure webhook URLs (Discord, Slack, etc.) from the dashboard
+- Trigger on events: mention, reblog, follow, favourite, emoji reaction, poll, status
+
+### Filter v2 API
+- Mastodon-compatible content filtering (`/api/v2/filters`)
+- Filter actions: warn, hide
+- Keyword-based filtering with whole-word matching
+- Filter contexts: home, notifications, public, thread, account
+
+### Backup
+- Archive backup (JSON or Markdown with embedded images)
+- Full Hollo backup for migration (database + media)
+- Accessible from the dashboard Backup tab
+
+### Other
+- Deploy on Railway button for one-click deployment
+
+---
+
+## Upstream
+
+This fork is based on the original Hollo by [Fedify](https://fedify.dev/).
+
+- Upstream repository: [fedify-dev/hollo](https://github.com/fedify-dev/hollo)
+- Original docs: [docs.hollo.social](https://docs.hollo.social/)
+
 [Fedify]: https://fedify.dev/
 [ActivityPub]: https://www.w3.org/TR/activitypub/
 
