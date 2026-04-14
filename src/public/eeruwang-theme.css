@@ -629,8 +629,9 @@ main.container > div > img[style*="width: 100%"] + hgroup [data-tooltip] {
   display: none;
 }
 
-/* Date header on thread parent only (blog .date style) */
-.profile-timeline .thread > article:first-child > footer {
+/* Date header (blog .date style) — on thread parent and standalone posts */
+.profile-timeline .thread > article:first-child > footer,
+.profile-timeline > article > footer {
   order: -1;
   margin: 0 0 14px;
   padding: 0 0 4px;
@@ -642,27 +643,25 @@ main.container > div > img[style*="width: 100%"] + hgroup [data-tooltip] {
   color: #333;
   letter-spacing: 0.05em;
 }
-.profile-timeline .thread > article:first-child > footer p {
+.profile-timeline .thread > article:first-child > footer p,
+.profile-timeline > article > footer p {
   margin: 0;
 }
 .profile-timeline .thread > article:first-child > footer a,
-.profile-timeline .thread > article:first-child > footer small {
+.profile-timeline .thread > article:first-child > footer small,
+.profile-timeline > article > footer a,
+.profile-timeline > article > footer small {
   color: #333 !important;
   font-size: inherit !important;
   text-decoration: none !important;
 }
 
-/* Standalone posts (no replies) — blog .note style */
+/* Standalone posts (no replies) — blog .note style with date header */
 .profile-timeline > article {
   padding: 14px 16px 14px var(--indent) !important;
   background: #f9f8f8 !important;
   border: none !important;
   border-bottom: 1px solid var(--line) !important;
-}
-
-/* Hide date on standalone posts (.note items show no date) */
-.profile-timeline > article > footer {
-  display: none;
 }
 
 /* Compact content with bold first paragraph + " – " separator */
