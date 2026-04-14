@@ -791,8 +791,8 @@ main.container > article,
 }
 main.container > article:hover,
 .profile-timeline > article:hover {
-  padding-left: calc(var(--indent) - 2px);
-  border-left: 2px solid black;
+  padding-left: calc(var(--indent) - 2px) !important;
+  border-left: 2px solid black !important;
 }
 
 /* Pinned post */
