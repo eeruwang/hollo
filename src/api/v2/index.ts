@@ -7,7 +7,17 @@ import {
 } from "@fedify/vocab";
 import { zValidator } from "@hono/zod-validator";
 import { getLogger } from "@logtape/logtape";
-import { and, desc, eq, ilike, inArray, lte, or, sql } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  ilike,
+  inArray,
+  isNull,
+  lte,
+  or,
+  sql,
+} from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 import { db } from "../../db";
@@ -21,18 +31,20 @@ import {
   tokenRequired,
   type Variables,
 } from "../../oauth/middleware";
+import { HANDLE_PATTERN } from "../../patterns";
 import { type Account, accounts, posts } from "../../schema";
+import { buildSearchFilter, parseSearchQuery } from "../../search";
 import { uuid } from "../../uuid";
 import { postMedia } from "../v1/media";
 import filtersApi from "./filters";
 import instance from "./instance";
-import notifications from "./notifications";
+import notificationsRoutes from "./notifications";
 
 const app = new Hono<{ Variables: Variables }>();
 
 app.route("/filters", filtersApi);
 app.route("/instance", instance);
-app.route("/notifications", notifications);
+app.route("/notifications", notificationsRoutes);
 
 app.post("/media", tokenRequired, scopeRequired(["write:media"]), postMedia);
 
@@ -52,7 +64,7 @@ app.get(
         .string()
         .regex(/\d+/)
         .default("20")
-        .transform((v) => Number.parseInt(v, 10)),
+        .transform((v) => Math.min(40, Math.max(1, Number.parseInt(v, 10)))),
       offset: z
         .string()
         .regex(/\d+/)
@@ -66,6 +78,12 @@ app.get(
     if (owner == null) return c.json({ error: "invalid_token" }, 401);
     const query = c.req.valid("query");
     const q = query.q.trim();
+    // Check if query is a URL (for post search optimization)
+    const isUrlQuery = q.startsWith("http://") || q.startsWith("https://");
+    // Check if query is a WebFinger handle (e.g., @user@domain or user@domain)
+    const isHandleQuery = HANDLE_PATTERN.test(q);
+    // Remote lookup should only be attempted for URL or handle queries
+    const isResolvableQuery = isUrlQuery || isHandleQuery;
     const users =
       query.offset < 1
         ? await db.query.accounts.findMany({
@@ -83,6 +101,7 @@ app.get(
         ? await db.query.posts.findMany({
             where: and(
               or(eq(posts.iri, q), eq(posts.url, q)),
+              isNull(posts.sharingId),
               lte(posts.published, sql`NOW() + INTERVAL '5 minutes'`),
             ),
             with: getPostRelations(owner.id),
@@ -98,6 +117,7 @@ app.get(
     let resolved: Object | null = null;
     if (
       query.resolve === "true" &&
+      isResolvableQuery &&
       query.offset < 1 &&
       users.length < 1 &&
       statuses.length < 1
@@ -139,52 +159,74 @@ app.get(
       }
     }
     if (query.type == null || query.type === "statuses") {
-      let filter = ilike(posts.content, `%${q}%`);
-      if (query.account_id != null) {
-        filter = and(filter, eq(posts.accountId, query.account_id))!;
+      // Skip full-text search for URL queries (already handled by cache lookup)
+      // Only perform content search for non-URL queries
+      if (!isUrlQuery) {
+        // Parse search query with advanced operators
+        const searchAst = parseSearchQuery(q);
+        const searchFilter = searchAst
+          ? buildSearchFilter(searchAst)
+          : sql`TRUE`;
+
+        let filter = and(searchFilter, isNull(posts.sharingId))!;
+        if (query.account_id != null) {
+          filter = and(filter, eq(posts.accountId, query.account_id))!;
+        }
+        const hits = await db.query.posts.findMany({
+          where: filter,
+          limit: query.limit,
+          offset: query.offset,
+        });
+        const result =
+          hits == null || hits.length < 1
+            ? []
+            : await db.query.posts.findMany({
+                where: inArray(
+                  posts.id,
+                  // biome-ignore lint/complexity/useLiteralKeys: tsc rants about this (TS4111)
+                  hits.map((hit) => hit["id"]),
+                ),
+                with: getPostRelations(owner.id),
+                orderBy: [
+                  desc(eq(posts.iri, q)),
+                  desc(eq(posts.url, q)),
+                  desc(posts.published),
+                  desc(posts.updated),
+                ],
+              });
+        for (const post of result) {
+          if (statuses.some((s) => s.id === post.id)) continue;
+          statuses.push(post);
+        }
       }
-      const hits = await db.query.posts.findMany({
-        where: filter,
-        limit: query.limit,
-        offset: query.offset,
-      });
-      if (
-        hits != null &&
-        (resolved instanceof Note || resolved instanceof Article)
-      ) {
+      // Handle resolved object from lookupObject (for URL queries)
+      if (resolved instanceof Note || resolved instanceof Article) {
         const resolvedPost = await persistPost(
           db,
           resolved,
           c.req.url,
           options,
         );
-        if (resolvedPost != null) hits.push(resolvedPost);
-      }
-      const result =
-        hits == null || hits.length < 1
-          ? []
-          : await db.query.posts.findMany({
-              where: inArray(
-                posts.id,
-                // biome-ignore lint/complexity/useLiteralKeys: tsc rants about this (TS4111)
-                hits.map((hit) => hit["id"]),
-              ),
+        if (resolvedPost != null) {
+          // Check if already in statuses from cache lookup
+          if (!statuses.some((s) => s.id === resolvedPost.id)) {
+            // Fetch with relations
+            const fullPost = await db.query.posts.findFirst({
+              where: eq(posts.id, resolvedPost.id),
               with: getPostRelations(owner.id),
-              orderBy: [
-                desc(eq(posts.iri, q)),
-                desc(eq(posts.url, q)),
-                desc(posts.published),
-                desc(posts.updated),
-              ],
             });
-      for (const post of result) {
-        if (statuses.some((s) => s.id === post.id)) continue;
-        statuses.push(post);
+            if (fullPost != null) statuses.push(fullPost);
+          }
+        }
       }
     }
     return c.json({
-      accounts: users.map((u) => serializeAccount(u, c.req.url)),
-      statuses: statuses.map((s) => serializePost(s, owner, c.req.url)),
+      accounts: users
+        .slice(0, query.limit)
+        .map((u) => serializeAccount(u, c.req.url)),
+      statuses: statuses
+        .slice(0, query.limit)
+        .map((s) => serializePost(s, owner, c.req.url)),
       hashtags: [],
     });
   },
