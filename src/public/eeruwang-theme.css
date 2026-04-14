@@ -534,7 +534,7 @@ main.container > div > hgroup > p {
   padding-top: 0.25rem;
 }
 
-/* --- 2026 hero cover — profile info fully on cover --- */
+/* --- 2026 hero cover — glassmorphism profile overlay --- */
 
 /* Cover image — cinematic crop */
 main.container > div > img[style*="width: 100%"] {
@@ -545,29 +545,28 @@ main.container > div > img[style*="width: 100%"] {
   display: block;
 }
 
-/* Profile hgroup — fully overlaid on cover with gradient */
+/* Profile hgroup — frosted glass fully on cover */
 main.container > div > img[style*="width: 100%"] + hgroup {
-  margin-top: -120px;
+  margin-top: -160px;
   position: relative;
   z-index: 1;
-  padding: 40px var(--indent) 16px;
-  background: linear-gradient(
-    to top,
-    rgba(0, 0, 0, 0.55) 0%,
-    rgba(0, 0, 0, 0.15) 65%,
-    transparent 100%
-  );
+  padding: 32px var(--indent) 20px;
+  background: rgba(0, 0, 0, 0.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  backdrop-filter: blur(20px) saturate(1.4);
   border-radius: 0 0 16px 16px;
 }
 
-/* Avatar on cover — stronger shadow */
+/* Avatar on cover — stronger shadow + border */
 main.container > div > img[style*="width: 100%"] + hgroup img[style*="float: left"] {
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  border: 3px solid rgba(255, 255, 255, 0.8);
 }
 
 /* Name — white on cover */
 main.container > div > img[style*="width: 100%"] + hgroup > h1 {
   color: #fff !important;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 main.container > div > img[style*="width: 100%"] + hgroup > h1 a {
   color: #fff !important;
@@ -576,7 +575,8 @@ main.container > div > img[style*="width: 100%"] + hgroup > h1 a {
 
 /* Handle — semi-transparent white on cover */
 main.container > div > img[style*="width: 100%"] + hgroup > p {
-  color: rgba(255, 255, 255, 0.8) !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 
 /* Tooltip on cover — light underline */
@@ -788,10 +788,10 @@ main.container > div[style*="justify-content"] a:hover {
     grid-template-columns: 1fr;
   }
 
-  /* Profile hero — smaller overlap on mobile */
+  /* Profile hero — adjusted overlap on mobile */
   main.container > div > img[style*="width: 100%"] + hgroup {
-    margin-top: -100px;
-    padding: 30px var(--indent) 12px;
+    margin-top: -130px;
+    padding: 24px var(--indent) 16px;
   }
 }
 
