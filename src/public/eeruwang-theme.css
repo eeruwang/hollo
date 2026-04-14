@@ -176,16 +176,16 @@ article {
   text-decoration: none;
   color: #000;
   border-bottom: 1px solid var(--line);
-  padding: 20px 16px 20px var(--indent, 16px);
+  padding: 24px 20px;
   background: #f9f8f8;
   margin-bottom: 0;
   border-radius: 0;
   box-shadow: none;
-  transition: padding-left 0.1s ease, border-left 0.1s ease;
+  transition: border-left 0.15s ease;
+  border-left: 3px solid transparent;
 }
 article:hover {
-  padding-left: calc(var(--indent, 16px) - 2px);
-  border-left: 2px solid black;
+  border-left: 3px solid var(--anthropic-clay);
 }
 
 article header {
@@ -434,9 +434,85 @@ footer {
   overflow: auto;
 }
 
+/* Cover image */
+img[style*="width: 100%"] {
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
 /* Avatar styling */
 img[style*="float: left"] {
   border-radius: 50%;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Profile hgroup */
+main.container > hgroup {
+  margin-bottom: 2rem;
+}
+
+main.container > hgroup h1 {
+  font-size: 200%;
+  margin-bottom: 0.25rem;
+}
+
+main.container > hgroup h1 a {
+  color: #000;
+  text-decoration: none;
+}
+
+main.container > hgroup p {
+  color: #666;
+  font-size: 0.9em;
+}
+
+/* Profile fields table */
+main.container > .overflow-auto table {
+  font-size: 0.9em;
+  margin-bottom: 2rem;
+}
+
+/* Post cards on profile */
+main.container > article {
+  font-size: 100% !important;
+  word-spacing: normal !important;
+  letter-spacing: normal !important;
+}
+
+main.container > article header hgroup h5 {
+  font-size: 1em;
+  font-weight: 600;
+}
+
+main.container > article header hgroup h5 a {
+  color: #000;
+}
+
+main.container > article footer {
+  text-align: center;
+}
+
+main.container > article footer a {
+  color: var(--anthropic-clay);
+}
+
+/* Bio content */
+main.container > div {
+  margin-bottom: 1.5rem;
+  line-height: 1.7;
+}
+
+/* Pagination links */
+main.container > div[style*="justify-content"] {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+
+main.container > div[style*="justify-content"] a {
+  color: var(--anthropic-clay);
+  font-weight: 600;
 }
 
 /* ==== Tooltip (Pico data-tooltip) ==== */
