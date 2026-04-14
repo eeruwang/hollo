@@ -678,7 +678,7 @@ main.container > div > hgroup > h1 a {
   letter-spacing: 0.05em;
 }
 .profile-timeline .date-group:first-of-type {
-  margin-top: 24px;
+  margin-top: 60px;
 }
 
 /* Hide per-post date footer on profile timeline (date shown in group header) */
