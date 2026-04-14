@@ -693,8 +693,14 @@ main.container > div > hgroup > h1 a {
   border-top: none !important;
   border-left: none !important;
   border-right: none !important;
-  border-bottom: 1px solid #d8d8d8 !important;
+  border-bottom: none !important;
   border-radius: 0 !important;
+}
+
+/* Subtle separator between post cards (NOT on last) */
+.profile-timeline > article:not(:last-child),
+.profile-timeline > .thread:not(:last-child) {
+  border-bottom: 1px solid #d8d8d8 !important;
 }
 
 /* Compact content with bold first paragraph + " – " separator */
@@ -731,7 +737,6 @@ main.container > div > hgroup > h1 a {
   position: relative;
   padding: 14px 16px 14px var(--indent);
   background: #f9f8f8;
-  border-bottom: 1px solid var(--line);
   margin-bottom: 0;
   font-size: 0.92em;
   line-height: 1.6;
@@ -821,7 +826,6 @@ main.container > article,
   padding: 14px 16px 14px var(--indent);
   background: #f9f8f8;
   border: none;
-  border-bottom: 1px solid var(--line);
   border-radius: 0;
   transition: padding-left 0.1s ease, border-left 0.1s ease;
   margin-bottom: 0;
