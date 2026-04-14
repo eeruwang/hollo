@@ -629,8 +629,8 @@ main.container > div > img[style*="width: 100%"] + hgroup [data-tooltip] {
   display: none;
 }
 
-/* Promote footer (with date) to top, styled like blog .date */
-.profile-timeline article > footer {
+/* Date header on thread parent only (blog .date style) */
+.profile-timeline .thread > article:first-child > footer {
   order: -1;
   margin: 0 0 14px;
   padding: 0 0 4px;
@@ -642,14 +642,53 @@ main.container > div > img[style*="width: 100%"] + hgroup [data-tooltip] {
   color: #333;
   letter-spacing: 0.05em;
 }
-.profile-timeline article > footer p {
+.profile-timeline .thread > article:first-child > footer p {
   margin: 0;
 }
-.profile-timeline article > footer a,
-.profile-timeline article > footer small {
+.profile-timeline .thread > article:first-child > footer a,
+.profile-timeline .thread > article:first-child > footer small {
   color: #333 !important;
   font-size: inherit !important;
   text-decoration: none !important;
+}
+
+/* Standalone posts (no replies) — blog .note style */
+.profile-timeline > article {
+  padding: 14px 16px 14px var(--indent) !important;
+  background: #f9f8f8 !important;
+  border: none !important;
+  border-bottom: 1px solid var(--line) !important;
+}
+
+/* Hide date on standalone posts (.note items show no date) */
+.profile-timeline > article > footer {
+  display: none;
+}
+
+/* Compact content with bold first paragraph + " – " separator */
+.profile-timeline > article > div {
+  font-size: 0.92em;
+  line-height: 1.6;
+}
+.profile-timeline > article > div > p:first-child {
+  font-weight: bold;
+  display: inline;
+  margin: 0;
+}
+.profile-timeline > article > div > p:first-child::after {
+  content: " \2013  ";
+  opacity: 0.5;
+  margin-left: 2px;
+  margin-right: 2px;
+  font-weight: normal;
+}
+.profile-timeline > article > div > p:nth-child(n + 2) {
+  display: inline;
+  font-weight: normal;
+  margin: 0;
+}
+.profile-timeline > article > div > p:only-child::after {
+  content: none;
 }
 
 /* ==== Thread: parent as .paper, replies as .note ==== */
