@@ -534,7 +534,7 @@ main.container > div > hgroup > p {
   padding-top: 0.25rem;
 }
 
-/* --- 2026 hero cover — glassmorphism profile overlay --- */
+/* --- 2026 hero cover — natural vignette gradient --- */
 
 /* Cover image — cinematic crop */
 main.container > div > img[style*="width: 100%"] {
@@ -545,28 +545,33 @@ main.container > div > img[style*="width: 100%"] {
   display: block;
 }
 
-/* Profile hgroup — frosted glass fully on cover */
+/* Profile hgroup — fully on cover with natural vignette */
 main.container > div > img[style*="width: 100%"] + hgroup {
-  margin-top: -160px;
+  margin-top: -180px;
   position: relative;
   z-index: 1;
-  padding: 32px var(--indent) 20px;
-  background: rgba(0, 0, 0, 0.3);
-  -webkit-backdrop-filter: blur(20px) saturate(1.4);
-  backdrop-filter: blur(20px) saturate(1.4);
+  padding: 56px var(--indent) 24px;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.75) 0%,
+    rgba(0, 0, 0, 0.55) 25%,
+    rgba(0, 0, 0, 0.3) 55%,
+    rgba(0, 0, 0, 0.08) 85%,
+    transparent 100%
+  );
   border-radius: 0 0 16px 16px;
 }
 
-/* Avatar on cover — stronger shadow + border */
+/* Avatar on cover — stronger shadow */
 main.container > div > img[style*="width: 100%"] + hgroup img[style*="float: left"] {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-  border: 3px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  border: 3px solid rgba(255, 255, 255, 0.95);
 }
 
 /* Name — white on cover */
 main.container > div > img[style*="width: 100%"] + hgroup > h1 {
   color: #fff !important;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.25);
 }
 main.container > div > img[style*="width: 100%"] + hgroup > h1 a {
   color: #fff !important;
@@ -575,13 +580,49 @@ main.container > div > img[style*="width: 100%"] + hgroup > h1 a {
 
 /* Handle — semi-transparent white on cover */
 main.container > div > img[style*="width: 100%"] + hgroup > p {
-  color: rgba(255, 255, 255, 0.85) !important;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  color: rgba(255, 255, 255, 0.88) !important;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.25);
 }
 
 /* Tooltip on cover — light underline */
 main.container > div > img[style*="width: 100%"] + hgroup [data-tooltip] {
   border-bottom-color: rgba(255, 255, 255, 0.4);
+}
+
+/* --- Profile page posts — hide author, promote date to header --- */
+
+/* Target posts only on profile page (div with h1 hgroup exists) */
+main.container > div:has(> hgroup > h1) ~ article {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Hide post header (avatar + name + handle) — single-user instance */
+main.container > div:has(> hgroup > h1) ~ article > header {
+  display: none;
+}
+
+/* Promote footer (with date) to top, styled like blog .date */
+main.container > div:has(> hgroup > h1) ~ article > footer {
+  order: -1;
+  margin: 0 0 14px;
+  padding: 0 0 4px;
+  border-top: none;
+  border-bottom: 1px solid #333;
+  font-size: 0.72em;
+  text-transform: uppercase;
+  font-weight: bold;
+  color: #333;
+  letter-spacing: 0.05em;
+}
+main.container > div:has(> hgroup > h1) ~ article > footer p {
+  margin: 0;
+}
+main.container > div:has(> hgroup > h1) ~ article > footer a,
+main.container > div:has(> hgroup > h1) ~ article > footer small {
+  color: #333 !important;
+  font-size: inherit !important;
+  text-decoration: none !important;
 }
 
 /* Bio */
@@ -790,8 +831,8 @@ main.container > div[style*="justify-content"] a:hover {
 
   /* Profile hero — adjusted overlap on mobile */
   main.container > div > img[style*="width: 100%"] + hgroup {
-    margin-top: -130px;
-    padding: 24px var(--indent) 16px;
+    margin-top: -140px;
+    padding: 40px var(--indent) 18px;
   }
 }
 
