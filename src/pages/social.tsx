@@ -1,4 +1,4 @@
-import { Note } from "@fedify/fedify";
+import { Note } from "@fedify/vocab";
 import { desc, eq, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { DashboardLayout } from "../components/DashboardLayout.tsx";
