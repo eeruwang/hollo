@@ -693,13 +693,12 @@ main.container > div > hgroup > h1 a {
   border-top: none !important;
   border-left: none !important;
   border-right: none !important;
-  border-bottom: none !important;
+  border-bottom: 1px solid #d8d8d8 !important;
   border-radius: 0 !important;
 }
 
-/* Subtle separator between post cards (NOT on last) */
-.profile-timeline > article:not(:last-child),
-.profile-timeline > .thread:not(:last-child) {
+/* Subtle separator on all post cards (including last) */
+.profile-timeline > .thread {
   border-bottom: 1px solid #d8d8d8 !important;
 }
 
@@ -1086,10 +1085,8 @@ article header {
   border-bottom: none;
 }
 
-/* Last article card removes bottom border */
-article:last-child,
-.profile-timeline > article:last-child,
-.profile-timeline > .thread:last-child {
+/* Last article on dashboard pages (direct child of main.container) — no bottom border */
+main.container > article:last-child {
   border-bottom: none !important;
 }
 
