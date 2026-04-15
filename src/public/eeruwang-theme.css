@@ -15,13 +15,7 @@
   --anthropic-ivory: #faf9f5;
   --anthropic-clay: #d97757;
   --anthropic-oat: #e3dacc;
-  --anthropic-coral: #ebcece;
-  --anthropic-fig: #c46686;
-  --anthropic-sky: #6a9bcc;
-  --anthropic-olive: #788c5d;
   --anthropic-background: #fffbf9;
-  --anthropic-manilla: #f2e0bd;
-  --anthropic-kraft: #d19b75;
   --anthropic-book-cloth: #b86046;
 }
 
@@ -142,7 +136,10 @@ small {
 
 /* ==== hgroup ==== */
 hgroup {
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
+}
+hgroup h1 {
+  margin-bottom: 0.25rem;
 }
 hgroup > *:not(:first-child) {
   margin-top: 0;
@@ -568,36 +565,6 @@ footer {
 
 /* ==== Profile (CSS-only override of upstream HTML) ==== */
 
-/* --- Generic styles (no cover / fallback) --- */
-
-/* Avatar */
-main.container img[style*="float: left"] {
-  border-radius: 50% !important;
-  float: left !important;
-  border: 3px solid #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  position: relative;
-  z-index: 2;
-}
-
-/* Profile name */
-main.container > div > hgroup > h1 {
-  font-size: 220% !important;
-  font-weight: 900 !important;
-  margin-top: 4px !important;
-}
-main.container > div > hgroup > h1 a {
-  color: #000 !important;
-}
-
-/* Profile handle and stats */
-main.container > div > hgroup > p {
-  color: #999;
-  font-size: 0.85em;
-  clear: left;
-  padding-top: 0.25rem;
-}
-
 /* --- Profile: no cover, name only at top, info in footer --- */
 
 /* Hide cover image */
@@ -693,13 +660,13 @@ main.container > div > hgroup > h1 a {
   border-top: none !important;
   border-left: none !important;
   border-right: none !important;
-  border-bottom: 1px solid #d8d8d8 !important;
+  border-bottom: 1px solid var(--line) !important;
   border-radius: 0 !important;
 }
 
 /* Subtle separator on all post cards (including last) */
 .profile-timeline > .thread {
-  border-bottom: 1px solid #d8d8d8 !important;
+  border-bottom: 1px solid var(--line) !important;
 }
 
 /* Compact content with bold first paragraph + " – " separator */
@@ -1037,14 +1004,6 @@ main.container:has(> header:first-child) {
 header nav {
   margin-bottom: 0.5rem;
   padding: 0.5rem 0;
-}
-
-hgroup {
-  margin-bottom: 1.5rem;
-}
-
-hgroup h1 {
-  margin-bottom: 0.25rem;
 }
 
 hgroup + form,
