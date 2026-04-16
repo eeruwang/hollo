@@ -1,4 +1,4 @@
-import { and, count, desc, eq, isNull, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, or, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import xss from "xss";
 import { Layout } from "../../components/Layout.tsx";
@@ -51,74 +51,17 @@ profile.get<"/:handle">(async (c) => {
     pageStr !== undefined && !Number.isNaN(Number.parseInt(pageStr, 10))
       ? Number.parseInt(pageStr, 10)
       : 1;
-  const [{ totalPosts }] = await db
-    .select({ totalPosts: count() })
-    .from(posts)
-    .where(
-      and(
-        eq(posts.accountId, owner.id),
-        or(eq(posts.visibility, "public"), eq(posts.visibility, "unlisted")),
-        isNull(posts.replyTargetId),
-      ),
-    );
-  const maxPage = Math.ceil(totalPosts / PAGE_SIZE);
-  if (page > maxPage && !(page <= 1 && totalPosts < 1)) {
-    return c.notFound();
-  }
-  const postList = await db.query.posts.findMany({
+  // Fetch ALL user's posts (root + replies at any depth) with full relations
+  const allUserPosts = await db.query.posts.findMany({
     where: and(
       eq(posts.accountId, owner.id),
       or(eq(posts.visibility, "public"), eq(posts.visibility, "unlisted")),
-      isNull(posts.replyTargetId),
     ),
     orderBy: desc(posts.id),
-    limit: PAGE_SIZE,
-    offset: (page - 1) * PAGE_SIZE,
     with: {
       account: true,
       media: true,
       poll: { with: { options: true } },
-      replies: {
-        where: or(
-          eq(posts.visibility, "public"),
-          eq(posts.visibility, "unlisted"),
-        ),
-        orderBy: posts.id,
-        with: {
-          account: true,
-          media: true,
-          poll: { with: { options: true } },
-          replyTarget: { with: { account: true } },
-          quoteTarget: {
-            with: {
-              account: true,
-              media: true,
-              poll: { with: { options: true } },
-              replyTarget: { with: { account: true } },
-              reactions: true,
-            },
-          },
-          reactions: true,
-          sharing: {
-            with: {
-              account: true,
-              media: true,
-              poll: { with: { options: true } },
-              replyTarget: { with: { account: true } },
-              quoteTarget: {
-                with: {
-                  account: true,
-                  media: true,
-                  poll: { with: { options: true } },
-                  replyTarget: { with: { account: true } },
-                  reactions: true,
-                },
-              },
-              reactions: true,
-            },
-          },
-        },
-      },
       sharing: {
         with: {
           account: true,
@@ -150,6 +93,56 @@ profile.get<"/:handle">(async (c) => {
       reactions: true,
     },
   });
+
+  // Build parent → children map and find root posts (no parent in user's set)
+  const childrenMap = new Map<string, typeof allUserPosts>();
+  const postsById = new Map(allUserPosts.map((p) => [p.id, p]));
+  for (const post of allUserPosts) {
+    if (post.replyTargetId != null) {
+      if (!childrenMap.has(post.replyTargetId)) {
+        childrenMap.set(post.replyTargetId, []);
+      }
+      childrenMap.get(post.replyTargetId)?.push(post);
+    }
+  }
+  // Sort each children list chronologically (id ASC)
+  for (const children of childrenMap.values()) {
+    children.sort((a, b) => a.id.localeCompare(b.id));
+  }
+
+  // Recursively flatten a root post's entire reply tree (DFS, chronological)
+  const flattenDescendants = (root: (typeof allUserPosts)[number]) => {
+    const out: typeof allUserPosts = [];
+    const walk = (node: (typeof allUserPosts)[number]) => {
+      const kids = childrenMap.get(node.id) ?? [];
+      for (const kid of kids) {
+        out.push(kid);
+        walk(kid);
+      }
+    };
+    walk(root);
+    return out;
+  };
+
+  // Root posts: no replyTargetId OR replyTarget is not in user's set
+  const rootPosts = allUserPosts.filter(
+    (p) => p.replyTargetId == null || !postsById.has(p.replyTargetId),
+  );
+
+  // Pagination guard (404 on invalid page)
+  const maxPage = Math.max(1, Math.ceil(rootPosts.length / PAGE_SIZE));
+  if (page > maxPage && !(page <= 1 && rootPosts.length < 1)) {
+    return c.notFound();
+  }
+
+  // Paginate root posts
+  const pagedRoots = rootPosts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // Attach flattened descendants as `replies` for each root
+  const postList = pagedRoots.map((root) => ({
+    ...root,
+    replies: flattenDescendants(root),
+  }));
   const pinnedPostList =
     cont == null
       ? await db.query.pinnedPosts.findMany({
