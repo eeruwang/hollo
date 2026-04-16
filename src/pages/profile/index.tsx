@@ -416,7 +416,8 @@ function groupByMonth<T extends { published: Date | null; updated: Date }>(
 // Posts over this many plain-text characters render as a truncated
 // preview card linking to the full post page. Truncation cuts at the
 // last sentence boundary (., !, ?, 。, ？, ！) within the threshold.
-const LONG_POST_THRESHOLD = 500;
+// Value matches the blog reference (cards max out around 300-310 chars).
+const LONG_POST_THRESHOLD = 310;
 
 function stripHtml(html: string | null | undefined): string {
   if (!html) return "";
