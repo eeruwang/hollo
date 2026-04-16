@@ -199,10 +199,15 @@ function PostPage({ post, accountOwner }: PostPageProps) {
       ]}
       themeColor={accountOwner.themeColor}
     >
-      <PostView post={post} />
-      {post.replies.map((reply) => (
-        <PostView post={reply} />
-      ))}
+      <div class="article-page">
+        <p class="article-back">
+          <a href={`/@${accountOwner.handle}`}>&larr; Back to posts</a>
+        </p>
+        <PostView post={post} />
+        {post.replies.map((reply) => (
+          <PostView post={reply} />
+        ))}
+      </div>
     </Layout>
   );
 }

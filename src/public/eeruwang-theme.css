@@ -1150,4 +1150,245 @@ article ~ form {
   color: #d97757;
 }
 
+/* ================================================================
+   ARTICLE (single post) PAGE — blog-style full article view
+   ================================================================ */
+
+.article-page {
+  margin: 0;
+}
+
+.article-back {
+  margin: 0 0 40px;
+  font-size: 0.75em;
+}
+.article-back a {
+  color: #333;
+  text-decoration: none;
+  font-weight: bold;
+}
+.article-back a:hover {
+  text-decoration: underline;
+}
+
+.article-title {
+  font-size: 220%;
+  line-height: 1.15;
+  margin: 0 0 12px;
+  font-weight: 900;
+  color: #000;
+}
+
+.article-meta {
+  font-size: 0.85em;
+  color: #666;
+  margin: 0 0 32px;
+  font-style: italic;
+}
+
+.article-page .cover {
+  width: 100%;
+  height: auto;
+  margin: 0 0 24px;
+  border: none;
+  border-radius: 0;
+}
+
+/* Article content typography — blog #content scoped rules.
+   Applies to PostView's content div inside .article-page. */
+.article-page article > div {
+  font-size: 1em;
+  line-height: 1.6;
+}
+.article-page article > div h2 {
+  font-size: 140%;
+  margin-top: 2rem;
+}
+.article-page article > div h3 {
+  font-size: 120%;
+  margin-top: 1.5rem;
+}
+.article-page article > div p {
+  margin: 0 0 1.2em;
+}
+.article-page article > div ul,
+.article-page article > div ol {
+  padding-left: 1.3rem;
+  margin: 1rem 0;
+}
+.article-page article > div li {
+  margin: 0.3rem 0;
+  line-height: 1.6;
+}
+.article-page article > div a {
+  color: var(--anthropic-clay);
+  text-decoration: underline;
+  text-decoration-color: rgba(217, 119, 87, 0.35);
+  text-underline-offset: 3px;
+  transition: text-decoration-color 0.15s ease, color 0.15s ease;
+}
+.article-page article > div a:hover {
+  color: var(--anthropic-book-cloth);
+  text-decoration-color: var(--anthropic-clay);
+}
+
+/* Markdown code blocks — use monospace nerd font consistently */
+.article-page article code,
+.article-page article kbd,
+.article-page article samp {
+  font-family: var(--code-font) !important;
+  font-size: 0.88em;
+  font-variant-ligatures: none;
+}
+.article-page article pre {
+  font-family: var(--code-font) !important;
+  font-size: 0.85em;
+  line-height: 1.6;
+  tab-size: 2;
+  -moz-tab-size: 2;
+}
+.article-page article pre code {
+  font: inherit !important;
+}
+
+/* Tables inside article content */
+.article-page article > div table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-size: 0.9em;
+}
+.article-page article > div th,
+.article-page article > div td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+.article-page article > div th {
+  font-weight: bold;
+  font-size: 0.85em;
+  color: #333;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ================================================================
+   FOOTNOTES (markdown footnote-ref + footnote-tip tooltips)
+   ================================================================ */
+
+.footnote-ref {
+  position: relative;
+  display: inline-block;
+}
+.footnote-ref .footnote-tip {
+  all: unset;
+  box-sizing: border-box;
+  display: none;
+  position: absolute;
+  left: 0;
+  top: 100%;
+  margin-top: 6px;
+  min-width: 220px;
+  max-width: min(70vw, 400px);
+  font: inherit;
+  line-height: 1.55;
+  color: #000;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 12px 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+}
+.footnote-ref:hover .footnote-tip,
+.footnote-ref:focus-within .footnote-tip {
+  display: block;
+}
+.footnote-ref .footnote-jump {
+  float: right;
+  font-size: 0.86em;
+  color: #999;
+}
+
+.footnotes {
+  margin-top: 32px;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+.footnotes h3 {
+  margin: 0 0 10px;
+  font-size: 0.78rem;
+  font-weight: bold;
+  color: #333;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.footnotes ol {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+.footnotes li {
+  margin: 6px 0;
+  font-size: 0.9em;
+}
+.footnote-backref {
+  margin-left: 6px;
+  color: #999;
+  text-decoration: none;
+}
+
+/* Touch devices: pin footnote tooltip to bottom of viewport */
+@media (pointer: coarse) {
+  .footnote-ref .footnote-tip {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+    top: auto;
+  }
+}
+
+/* ================================================================
+   BIBLIOGRAPHY (academic citation list at bottom of article)
+   ================================================================ */
+
+.bibliography {
+  margin-top: 32px;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+.bibliography .footnotes-title {
+  margin: 0 0 10px;
+  font-size: 0.78rem;
+  color: #333;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.bibliography ul,
+.bibliography ol,
+.bibliography .footnotes-list,
+.bibliography .bib-list {
+  list-style: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+.bibliography li {
+  margin: 0 0 0.65rem;
+  padding-left: 1.6rem;
+  text-indent: -1.6rem;
+  font-size: 0.9em;
+}
+.bibliography .bib-block {
+  margin: 0;
+  padding: 0;
+}
+.bibliography .bib-entry {
+  margin: 0 0 0.65rem;
+  line-height: 1.6;
+  padding-left: 1.6rem;
+  text-indent: -1.6rem;
+  font-size: 0.9em;
+}
+
 /* cSpell: ignore eeruwang anthropic */
