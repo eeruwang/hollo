@@ -11,6 +11,12 @@
   --page-max: 700px;
   --line: #d8d8d8;
 
+  /* Press-in animation (matches blog feel) */
+  --press-dy: 1.5px;
+  --press-scale: 0.985;
+  --press-duration: 200ms;
+  --press-ease: cubic-bezier(0.22, 0.8, 0.25, 1);
+
   --anthropic-slate: #141413;
   --anthropic-ivory: #faf9f5;
   --anthropic-clay: #d97757;
@@ -657,9 +663,9 @@ main.container > div > hgroup > h1 a {
 .profile-timeline > article {
   padding: 14px 16px 14px var(--indent) !important;
   background: #f9f8f8 !important;
-  border-top: none !important;
-  border-left: none !important;
-  border-right: none !important;
+  border-top: 0 solid transparent !important;
+  border-left: 0 solid transparent !important;
+  border-right: 0 solid transparent !important;
   border-bottom: 1px solid var(--line) !important;
   border-radius: 0 !important;
 }
@@ -729,7 +735,10 @@ main.container > div > hgroup > h1 a {
   margin-bottom: 0;
   font-size: 0.92em;
   line-height: 1.6;
-  transition: padding-left 0.1s ease, border-left 0.1s ease;
+  /* Explicit 0-width solid border prevents style jump during :hover transition */
+  border-left: 0 solid transparent;
+  transition: padding-left 0.1s ease, border-left-width 0.1s ease,
+    border-left-color 0.1s ease;
 }
 .profile-timeline .thread:hover {
   padding-left: calc(var(--indent) - 2px);
@@ -814,9 +823,13 @@ main.container > article,
   letter-spacing: normal !important;
   padding: 14px 16px 14px var(--indent);
   background: #f9f8f8;
-  border: none;
+  /* Explicit 0-width solid left border prevents style jump on :hover */
+  border-top: 0 solid transparent;
+  border-right: 0 solid transparent;
+  border-left: 0 solid transparent;
   border-radius: 0;
-  transition: padding-left 0.1s ease, border-left 0.1s ease;
+  transition: padding-left 0.1s ease, border-left-width 0.1s ease,
+    border-left-color 0.1s ease;
   margin-bottom: 0;
 }
 main.container > article:hover,
@@ -1008,12 +1021,80 @@ main.container > div[style*="justify-content"]:not(:has(a)) {
 
 }
 
+/* ==== Press-in feedback (blog .is-pressing — via :active) ==== */
+a[href],
+button,
+[role="button"],
+input[type="submit"],
+input[type="button"] {
+  transition: transform var(--press-duration) var(--press-ease),
+    opacity var(--press-duration) var(--press-ease),
+    background 0.15s ease, color 0.15s ease,
+    text-decoration-color 0.15s ease;
+}
+a[href]:active,
+button:active,
+[role="button"]:active,
+input[type="submit"]:active,
+input[type="button"]:active {
+  transform: translateY(var(--press-dy)) scale(var(--press-scale));
+}
+
+/* ==== Page fade-in on load (blog #page.ready) ==== */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+main.container {
+  animation: fadeInUp 0.25s ease both;
+}
+
+/* ==== List swap animations (available for future live filtering) ==== */
+@keyframes listOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+@keyframes listIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.profile-timeline.swap-out {
+  animation: listOut 0.18s ease both;
+}
+.profile-timeline.swap-in {
+  animation: listIn 0.24s ease both;
+}
+
+/* ==== Reduced motion: disable all transitions/animations ==== */
 @media (prefers-reduced-motion: reduce) {
-  a,
-  button,
-  [role="button"],
-  article {
-    transition: none;
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+  a[href]:active,
+  button:active,
+  [role="button"]:active {
+    transform: none;
   }
 }
 
