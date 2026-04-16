@@ -661,10 +661,12 @@ main.container > div > hgroup > h1 a {
 
 /* Standalone posts (no replies) — blog .note style with date header */
 .profile-timeline > article {
-  padding: 14px 16px 14px var(--indent) !important;
+  /* Base reserves 2px left border space as transparent; hover just
+     colors it — no width/padding animation → zero text shift. */
+  padding: 14px 16px 14px calc(var(--indent) - 2px) !important;
   background: #f9f8f8 !important;
   border-top: 0 solid transparent !important;
-  border-left: 0 solid transparent !important;
+  border-left: 2px solid transparent !important;
   border-right: 0 solid transparent !important;
   border-bottom: 1px solid var(--line) !important;
   border-radius: 0 !important;
@@ -730,19 +732,17 @@ main.container > div > hgroup > h1 a {
 /* Thread container is the single .note card */
 .profile-timeline .thread {
   position: relative;
-  padding: 14px 16px 14px var(--indent);
+  /* Reserve 2px left border space from the start; hover only recolors it */
+  padding: 14px 16px 14px calc(var(--indent) - 2px);
   background: #f9f8f8;
   margin-bottom: 0;
   font-size: 0.92em;
   line-height: 1.6;
-  /* Explicit 0-width solid border prevents style jump during :hover transition */
-  border-left: 0 solid transparent;
-  transition: padding-left 0.1s ease, border-left-width 0.1s ease,
-    border-left-color 0.1s ease;
+  border-left: 2px solid transparent;
+  transition: border-left-color 0.15s ease;
 }
 .profile-timeline .thread:hover {
-  padding-left: calc(var(--indent) - 2px);
-  border-left: 2px solid black;
+  border-left-color: black;
 }
 
 /* All articles in thread: transparent, inline so they flow as one */
@@ -821,21 +821,19 @@ main.container > article,
   font-size: 100% !important;
   word-spacing: normal !important;
   letter-spacing: normal !important;
-  padding: 14px 16px 14px var(--indent);
+  /* Reserve 2px left border from the start — hover only recolors it */
+  padding: 14px 16px 14px calc(var(--indent) - 2px);
   background: #f9f8f8;
-  /* Explicit 0-width solid left border prevents style jump on :hover */
   border-top: 0 solid transparent;
   border-right: 0 solid transparent;
-  border-left: 0 solid transparent;
+  border-left: 2px solid transparent;
   border-radius: 0;
-  transition: padding-left 0.1s ease, border-left-width 0.1s ease,
-    border-left-color 0.1s ease;
+  transition: border-left-color 0.15s ease;
   margin-bottom: 0;
 }
 main.container > article:hover,
 .profile-timeline > article:hover {
-  padding-left: calc(var(--indent) - 2px) !important;
-  border-left: 2px solid black !important;
+  border-left-color: black !important;
 }
 
 /* Pinned post */
