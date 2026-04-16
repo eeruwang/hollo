@@ -413,6 +413,36 @@ function groupByMonth<T extends { published: Date | null; updated: Date }>(
   return groups;
 }
 
+// Posts over this many plain-text characters render as a preview
+// with a "Read more" link to the full post page.
+const LONG_POST_THRESHOLD = 280;
+const PREVIEW_LENGTH = 140;
+
+function stripHtml(html: string | null | undefined): string {
+  if (!html) return "";
+  return html
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isLongPost(post: { contentHtml: string | null }): boolean {
+  return stripHtml(post.contentHtml).length > LONG_POST_THRESHOLD;
+}
+
+function makePreview(
+  post: { contentHtml: string | null },
+  maxLen = PREVIEW_LENGTH,
+): string {
+  const text = stripHtml(post.contentHtml);
+  if (text.length <= maxLen) return text;
+  const cut = text.substring(0, maxLen);
+  const lastSpace = cut.lastIndexOf(" ");
+  const sliced =
+    lastSpace > maxLen * 0.6 ? cut.substring(0, lastSpace) : cut;
+  return `${sliced}…`;
+}
+
 interface ProfilePageProps {
   readonly accountOwner: AccountOwner & { account: Account };
   readonly tag?: string;
@@ -519,8 +549,19 @@ function ProfilePage({
         {groupByMonth(posts).map((group) => (
           <>
             <div class="date-group">{group.label}</div>
-            {group.posts.map((post) =>
-              post.replies.length > 0 ? (
+            {group.posts.map((post) => {
+              if (isLongPost(post)) {
+                const postUrl = `/@${accountOwner.handle}/${post.id}`;
+                return (
+                  <article class="post-preview">
+                    <a href={postUrl}>
+                      <span class="preview-text">{makePreview(post)}</span>{" "}
+                      <span class="read-more">Read more &rarr;</span>
+                    </a>
+                  </article>
+                );
+              }
+              return post.replies.length > 0 ? (
                 <div class="thread">
                   <PostView post={post} />
                   {post.replies.map((reply) => (
@@ -529,8 +570,8 @@ function ProfilePage({
                 </div>
               ) : (
                 <PostView post={post} />
-              ),
-            )}
+              );
+            })}
           </>
         ))}
       </section>
