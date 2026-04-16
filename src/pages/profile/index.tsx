@@ -413,10 +413,10 @@ function groupByMonth<T extends { published: Date | null; updated: Date }>(
   return groups;
 }
 
-// Posts over this many plain-text characters render as a preview
-// with a "Read more" link to the full post page.
-const LONG_POST_THRESHOLD = 280;
-const PREVIEW_LENGTH = 140;
+// Posts over this many plain-text characters render as a truncated
+// preview card linking to the full post page. Truncation cuts at the
+// last sentence boundary (., !, ?, 。, ？, ！) within the threshold.
+const LONG_POST_THRESHOLD = 500;
 
 function stripHtml(html: string | null | undefined): string {
   if (!html) return "";
@@ -432,10 +432,30 @@ function isLongPost(post: { contentHtml: string | null }): boolean {
 
 function makePreview(
   post: { contentHtml: string | null },
-  maxLen = PREVIEW_LENGTH,
+  maxLen = LONG_POST_THRESHOLD,
 ): string {
   const text = stripHtml(post.contentHtml);
   if (text.length <= maxLen) return text;
+
+  // Find the last sentence-ending punctuation within maxLen
+  const sentenceEnd = /[.!?。！？]/g;
+  let bestEnd = -1;
+  let match: RegExpExecArray | null = sentenceEnd.exec(text);
+  while (match !== null) {
+    const end = match.index + 1;
+    if (end > maxLen) break;
+    // Require the punctuation to be followed by whitespace or end
+    // (avoids cutting inside decimals like "v2.0")
+    const next = text.charAt(end);
+    if (next === "" || /\s/.test(next)) bestEnd = end;
+    match = sentenceEnd.exec(text);
+  }
+
+  if (bestEnd > maxLen * 0.3) {
+    return text.substring(0, bestEnd).trim();
+  }
+
+  // Fallback: word boundary with ellipsis
   const cut = text.substring(0, maxLen);
   const lastSpace = cut.lastIndexOf(" ");
   const sliced =
@@ -554,10 +574,7 @@ function ProfilePage({
                 const postUrl = `/@${accountOwner.handle}/${post.id}`;
                 return (
                   <article class="post-preview">
-                    <a href={postUrl}>
-                      <span class="preview-text">{makePreview(post)}</span>{" "}
-                      <span class="read-more">Read more &rarr;</span>
-                    </a>
+                    <a href={postUrl}>{makePreview(post)}</a>
                   </article>
                 );
               }
