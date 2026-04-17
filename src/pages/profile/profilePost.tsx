@@ -8,6 +8,7 @@ import {
   type Account,
   type AccountOwner,
   accountOwners,
+  customEmojis,
   type Medium,
   type Poll,
   type PollOption,
@@ -109,6 +110,32 @@ profilePost.get<"/:handle{@[^/]+}/:id{[-a-f0-9]+}">(async (c) => {
     },
   })) as CommentPost[];
 
+  // Build a local-shortcode → local URL map so render-time code can
+  // swap remote reaction image URLs for the locally-mirrored copy
+  // when an admin has already imported that emoji. Only the codes
+  // actually used in this post's reactions are fetched.
+  const usedShortcodes = new Set<string>();
+  const collectCodes = (list: readonly Reaction[]) => {
+    for (const r of list) {
+      if (r.emoji.startsWith(":") && r.emoji.endsWith(":")) {
+        usedShortcodes.add(r.emoji.replace(/^:|:$/g, ""));
+      }
+    }
+  };
+  collectCodes(rootReactions);
+  for (const c of comments) collectCodes(c.reactions);
+
+  const localEmojiMap = new Map<string, string>();
+  if (usedShortcodes.size > 0) {
+    const localEmojis = await db.query.customEmojis.findMany({
+      where: inArray(customEmojis.shortcode, [...usedShortcodes]),
+      columns: { shortcode: true, url: true },
+    });
+    for (const row of localEmojis) {
+      localEmojiMap.set(row.shortcode, row.url);
+    }
+  }
+
   return c.html(
     <PostPage
       root={root}
@@ -116,6 +143,7 @@ profilePost.get<"/:handle{@[^/]+}/:id{[-a-f0-9]+}">(async (c) => {
       accountOwner={accountOwner}
       rootReactions={rootReactions}
       comments={comments}
+      localEmojiMap={localEmojiMap}
     />,
   );
 });
@@ -126,6 +154,7 @@ interface PostPageProps {
   readonly descendants: ThreadPost[];
   readonly rootReactions: Reaction[];
   readonly comments: CommentPost[];
+  readonly localEmojiMap: ReadonlyMap<string, string>;
 }
 
 function PostPage({
@@ -134,6 +163,7 @@ function PostPage({
   accountOwner,
   rootReactions,
   comments,
+  localEmojiMap,
 }: PostPageProps) {
   const publishedAt = root.published ?? root.updated;
   const { title, bodyHtml } = deriveTitleAndBody(root);
@@ -213,9 +243,14 @@ function PostPage({
           post={root}
           reactions={rootReactions}
           commentCount={comments.length}
+          localEmojiMap={localEmojiMap}
         />
         {comments.length > 0 && (
-          <CommentList comments={comments} accountOwner={accountOwner} />
+          <CommentList
+            comments={comments}
+            accountOwner={accountOwner}
+            localEmojiMap={localEmojiMap}
+          />
         )}
       </div>
     </Layout>
@@ -253,21 +288,20 @@ interface ArticleEngagementProps {
   readonly post: ThreadPost;
   readonly reactions: Reaction[];
   readonly commentCount: number;
+  readonly localEmojiMap: ReadonlyMap<string, string>;
 }
 
 function ArticleEngagement({
   post,
   reactions,
   commentCount,
+  localEmojiMap,
 }: ArticleEngagementProps) {
-  const grouped = groupByEmojis(reactions);
+  const grouped = groupByEmojis(reactions, localEmojiMap);
   const likes = post.likesCount ?? 0;
   const shares = post.sharesCount ?? 0;
   const hasAny =
-    likes > 0 ||
-    shares > 0 ||
-    reactions.length > 0 ||
-    commentCount > 0;
+    likes > 0 || shares > 0 || reactions.length > 0 || commentCount > 0;
   if (!hasAny) return null;
   return (
     <aside class="article-engagement">
@@ -317,14 +351,21 @@ function ArticleEngagement({
 
 function groupByEmojis(
   reactionList: Reaction[],
+  localEmojiMap: ReadonlyMap<string, string>,
 ): Record<string, { src?: string; count: number }> {
   const result: Record<string, { src?: string; count: number }> = {};
   for (const r of reactionList) {
+    // Prefer the locally-mirrored copy when the shortcode already
+    // lives in customEmojis. Falls back to the remote URL stored on
+    // the reaction if we haven't imported it.
+    let src = r.customEmoji ?? undefined;
+    if (r.emoji.startsWith(":") && r.emoji.endsWith(":")) {
+      const code = r.emoji.slice(1, -1);
+      const localUrl = localEmojiMap.get(code);
+      if (localUrl != null) src = localUrl;
+    }
     if (result[r.emoji] == null) {
-      result[r.emoji] = {
-        src: r.customEmoji ?? undefined,
-        count: 1,
-      };
+      result[r.emoji] = { src, count: 1 };
     } else {
       result[r.emoji].count++;
     }
@@ -335,19 +376,26 @@ function groupByEmojis(
 interface CommentListProps {
   readonly comments: CommentPost[];
   readonly accountOwner: AccountOwner & { account: Account };
+  readonly localEmojiMap: ReadonlyMap<string, string>;
 }
 
-function CommentList({ comments, accountOwner }: CommentListProps) {
+function CommentList({
+  comments,
+  accountOwner,
+  localEmojiMap,
+}: CommentListProps) {
   return (
     <section class="article-comments" id="comments">
       <h2 class="article-comments-heading">
-        {comments.length === 1
-          ? "1 comment"
-          : `${comments.length} comments`}
+        {comments.length === 1 ? "1 comment" : `${comments.length} comments`}
       </h2>
       <ul class="comment-list">
         {comments.map((c) => (
-          <Comment comment={c} accountOwner={accountOwner} />
+          <Comment
+            comment={c}
+            accountOwner={accountOwner}
+            localEmojiMap={localEmojiMap}
+          />
         ))}
       </ul>
     </section>
@@ -357,15 +405,16 @@ function CommentList({ comments, accountOwner }: CommentListProps) {
 interface CommentProps {
   readonly comment: CommentPost;
   readonly accountOwner: AccountOwner & { account: Account };
+  readonly localEmojiMap: ReadonlyMap<string, string>;
 }
 
-function Comment({ comment, accountOwner }: CommentProps) {
+function Comment({ comment, accountOwner, localEmojiMap }: CommentProps) {
   const published = comment.published ?? comment.updated;
   const contentHtml = renderCustomEmojis(
     comment.contentHtml ?? "",
     comment.emojis,
   );
-  const grouped = groupByEmojis(comment.reactions);
+  const grouped = groupByEmojis(comment.reactions, localEmojiMap);
   const account = comment.account;
   const accountUrl = account.url ?? account.iri;
   const isOwner = comment.accountId === accountOwner.id;
@@ -554,17 +603,16 @@ function ProfilePopup({ accountOwner }: ProfilePopupProps) {
               dangerouslySetInnerHTML={{ __html: bioHtml }}
             />
           )}
-          {account.fieldHtmls &&
-            Object.keys(account.fieldHtmls).length > 0 && (
-              <dl class="profile-popup-fields">
-                {Object.entries(account.fieldHtmls).map(([key, value]) => (
-                  <>
-                    <dt>{key}</dt>
-                    <dd dangerouslySetInnerHTML={{ __html: value }} />
-                  </>
-                ))}
-              </dl>
-            )}
+          {account.fieldHtmls && Object.keys(account.fieldHtmls).length > 0 && (
+            <dl class="profile-popup-fields">
+              {Object.entries(account.fieldHtmls).map(([key, value]) => (
+                <>
+                  <dt>{key}</dt>
+                  <dd dangerouslySetInnerHTML={{ __html: value }} />
+                </>
+              ))}
+            </dl>
+          )}
         </div>
       </div>
       <script
