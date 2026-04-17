@@ -1,6 +1,8 @@
 import { getLogger } from "@logtape/logtape";
 import { desc, inArray, isNotNull, ne } from "drizzle-orm";
+import type { Context } from "hono";
 import { Hono } from "hono";
+import JSZip from "jszip";
 import mime from "mime";
 import { DashboardLayout } from "../components/DashboardLayout";
 import db from "../db";
@@ -95,6 +97,14 @@ emojis.get("/", async (c) => {
           <a role="button" href="/emojis/import/remote" class="secondary">
             Import from remote instance
           </a>
+          <a role="button" href="/emojis/import/zip" class="secondary">
+            Import zip pack
+          </a>
+          {emojis.length > 0 && (
+            <a role="button" href="/emojis/export" class="secondary">
+              Export zip pack
+            </a>
+          )}
           <button type="submit" class="contrast" disabled>
             Delete selected emojis
           </button>
@@ -343,8 +353,7 @@ emojis.get("/import", async (c) => {
         </fieldset>
         <p class="emoji-import-status">
           <span id="emoji-import-count">
-            Showing {Object.keys(emojis).length} of{" "}
-            {Object.keys(emojis).length}
+            Showing {Object.keys(emojis).length} of {Object.keys(emojis).length}
           </span>
           <span>
             {" "}
@@ -429,13 +438,12 @@ emojis.get("/import", async (c) => {
         </fieldset>
         <label>
           <input type="checkbox" name="mirror" value="true" checked />
-          Mirror emoji images to local storage (recommended — keeps
-          the emoji working even if the source instance disappears)
+          Mirror emoji images to local storage (recommended — keeps the emoji
+          working even if the source instance disappears)
         </label>
         <button type="submit">Import selected custom emojis</button>
       </form>
       <script
-        // biome-ignore lint/security/noDangerouslySetInnerHtml: client-side filter helper
         dangerouslySetInnerHTML={{
           __html: `(() => {
   const search = document.getElementById('emoji-import-search');
@@ -504,8 +512,8 @@ emojis.get("/import/remote", async (c) => {
           <h1>Import from remote instance</h1>
           <p>
             Pull the full custom-emoji set from another fediverse instance
-            (Mastodon, Misskey, etc.) without waiting for posts to federate
-            in first.
+            (Mastodon, Misskey, etc.) without waiting for posts to federate in
+            first.
           </p>
         </hgroup>
         <form method="get" action="/emojis/import/remote">
@@ -547,10 +555,10 @@ emojis.get("/import/remote", async (c) => {
   try {
     fetched = await fetchInstanceEmojis(domain);
   } catch (error) {
-    logger.error(
-      "Unexpected error fetching emojis from {domain}: {error}",
-      { domain, error },
-    );
+    logger.error("Unexpected error fetching emojis from {domain}: {error}", {
+      domain,
+      error,
+    });
     return renderRemoteFetchError(
       c,
       source,
@@ -586,16 +594,16 @@ emojis.get("/import/remote", async (c) => {
         <h1>Emojis from {domain}</h1>
         <p>
           Found {fetched.length} public emoji
-          {fetched.length === 1 ? "" : "s"}, {Object.keys(fresh).length}{" "}
-          new. Review the list, tick the ones you want, and they'll be
-          imported (and mirrored locally by default).
+          {fetched.length === 1 ? "" : "s"}, {Object.keys(fresh).length} new.
+          Review the list, tick the ones you want, and they'll be imported (and
+          mirrored locally by default).
         </p>
       </hgroup>
       {Object.keys(fresh).length === 0 ? (
         <>
           <p>
-            You already have all of {domain}'s emojis imported. Nothing to
-            do here.
+            You already have all of {domain}'s emojis imported. Nothing to do
+            here.
           </p>
           <p>
             <a href="/emojis" role="button" class="secondary">
@@ -610,7 +618,7 @@ emojis.get("/import/remote", async (c) => {
   );
 });
 
-function renderRemoteFetchError(c: any, source: string, message: string) {
+function renderRemoteFetchError(c: Context, source: string, message: string) {
   return c.html(
     <DashboardLayout
       title="Hollo: Import from remote instance"
@@ -683,8 +691,7 @@ function renderImportPreviewForm(
         </fieldset>
         <p class="emoji-import-status">
           <span id="emoji-import-count">
-            Showing {Object.keys(fresh).length} of{" "}
-            {Object.keys(fresh).length}
+            Showing {Object.keys(fresh).length} of {Object.keys(fresh).length}
           </span>
           <span>from {domainLabel}</span>
         </p>
@@ -753,7 +760,6 @@ function renderImportPreviewForm(
         <button type="submit">Import selected custom emojis</button>
       </form>
       <script
-        // biome-ignore lint/security/noDangerouslySetInnerHtml: client-side filter helper
         dangerouslySetInnerHTML={{
           __html: `(() => {
   const search = document.getElementById('emoji-import-search');
@@ -822,15 +828,10 @@ function cleanDomain(domain: string): string | null {
   return d;
 }
 
-async function fetchInstanceEmojis(
-  domain: string,
-): Promise<DiscoveredEmoji[]> {
+async function fetchInstanceEmojis(domain: string): Promise<DiscoveredEmoji[]> {
   const base = `https://${domain}`;
   const makeSignal = () => AbortSignal.timeout(10_000);
-  const toEntry = (
-    shortcode: string,
-    url: string,
-  ): DiscoveredEmoji | null => {
+  const toEntry = (shortcode: string, url: string): DiscoveredEmoji | null => {
     if (!shortcode || !url) return null;
     if (!/^https?:\/\//i.test(url)) return null;
     const clean = shortcode.replace(/^:|:$/g, "");
@@ -882,10 +883,10 @@ async function fetchInstanceEmojis(
       }
     }
   } catch (err) {
-    logger.debug(
-      "Misskey-style GET emoji fetch failed for {domain}: {error}",
-      { domain, error: err },
-    );
+    logger.debug("Misskey-style GET emoji fetch failed for {domain}: {error}", {
+      domain,
+      error: err,
+    });
   }
 
   // Misskey older: POST /api/emojis with {}
@@ -986,10 +987,10 @@ async function mirrorEmojiImage(
     clearTimeout(timer);
   }
   if (!response.ok) {
-    logger.warning(
-      "Emoji mirror skipped: status {status} from {url}",
-      { status: response.status, url: remoteUrl },
-    );
+    logger.warning("Emoji mirror skipped: status {status} from {url}", {
+      status: response.status,
+      url: remoteUrl,
+    });
     return null;
   }
   const contentType =
@@ -1018,6 +1019,266 @@ async function mirrorEmojiImage(
     visibility: "public",
   });
   return await disk.getUrl(path);
+}
+
+// ---------------------------------------------------------------
+// Misskey-compatible zip pack import/export
+// ---------------------------------------------------------------
+
+emojis.get("/import/zip", async (c) => {
+  return c.html(
+    <DashboardLayout title="Hollo: Import emoji pack" selectedMenu="emojis">
+      <hgroup>
+        <h1>Import emoji pack (.zip)</h1>
+        <p>
+          Upload a Misskey-style emoji pack — a zip file containing a
+          <tt> meta.json</tt> at its root plus image files. Emojis with{" "}
+          <tt>downloaded: true</tt> are imported using their bundled image and
+          the category/aliases from the metadata.
+        </p>
+      </hgroup>
+      <form
+        method="post"
+        action="/emojis/import/zip"
+        enctype="multipart/form-data"
+      >
+        <label>
+          Emoji pack (.zip)
+          <input
+            type="file"
+            name="pack"
+            required
+            accept=".zip,application/zip"
+          />
+        </label>
+        <label>
+          <input type="checkbox" name="overwrite" value="true" />
+          Replace existing shortcodes (otherwise duplicates are skipped)
+        </label>
+        <button type="submit">Import pack</button>
+      </form>
+      <p>
+        <a role="button" href="/emojis" class="secondary">
+          Back to custom emojis
+        </a>
+      </p>
+    </DashboardLayout>,
+  );
+});
+
+emojis.post("/import/zip", async (c) => {
+  const disk = drive.use();
+  const form = await c.req.formData();
+  const file = form.get("pack");
+  const overwrite = form.get("overwrite") === "true";
+  if (!(file instanceof File)) return c.text("No file uploaded", 400);
+
+  let zip: JSZip;
+  try {
+    zip = await JSZip.loadAsync(await file.arrayBuffer());
+  } catch (error) {
+    logger.warning("Zip import failed to parse: {error}", { error });
+    return c.text("Could not read zip archive.", 400);
+  }
+
+  const metaFile = zip.file("meta.json");
+  if (metaFile == null) return c.text("meta.json missing from zip", 400);
+
+  let metaJson: unknown;
+  try {
+    metaJson = JSON.parse(await metaFile.async("string"));
+  } catch (error) {
+    logger.warning("Zip import meta.json parse failed: {error}", { error });
+    return c.text("meta.json is not valid JSON", 400);
+  }
+  if (
+    metaJson == null ||
+    typeof metaJson !== "object" ||
+    !Array.isArray((metaJson as { emojis?: unknown }).emojis)
+  ) {
+    return c.text("meta.json missing 'emojis' array", 400);
+  }
+
+  const existing = await db.query.customEmojis.findMany();
+  const existingCodes = new Set(existing.map((e) => e.shortcode));
+
+  let imported = 0;
+  let skipped = 0;
+  let failed = 0;
+  for (const raw of (metaJson as { emojis: unknown[] }).emojis) {
+    if (raw == null || typeof raw !== "object") {
+      failed++;
+      continue;
+    }
+    const entry = raw as {
+      downloaded?: boolean;
+      fileName?: string;
+      emoji?: {
+        name?: string;
+        category?: string | null;
+        type?: string;
+      };
+    };
+    // Misskey only marks emojis with a bundled image as downloaded: true
+    if (entry.downloaded === false) {
+      skipped++;
+      continue;
+    }
+    const fileName = entry.fileName?.trim();
+    const rawName = entry.emoji?.name ?? fileName?.replace(/\.[^.]+$/, "");
+    const shortcode = sanitizeShortcode(rawName);
+    if (!fileName || !shortcode) {
+      failed++;
+      continue;
+    }
+    if (!overwrite && existingCodes.has(shortcode)) {
+      skipped++;
+      continue;
+    }
+    const imgFile = zip.file(fileName);
+    if (imgFile == null) {
+      failed++;
+      continue;
+    }
+    const contentType =
+      (entry.emoji?.type ?? "").toLowerCase() ||
+      mime.getType(fileName) ||
+      "image/png";
+    if (!ALLOWED_EMOJI_MIME.has(contentType)) {
+      failed++;
+      continue;
+    }
+    const buffer = await imgFile.async("uint8array");
+    if (buffer.byteLength === 0 || buffer.byteLength > MAX_EMOJI_BYTES) {
+      failed++;
+      continue;
+    }
+    const extension = mime.getExtension(contentType);
+    if (extension == null) {
+      failed++;
+      continue;
+    }
+    const path = `emojis/${shortcode}.${extension}`;
+    try {
+      await disk.put(path, buffer, {
+        contentType,
+        contentLength: buffer.byteLength,
+        visibility: "public",
+      });
+      const url = await disk.getUrl(path);
+      const category = entry.emoji?.category ?? null;
+      if (existingCodes.has(shortcode)) {
+        await db
+          .update(customEmojis)
+          .set({ url, category })
+          .where(inArray(customEmojis.shortcode, [shortcode]));
+      } else {
+        await db.insert(customEmojis).values({ shortcode, url, category });
+        existingCodes.add(shortcode);
+      }
+      imported++;
+    } catch (error) {
+      failed++;
+      logger.warning("Zip import: failed to store {shortcode}: {error}", {
+        shortcode,
+        error,
+      });
+    }
+  }
+
+  logger.info(
+    "Zip import complete — imported={imported}, skipped={skipped}, failed={failed}",
+    { imported, skipped, failed },
+  );
+  return c.redirect(
+    `/emojis?imported=${imported}&skipped=${skipped}&failed=${failed}`,
+  );
+});
+
+emojis.get("/export", async (c) => {
+  const rows = await db.query.customEmojis.findMany({
+    orderBy: [customEmojis.category, customEmojis.shortcode],
+  });
+  if (rows.length === 0) return c.text("No emojis to export", 404);
+
+  const zip = new JSZip();
+  const metaEmojis: Array<{
+    downloaded: true;
+    fileName: string;
+    emoji: {
+      name: string;
+      category: string | null;
+      aliases: string[];
+      url: string;
+      type: string;
+    };
+  }> = [];
+
+  for (const row of rows) {
+    try {
+      const resp = await fetch(row.url, {
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!resp.ok) {
+        logger.warning(
+          "Zip export: skipping {shortcode} — fetch {status} for {url}",
+          { shortcode: row.shortcode, status: resp.status, url: row.url },
+        );
+        continue;
+      }
+      const contentType =
+        resp.headers.get("content-type")?.split(";")[0].trim() ||
+        mime.getType(row.url) ||
+        "image/png";
+      const extension = mime.getExtension(contentType) ?? "png";
+      const fileName = `${row.shortcode}.${extension}`;
+      const buffer = new Uint8Array(await resp.arrayBuffer());
+      zip.file(fileName, buffer);
+      metaEmojis.push({
+        downloaded: true,
+        fileName,
+        emoji: {
+          name: row.shortcode,
+          category: row.category,
+          aliases: [],
+          url: row.url,
+          type: contentType,
+        },
+      });
+    } catch (error) {
+      logger.warning(
+        "Zip export: failed to fetch {shortcode} from {url}: {error}",
+        { shortcode: row.shortcode, url: row.url, error },
+      );
+    }
+  }
+
+  const host = new URL(c.req.url).host;
+  const meta = {
+    metaVersion: 2,
+    host,
+    exportedAt: new Date().toISOString(),
+    emojis: metaEmojis,
+  };
+  zip.file("meta.json", JSON.stringify(meta, null, 2));
+  const buffer = await zip.generateAsync({ type: "nodebuffer" });
+  const today = new Date().toISOString().slice(0, 10);
+  return new Response(new Uint8Array(buffer), {
+    headers: {
+      "Content-Type": "application/zip",
+      "Content-Disposition": `attachment; filename="hollo-emojis-${today}.zip"`,
+    },
+  });
+});
+
+function sanitizeShortcode(raw: string | undefined): string | null {
+  if (!raw) return null;
+  const s = raw
+    .replace(/^:|:$/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, "_")
+    .replace(/^_+|_+$/g, "");
+  return s.length > 0 ? s : null;
 }
 
 export default emojis;
