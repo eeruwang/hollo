@@ -1000,6 +1000,12 @@ main.container > div[style*="justify-content"]:not(:has(a)) {
 .emoji-import-filters {
   margin-bottom: 0.75rem;
 }
+.emoji-import-bulk-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
 .emoji-import-status {
   display: flex;
   flex-wrap: wrap;

@@ -10,6 +10,13 @@ import { drive } from "../storage";
 
 const logger = getLogger(["hollo", "pages", "emojis"]);
 
+interface DiscoveredEmoji {
+  readonly id: string;
+  readonly shortcode: string;
+  readonly url: string;
+  readonly domain: string;
+}
+
 const emojis = new Hono();
 
 emojis.use(loginRequired);
@@ -83,7 +90,10 @@ emojis.get("/", async (c) => {
             Add a custom emoji
           </a>
           <a role="button" href="/emojis/import" class="secondary">
-            Import custom emojis
+            Import from federated
+          </a>
+          <a role="button" href="/emojis/import/remote" class="secondary">
+            Import from remote instance
           </a>
           <button type="submit" class="contrast" disabled>
             Delete selected emojis
@@ -298,9 +308,17 @@ emojis.get("/import", async (c) => {
     <DashboardLayout title="Hollo: Import custom emojis" selectedMenu="emojis">
       <hgroup>
         <h1>Import custom emojis</h1>
-        <p>You can import custom emojis from your peer servers.</p>
+        <p>
+          Emojis that other fediverse accounts have used in posts, replies,
+          reactions, or profile data that's already reached this instance.
+        </p>
       </hgroup>
-      <form method="post">
+      <p>
+        <a role="button" href="/emojis/import/remote" class="secondary">
+          Or pull directly from a remote instance &rarr;
+        </a>
+      </p>
+      <form method="post" action="/emojis/import">
         <fieldset class="grid emoji-import-filters">
           <label>
             Search shortcode
@@ -464,6 +482,446 @@ emojis.get("/import", async (c) => {
     </DashboardLayout>,
   );
 });
+
+emojis.get("/import/remote", async (c) => {
+  const source = c.req.query("source")?.trim();
+  const categoriesRows = await db
+    .select({ category: customEmojis.category })
+    .from(customEmojis)
+    .where(isNotNull(customEmojis.category))
+    .groupBy(customEmojis.category);
+  const categories = new Set(
+    categoriesRows.map((r) => r.category).filter((c): c is string => c != null),
+  );
+
+  if (!source) {
+    return c.html(
+      <DashboardLayout
+        title="Hollo: Import from remote instance"
+        selectedMenu="emojis"
+      >
+        <hgroup>
+          <h1>Import from remote instance</h1>
+          <p>
+            Pull the full custom-emoji set from another fediverse instance
+            (Mastodon, Misskey, etc.) without waiting for posts to federate
+            in first.
+          </p>
+        </hgroup>
+        <form method="get" action="/emojis/import/remote">
+          <label>
+            Instance domain or fediverse handle
+            <input
+              type="text"
+              name="source"
+              placeholder="mastodon.social  or  @user@host.tld"
+              required
+              autocomplete="off"
+            />
+          </label>
+          <small>
+            Examples: <tt>mastodon.social</tt>, <tt>misskey.io</tt>,{" "}
+            <tt>@user@hollo.social</tt>, or a full URL.
+          </small>
+          <button type="submit">Fetch emojis</button>
+        </form>
+        <p>
+          <a href="/emojis/import" class="secondary" role="button">
+            Back to federated emojis
+          </a>
+        </p>
+      </DashboardLayout>,
+    );
+  }
+
+  const domain = parseSource(source);
+  if (domain == null) {
+    return renderRemoteFetchError(
+      c,
+      source,
+      "Could not parse as a domain or fediverse handle.",
+    );
+  }
+
+  let fetched: DiscoveredEmoji[];
+  try {
+    fetched = await fetchInstanceEmojis(domain);
+  } catch (error) {
+    logger.error(
+      "Unexpected error fetching emojis from {domain}: {error}",
+      { domain, error },
+    );
+    return renderRemoteFetchError(
+      c,
+      source,
+      `Error while contacting ${domain}.`,
+    );
+  }
+
+  if (fetched.length === 0) {
+    return renderRemoteFetchError(
+      c,
+      source,
+      `No public custom emojis were found on ${domain}. The instance may not expose an emoji API or may be offline.`,
+    );
+  }
+
+  // Dedup against what's already stored
+  const existing = await db.query.customEmojis.findMany();
+  const existingCodes = new Set(existing.map((e) => e.shortcode));
+  const existingUrls = new Set(existing.map((e) => e.url));
+  const fresh: Record<string, DiscoveredEmoji> = {};
+  for (const emoji of fetched) {
+    if (existingCodes.has(emoji.shortcode)) continue;
+    if (existingUrls.has(emoji.url)) continue;
+    fresh[emoji.id] = emoji;
+  }
+
+  return c.html(
+    <DashboardLayout
+      title={`Hollo: Emojis from ${domain}`}
+      selectedMenu="emojis"
+    >
+      <hgroup>
+        <h1>Emojis from {domain}</h1>
+        <p>
+          Found {fetched.length} public emoji
+          {fetched.length === 1 ? "" : "s"}, {Object.keys(fresh).length}{" "}
+          new. Review the list, tick the ones you want, and they'll be
+          imported (and mirrored locally by default).
+        </p>
+      </hgroup>
+      {Object.keys(fresh).length === 0 ? (
+        <>
+          <p>
+            You already have all of {domain}'s emojis imported. Nothing to
+            do here.
+          </p>
+          <p>
+            <a href="/emojis" role="button" class="secondary">
+              Back to custom emojis
+            </a>
+          </p>
+        </>
+      ) : (
+        renderImportPreviewForm(fresh, categories, domain)
+      )}
+    </DashboardLayout>,
+  );
+});
+
+function renderRemoteFetchError(c: any, source: string, message: string) {
+  return c.html(
+    <DashboardLayout
+      title="Hollo: Import from remote instance"
+      selectedMenu="emojis"
+    >
+      <hgroup>
+        <h1>Import from remote instance</h1>
+        <p>{message}</p>
+      </hgroup>
+      <form method="get" action="/emojis/import/remote">
+        <label>
+          Instance domain or fediverse handle
+          <input
+            type="text"
+            name="source"
+            value={source}
+            required
+            autocomplete="off"
+          />
+        </label>
+        <button type="submit">Try again</button>
+      </form>
+      <p>
+        <a href="/emojis/import" class="secondary" role="button">
+          Back to federated emojis
+        </a>
+      </p>
+    </DashboardLayout>,
+    400,
+  );
+}
+
+function renderImportPreviewForm(
+  fresh: Record<string, DiscoveredEmoji>,
+  categories: Set<string>,
+  domainLabel: string,
+) {
+  return (
+    <>
+      <form method="post" action="/emojis/import">
+        <fieldset class="grid emoji-import-filters">
+          <label>
+            Search shortcode
+            <input
+              type="search"
+              id="emoji-import-search"
+              placeholder=":shortcode..."
+              autocomplete="off"
+            />
+          </label>
+          <label>
+            Bulk actions
+            <span class="emoji-import-bulk-group">
+              <button
+                type="button"
+                class="secondary emoji-import-bulk"
+                id="emoji-import-select-visible"
+              >
+                Select visible
+              </button>{" "}
+              <button
+                type="button"
+                class="secondary emoji-import-bulk"
+                id="emoji-import-clear"
+              >
+                Clear selection
+              </button>
+            </span>
+          </label>
+        </fieldset>
+        <p class="emoji-import-status">
+          <span id="emoji-import-count">
+            Showing {Object.keys(fresh).length} of{" "}
+            {Object.keys(fresh).length}
+          </span>
+          <span>from {domainLabel}</span>
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Check</th>
+              <th>Short code</th>
+              <th>Image</th>
+            </tr>
+          </thead>
+          <tbody id="emoji-import-rows">
+            {Object.values(fresh).map(({ id, shortcode, url, domain }) => (
+              <tr data-domain={domain} data-shortcode={shortcode.toLowerCase()}>
+                <td>
+                  <input
+                    type="checkbox"
+                    id={id}
+                    name="import"
+                    value={JSON.stringify({ shortcode, url })}
+                  />
+                </td>
+                <td>
+                  <label for={id}>
+                    <tt>:{shortcode}:</tt>
+                  </label>
+                </td>
+                <td>
+                  <label for={id}>
+                    <img
+                      src={url}
+                      alt={`:${shortcode}:`}
+                      style="height: 24px"
+                      loading="lazy"
+                    />
+                  </label>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <fieldset class="grid">
+          <label>
+            Category
+            <select
+              name="category"
+              onchange="this.form.new.disabled = this.value != 'new'"
+            >
+              <option>None</option>
+              <option value="new">New category</option>
+              <hr />
+              {[...categories].map((category) => (
+                <option value={`category:${category}`}>{category}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            New category
+            <input type="text" name="new" disabled={true} />
+          </label>
+        </fieldset>
+        <label>
+          <input type="checkbox" name="mirror" value="true" checked />
+          Mirror emoji images to local storage (recommended)
+        </label>
+        <button type="submit">Import selected custom emojis</button>
+      </form>
+      <script
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: client-side filter helper
+        dangerouslySetInnerHTML={{
+          __html: `(() => {
+  const search = document.getElementById('emoji-import-search');
+  const rows = Array.from(
+    document.querySelectorAll('#emoji-import-rows tr[data-shortcode]')
+  );
+  const count = document.getElementById('emoji-import-count');
+  const selectVisible = document.getElementById('emoji-import-select-visible');
+  const clearSel = document.getElementById('emoji-import-clear');
+  const total = rows.length;
+  let visibleRows = rows.slice();
+  const apply = () => {
+    const q = (search.value || '').toLowerCase().trim();
+    visibleRows = [];
+    for (const row of rows) {
+      const show = !q || row.dataset.shortcode.indexOf(q) !== -1;
+      row.style.display = show ? '' : 'none';
+      if (show) visibleRows.push(row);
+    }
+    count.textContent = 'Showing ' + visibleRows.length + ' of ' + total;
+  };
+  if (search) search.addEventListener('input', apply);
+  if (selectVisible) selectVisible.addEventListener('click', () => {
+    for (const row of visibleRows) {
+      const cb = row.querySelector('input[type=checkbox]');
+      if (cb) cb.checked = true;
+    }
+  });
+  if (clearSel) clearSel.addEventListener('click', () => {
+    for (const row of rows) {
+      const cb = row.querySelector('input[type=checkbox]');
+      if (cb) cb.checked = false;
+    }
+  });
+  apply();
+})();`,
+        }}
+      />
+    </>
+  );
+}
+
+function parseSource(raw: string): string | null {
+  const s = raw.trim();
+  if (!s) return null;
+  // @user@host
+  if (s.startsWith("@")) {
+    const parts = s.slice(1).split("@");
+    if (parts.length === 2 && parts[1]) return cleanDomain(parts[1]);
+  }
+  // http(s)://host/...
+  if (/^https?:\/\//i.test(s)) {
+    try {
+      return cleanDomain(new URL(s).hostname);
+    } catch {
+      return null;
+    }
+  }
+  // Bare domain
+  return cleanDomain(s);
+}
+
+function cleanDomain(domain: string): string | null {
+  const d = domain.toLowerCase().trim().replace(/\/$/, "");
+  if (!/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(d)) return null;
+  return d;
+}
+
+async function fetchInstanceEmojis(
+  domain: string,
+): Promise<DiscoveredEmoji[]> {
+  const base = `https://${domain}`;
+  const makeSignal = () => AbortSignal.timeout(10_000);
+  const toEntry = (
+    shortcode: string,
+    url: string,
+  ): DiscoveredEmoji | null => {
+    if (!shortcode || !url) return null;
+    if (!/^https?:\/\//i.test(url)) return null;
+    const clean = shortcode.replace(/^:|:$/g, "");
+    return { id: `${clean}@${domain}`, shortcode: clean, url, domain };
+  };
+
+  // Mastodon / Akkoma: GET /api/v1/custom_emojis
+  try {
+    const resp = await fetch(`${base}/api/v1/custom_emojis`, {
+      signal: makeSignal(),
+      headers: { accept: "application/json" },
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      if (Array.isArray(data) && data.length > 0) {
+        const out: DiscoveredEmoji[] = [];
+        for (const e of data) {
+          const entry = toEntry(String(e.shortcode ?? ""), String(e.url ?? ""));
+          if (entry) out.push(entry);
+        }
+        if (out.length > 0) return out;
+      }
+    }
+  } catch (err) {
+    logger.debug("Mastodon-style emoji fetch failed for {domain}: {error}", {
+      domain,
+      error: err,
+    });
+  }
+
+  // Misskey v13+: GET /api/emojis returns {emojis: [...]}
+  try {
+    const resp = await fetch(`${base}/api/emojis`, {
+      signal: makeSignal(),
+      headers: { accept: "application/json" },
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data && Array.isArray(data.emojis)) {
+        const out: DiscoveredEmoji[] = [];
+        for (const e of data.emojis) {
+          const entry = toEntry(
+            String(e.name ?? ""),
+            String(e.url ?? e.originalUrl ?? e.publicUrl ?? ""),
+          );
+          if (entry) out.push(entry);
+        }
+        if (out.length > 0) return out;
+      }
+    }
+  } catch (err) {
+    logger.debug(
+      "Misskey-style GET emoji fetch failed for {domain}: {error}",
+      { domain, error: err },
+    );
+  }
+
+  // Misskey older: POST /api/emojis with {}
+  try {
+    const resp = await fetch(`${base}/api/emojis`, {
+      method: "POST",
+      signal: makeSignal(),
+      headers: {
+        accept: "application/json",
+        "content-type": "application/json",
+      },
+      body: "{}",
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data && Array.isArray(data.emojis)) {
+        const out: DiscoveredEmoji[] = [];
+        for (const e of data.emojis) {
+          const entry = toEntry(
+            String(e.name ?? ""),
+            String(e.url ?? e.originalUrl ?? e.publicUrl ?? ""),
+          );
+          if (entry) out.push(entry);
+        }
+        if (out.length > 0) return out;
+      }
+    }
+  } catch (err) {
+    logger.debug(
+      "Misskey-style POST emoji fetch failed for {domain}: {error}",
+      { domain, error: err },
+    );
+  }
+
+  return [];
+}
 
 emojis.post("/import", async (c) => {
   const disk = drive.use();
