@@ -12,7 +12,7 @@ export function Profile({ accountOwner }: ProfileProps) {
   const bioHtml = renderCustomEmojis(account.bioHtml ?? "", account.emojis);
   const url = account.url ?? account.iri;
   return (
-    <div>
+    <div class="profile-header">
       {account.coverUrl && (
         <img
           src={account.coverUrl}

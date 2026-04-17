@@ -1,6 +1,7 @@
 import { and, desc, eq, or } from "drizzle-orm";
 import { Hono } from "hono";
 import { Layout } from "../../components/Layout.tsx";
+import { Profile } from "../../components/Profile.tsx";
 import db from "../../db.ts";
 import {
   type Account,
@@ -113,12 +114,8 @@ function PostPage({ root, descendants, accountOwner }: PostPageProps) {
       ]}
       themeColor={accountOwner.themeColor}
     >
+      <Profile accountOwner={accountOwner} />
       <div class="article-page">
-        <p class="site-title-bar">
-          <a class="site-title" href={`/@${accountOwner.handle}`}>
-            {root.account.name}
-          </a>
-        </p>
         <header class="article-hero">
           {title && <h1 class="article-title">{title}</h1>}
           <div class="article-byline">

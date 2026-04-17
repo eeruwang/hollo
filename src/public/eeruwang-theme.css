@@ -1036,7 +1036,10 @@ input[type="button"]:active {
   transform: translateY(var(--press-dy)) scale(var(--press-scale));
 }
 
-/* ==== Page fade-in on load (blog #page.ready) ==== */
+/* ==== Page fade-in on load (blog #page.ready) ====
+   Animate each direct child of main.container except the persistent
+   Profile header, so the header stays anchored in place while the
+   rest of the page whooshes in. */
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -1047,7 +1050,7 @@ input[type="button"]:active {
     transform: translateY(0);
   }
 }
-main.container {
+main.container > *:not(.profile-header) {
   animation: fadeInUp 0.25s ease both;
 }
 
@@ -1167,24 +1170,11 @@ article ~ form {
   margin: 0;
 }
 
-/* Fixed site-name header — top-left of the article page. */
-.article-page .site-title-bar {
-  margin: 0 0 72px;
+/* Distill-inspired hero: big title with rule, italic inline byline.
+   Sits under the shared .profile-header, separated by a small margin. */
+.article-page {
+  margin-top: 2.5rem;
 }
-.article-page .site-title {
-  font-size: 1.02rem;
-  font-weight: 700;
-  color: #000;
-  text-decoration: none;
-  letter-spacing: -0.01em;
-}
-.article-page .site-title:hover {
-  text-decoration: underline;
-  text-decoration-thickness: 1.5px;
-  text-underline-offset: 4px;
-}
-
-/* Distill-inspired hero: big title with rule, italic inline byline */
 .article-page .article-hero {
   margin: 0 0 2.5rem;
 }
