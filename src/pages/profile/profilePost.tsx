@@ -120,6 +120,25 @@ function PostPage({ root, descendants, accountOwner }: PostPageProps) {
           {title && <h1 class="article-title">{title}</h1>}
           <div class="article-byline">
             <span class="byline-authors">
+              {root.account.avatarUrl && (
+                <button
+                  type="button"
+                  class="byline-avatar-btn"
+                  aria-label={`View ${root.account.name}'s profile`}
+                  {...({ popovertarget: "profile-popup" } as Record<
+                    string,
+                    string
+                  >)}
+                >
+                  <img
+                    src={root.account.avatarUrl}
+                    alt=""
+                    class="byline-avatar"
+                    width={28}
+                    height={28}
+                  />
+                </button>
+              )}
               <a href={root.account.url ?? root.account.iri}>
                 {root.account.name}
               </a>
@@ -133,6 +152,7 @@ function PostPage({ root, descendants, accountOwner }: PostPageProps) {
             </span>
           </div>
         </header>
+        <ProfilePopup accountOwner={accountOwner} />
         <article class="article-body">
           {rootBodyHtml && (
             <div
@@ -218,6 +238,35 @@ function ThreadSegment({ post }: ThreadSegmentProps) {
         <ThreadMedia medium={medium} />
       ))}
     </>
+  );
+}
+
+interface ProfilePopupProps {
+  readonly accountOwner: AccountOwner & { account: Account };
+}
+
+function ProfilePopup({ accountOwner }: ProfilePopupProps) {
+  return (
+    <div
+      id="profile-popup"
+      class="profile-popup"
+      {...({ popover: "auto" } as Record<string, string>)}
+    >
+      <button
+        type="button"
+        class="profile-popup-close"
+        aria-label="Close profile"
+        {...({
+          popovertarget: "profile-popup",
+          popovertargetaction: "hide",
+        } as Record<string, string>)}
+      >
+        &times;
+      </button>
+      <div class="profile-popup-body">
+        <Profile accountOwner={accountOwner} />
+      </div>
+    </div>
   );
 }
 

@@ -1194,7 +1194,7 @@ article ~ form {
 .article-page .article-byline {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
   gap: 1rem 2rem;
   flex-wrap: wrap;
   margin: 0;
@@ -1212,9 +1212,181 @@ article ~ form {
   color: var(--anthropic-slate) !important;
   text-decoration: underline !important;
 }
-.article-page .byline-authors,
+.article-page .byline-authors {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
 .article-page .byline-date {
   min-width: 0;
+}
+
+/* Small avatar button that opens the profile popover */
+.article-page .byline-avatar-btn {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  padding: 0;
+  background: transparent;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.article-page .byline-avatar-btn:hover,
+.article-page .byline-avatar-btn:focus-visible {
+  transform: scale(1.06);
+  box-shadow: 0 0 0 2px var(--anthropic-clay);
+  outline: none;
+}
+.article-page .byline-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: block;
+  object-fit: cover;
+}
+
+/* ================================================================
+   PROFILE POPUP (click-to-reveal card anchored to byline avatar)
+   ================================================================ */
+
+.profile-popup {
+  /* Native popover element (popover="auto") — centers itself by
+     default. Size it down and give it a card look. */
+  position: fixed;
+  margin: auto;
+  inset: 0;
+  width: min(92vw, 440px);
+  max-height: min(86vh, 640px);
+  height: fit-content;
+  padding: 0;
+  border: 1px solid var(--anthropic-oat);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 24px 64px rgba(20, 20, 19, 0.22),
+    0 4px 16px rgba(20, 20, 19, 0.08);
+  color: var(--anthropic-slate);
+  overflow: hidden;
+}
+.profile-popup::backdrop {
+  background: rgba(20, 20, 19, 0.38);
+  backdrop-filter: blur(2px);
+}
+
+.profile-popup-body {
+  overflow-y: auto;
+  max-height: inherit;
+  padding: 1.25rem 1.5rem 1.5rem;
+}
+.profile-popup-body > .profile-header {
+  margin: 0;
+}
+.profile-popup-body > .profile-header img[alt=""] {
+  /* Cover image — bleed to edges, shorter inside popup */
+  margin: -1.25rem -1.5rem 1rem !important;
+  width: calc(100% + 3rem) !important;
+  max-height: 140px;
+  object-fit: cover;
+}
+.profile-popup-body hgroup h1 {
+  font-size: 1.35rem;
+  margin: 0 0 0.25rem;
+}
+.profile-popup-body hgroup h1 a {
+  color: var(--anthropic-slate);
+  text-decoration: none;
+}
+.profile-popup-body hgroup h1 a:hover {
+  text-decoration: underline;
+}
+.profile-popup-body hgroup p {
+  font-size: 0.85rem;
+  color: #888;
+  margin: 0;
+}
+.profile-popup-body .overflow-auto {
+  margin-top: 1rem;
+  font-size: 0.88rem;
+}
+.profile-popup-body table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.profile-popup-body th,
+.profile-popup-body td {
+  padding: 0.45rem 0.5rem;
+  border-bottom: 1px solid var(--anthropic-oat);
+  text-align: left;
+  vertical-align: top;
+}
+.profile-popup-body th {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--anthropic-kraft);
+  width: 30%;
+}
+
+/* Close button */
+.profile-popup-close {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.75rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--anthropic-slate);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  box-shadow: 0 2px 6px rgba(20, 20, 19, 0.18);
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.profile-popup-close:hover,
+.profile-popup-close:focus-visible {
+  background: #fff;
+  transform: scale(1.05);
+  outline: none;
+}
+
+/* Fade/scale in when opened */
+@keyframes profilePopupIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.profile-popup:popover-open {
+  animation: profilePopupIn 0.18s ease both;
+}
+
+/* Fallback for browsers without :popover-open support — still
+   visible if JavaScript or user toggles the popover. */
+.profile-popup[popover]:not(:popover-open) {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-popup:popover-open {
+    animation: none;
+  }
 }
 
 /* Legacy article-meta (kept as safety net if rendered elsewhere) */
