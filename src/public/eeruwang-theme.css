@@ -1252,6 +1252,237 @@ article ~ form {
 }
 
 /* ================================================================
+   ARTICLE ENGAGEMENT FOOTER + COMMENTS
+   ================================================================ */
+
+.article-page .article-engagement {
+  margin: 3rem 0 2.5rem;
+  padding: 1.25rem 0 1.5rem;
+  border-top: 1px solid #e5e5e5;
+  border-bottom: 1px solid #e5e5e5;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+.article-page .engagement-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.4rem;
+  font-size: 0.88rem;
+  color: var(--anthropic-slate);
+}
+.article-page .engagement-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--anthropic-slate);
+  text-decoration: none;
+  font-weight: 500;
+}
+a.engagement-stat:hover {
+  color: var(--anthropic-clay);
+  text-decoration: underline;
+  text-decoration-color: rgba(217, 119, 87, 0.35);
+  text-underline-offset: 3px;
+}
+.article-page .engagement-icon {
+  font-size: 1em;
+  color: var(--anthropic-kraft);
+}
+.article-page .engagement-reactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.article-page .reaction-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: var(--anthropic-ivory);
+  border: 1px solid var(--anthropic-oat);
+  font-size: 0.85rem;
+  line-height: 1;
+  color: var(--anthropic-slate);
+}
+.article-page .reaction-chip .reaction-emoji {
+  display: inline-flex;
+  align-items: center;
+  font-size: 1em;
+  line-height: 1;
+}
+.article-page .reaction-chip img.reaction-emoji {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+.article-page .reaction-chip .reaction-count {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--anthropic-kraft);
+}
+
+/* Comments section — laid out like chat replies */
+.article-page .article-comments {
+  margin: 0 0 3rem;
+  padding-top: 0.5rem;
+}
+.article-page .article-comments-heading {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0 0 1.25rem;
+  color: #000;
+}
+.article-page .comment-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+.article-page .comment {
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--anthropic-slate);
+}
+.article-page .comment-avatar-link {
+  flex-shrink: 0;
+  display: block;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.article-page .comment-avatar-link:hover {
+  transform: scale(1.04);
+  box-shadow: 0 0 0 2px var(--anthropic-clay);
+}
+.article-page .comment-avatar {
+  width: 36px;
+  height: 36px;
+  object-fit: cover;
+  display: block;
+}
+.article-page .comment-avatar-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: var(--anthropic-oat);
+  color: var(--anthropic-kraft);
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+}
+.article-page .comment-body {
+  flex: 1;
+  min-width: 0;
+}
+.article-page .comment-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.55rem;
+  font-size: 0.82rem;
+  margin-bottom: 0.25rem;
+}
+.article-page .comment-name {
+  font-weight: 700;
+  color: #000;
+  text-decoration: none;
+}
+.article-page .comment-name:hover {
+  text-decoration: underline;
+}
+.article-page .comment-owner .comment-name::after {
+  content: "author";
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.4rem;
+  background: var(--anthropic-manilla);
+  color: var(--anthropic-book-cloth);
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  vertical-align: 1px;
+}
+.article-page .comment-handle {
+  color: #888;
+  word-break: break-all;
+  font-weight: 400;
+}
+.article-page .comment-date {
+  color: #aaa;
+  text-decoration: none;
+  margin-left: auto;
+  font-style: italic;
+}
+.article-page .comment-date:hover {
+  color: var(--anthropic-slate);
+  text-decoration: underline;
+}
+.article-page .comment-content {
+  margin: 0.1rem 0 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+.article-page .comment-content p {
+  margin: 0 0 0.5em;
+}
+.article-page .comment-content p:last-child {
+  margin-bottom: 0;
+}
+.article-page .comment-content a {
+  color: var(--anthropic-sky);
+  text-decoration: underline;
+  text-decoration-color: rgba(106, 155, 204, 0.35);
+  text-underline-offset: 2px;
+}
+.article-page .comment-content a:hover {
+  color: var(--anthropic-clay);
+  text-decoration-color: var(--anthropic-clay);
+}
+.article-page .comment-media {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.55rem 0 0;
+}
+.article-page .comment-media img {
+  max-width: 100%;
+  max-height: 220px;
+  border-radius: 6px;
+  border: 1px solid var(--anthropic-oat);
+  object-fit: cover;
+}
+.article-page .comment-reactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.55rem 0 0;
+}
+.article-page .comment-reactions .reaction-chip {
+  padding: 0.15rem 0.5rem;
+  font-size: 0.78rem;
+}
+.article-page .comment-reactions .reaction-chip img.reaction-emoji {
+  width: 15px;
+  height: 15px;
+}
+
+/* ================================================================
    PROFILE POPUP (click-to-reveal card anchored to byline avatar)
    ================================================================ */
 

@@ -1,4 +1,4 @@
-import { and, desc, eq, or } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, ne, or } from "drizzle-orm";
 import { escape } from "es-toolkit";
 import { Hono } from "hono";
 import { Layout } from "../../components/Layout.tsx";
@@ -13,6 +13,8 @@ import {
   type PollOption,
   type Post,
   posts,
+  type Reaction,
+  reactions,
 } from "../../schema.ts";
 import { renderCustomEmojis } from "../../text.ts";
 import { isUuid } from "../../uuid.ts";
@@ -23,6 +25,12 @@ type ThreadPost = Post & {
   account: Account;
   media: Medium[];
   poll: (Poll & { options: PollOption[] }) | null;
+};
+
+type CommentPost = Post & {
+  account: Account;
+  media: Medium[];
+  reactions: Reaction[];
 };
 
 profilePost.get<"/:handle{@[^/]+}/:id{[-a-f0-9]+}">(async (c) => {
@@ -78,11 +86,36 @@ profilePost.get<"/:handle{@[^/]+}/:id{[-a-f0-9]+}">(async (c) => {
   };
   walk(root);
 
+  // Reactions (emoji reactions) on the root post
+  const rootReactions = await db.query.reactions.findMany({
+    where: eq(reactions.postId, root.id),
+    orderBy: asc(reactions.created),
+  });
+
+  // Non-author replies to any post in the author's thread — these
+  // are the "comments" from other people on the fediverse.
+  const threadPostIds = [root.id, ...descendants.map((d) => d.id)];
+  const comments = (await db.query.posts.findMany({
+    where: and(
+      inArray(posts.replyTargetId, threadPostIds),
+      ne(posts.accountId, accountOwner.id),
+      or(eq(posts.visibility, "public"), eq(posts.visibility, "unlisted")),
+    ),
+    orderBy: asc(posts.published),
+    with: {
+      account: true,
+      media: true,
+      reactions: true,
+    },
+  })) as CommentPost[];
+
   return c.html(
     <PostPage
       root={root}
       descendants={descendants}
       accountOwner={accountOwner}
+      rootReactions={rootReactions}
+      comments={comments}
     />,
   );
 });
@@ -91,11 +124,18 @@ interface PostPageProps {
   readonly accountOwner: AccountOwner & { account: Account };
   readonly root: ThreadPost;
   readonly descendants: ThreadPost[];
+  readonly rootReactions: Reaction[];
+  readonly comments: CommentPost[];
 }
 
-function PostPage({ root, descendants, accountOwner }: PostPageProps) {
+function PostPage({
+  root,
+  descendants,
+  accountOwner,
+  rootReactions,
+  comments,
+}: PostPageProps) {
   const publishedAt = root.published ?? root.updated;
-  const thread: ThreadPost[] = [root, ...descendants];
   const { title, bodyHtml } = deriveTitleAndBody(root);
   const rootBodyHtml = renderCustomEmojis(bodyHtml, root.emojis);
   const metaTitle =
@@ -169,6 +209,14 @@ function PostPage({ root, descendants, accountOwner }: PostPageProps) {
             <ThreadSegment post={post} />
           ))}
         </article>
+        <ArticleEngagement
+          post={root}
+          reactions={rootReactions}
+          commentCount={comments.length}
+        />
+        {comments.length > 0 && (
+          <CommentList comments={comments} accountOwner={accountOwner} />
+        )}
       </div>
     </Layout>
   );
@@ -199,6 +247,206 @@ function deriveTitleAndBody(post: ThreadPost): {
     }
   }
   return { title: null, bodyHtml: html };
+}
+
+interface ArticleEngagementProps {
+  readonly post: ThreadPost;
+  readonly reactions: Reaction[];
+  readonly commentCount: number;
+}
+
+function ArticleEngagement({
+  post,
+  reactions,
+  commentCount,
+}: ArticleEngagementProps) {
+  const grouped = groupByEmojis(reactions);
+  const likes = post.likesCount ?? 0;
+  const shares = post.sharesCount ?? 0;
+  const hasAny =
+    likes > 0 ||
+    shares > 0 ||
+    reactions.length > 0 ||
+    commentCount > 0;
+  if (!hasAny) return null;
+  return (
+    <aside class="article-engagement">
+      <div class="engagement-stats">
+        {likes > 0 && (
+          <span class="engagement-stat">
+            <span class="engagement-icon" aria-hidden="true">
+              &#9829;
+            </span>
+            {likes} {likes === 1 ? "like" : "likes"}
+          </span>
+        )}
+        {shares > 0 && (
+          <span class="engagement-stat">
+            <span class="engagement-icon" aria-hidden="true">
+              &#8634;
+            </span>
+            {shares} {shares === 1 ? "share" : "shares"}
+          </span>
+        )}
+        {commentCount > 0 && (
+          <a href="#comments" class="engagement-stat">
+            <span class="engagement-icon" aria-hidden="true">
+              &#128172;
+            </span>
+            {commentCount} {commentCount === 1 ? "comment" : "comments"}
+          </a>
+        )}
+      </div>
+      {Object.keys(grouped).length > 0 && (
+        <div class="engagement-reactions">
+          {Object.entries(grouped).map(([emoji, { src, count }]) => (
+            <span class="reaction-chip" title={`${emoji} × ${count}`}>
+              {src == null ? (
+                <span class="reaction-emoji">{emoji}</span>
+              ) : (
+                <img class="reaction-emoji" src={src} alt={emoji} />
+              )}
+              <span class="reaction-count">{count}</span>
+            </span>
+          ))}
+        </div>
+      )}
+    </aside>
+  );
+}
+
+function groupByEmojis(
+  reactionList: Reaction[],
+): Record<string, { src?: string; count: number }> {
+  const result: Record<string, { src?: string; count: number }> = {};
+  for (const r of reactionList) {
+    if (result[r.emoji] == null) {
+      result[r.emoji] = {
+        src: r.customEmoji ?? undefined,
+        count: 1,
+      };
+    } else {
+      result[r.emoji].count++;
+    }
+  }
+  return result;
+}
+
+interface CommentListProps {
+  readonly comments: CommentPost[];
+  readonly accountOwner: AccountOwner & { account: Account };
+}
+
+function CommentList({ comments, accountOwner }: CommentListProps) {
+  return (
+    <section class="article-comments" id="comments">
+      <h2 class="article-comments-heading">
+        {comments.length === 1
+          ? "1 comment"
+          : `${comments.length} comments`}
+      </h2>
+      <ul class="comment-list">
+        {comments.map((c) => (
+          <Comment comment={c} accountOwner={accountOwner} />
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+interface CommentProps {
+  readonly comment: CommentPost;
+  readonly accountOwner: AccountOwner & { account: Account };
+}
+
+function Comment({ comment, accountOwner }: CommentProps) {
+  const published = comment.published ?? comment.updated;
+  const contentHtml = renderCustomEmojis(
+    comment.contentHtml ?? "",
+    comment.emojis,
+  );
+  const grouped = groupByEmojis(comment.reactions);
+  const account = comment.account;
+  const accountUrl = account.url ?? account.iri;
+  const isOwner = comment.accountId === accountOwner.id;
+  return (
+    <li class={`comment${isOwner ? " comment-owner" : ""}`}>
+      <a class="comment-avatar-link" href={accountUrl}>
+        {account.avatarUrl ? (
+          <img
+            class="comment-avatar"
+            src={account.avatarUrl}
+            alt=""
+            width={36}
+            height={36}
+          />
+        ) : (
+          <span class="comment-avatar comment-avatar-placeholder">
+            {account.name?.[0] ?? "?"}
+          </span>
+        )}
+      </a>
+      <div class="comment-body">
+        <div class="comment-meta">
+          <a
+            class="comment-name"
+            href={accountUrl}
+            dangerouslySetInnerHTML={{
+              __html: renderCustomEmojis(escape(account.name), account.emojis),
+            }}
+          />
+          <span class="comment-handle">
+            {account.handle.startsWith("@")
+              ? account.handle
+              : `@${account.handle}`}
+          </span>
+          <a
+            class="comment-date"
+            href={comment.url ?? comment.iri}
+            title={published.toISOString()}
+          >
+            <time dateTime={published.toISOString()}>
+              {published.toLocaleString("en", { dateStyle: "medium" })}
+            </time>
+          </a>
+        </div>
+        {comment.contentHtml && (
+          <div
+            class="comment-content markdown-content"
+            dangerouslySetInnerHTML={{ __html: contentHtml }}
+            lang={comment.language ?? undefined}
+          />
+        )}
+        {comment.media.length > 0 && (
+          <div class="comment-media">
+            {comment.media.map((m) => (
+              <a href={m.url}>
+                <img
+                  src={m.thumbnailUrl}
+                  alt={m.description ?? ""}
+                  loading="lazy"
+                />
+              </a>
+            ))}
+          </div>
+        )}
+        {Object.keys(grouped).length > 0 && (
+          <div class="comment-reactions">
+            {Object.entries(grouped).map(([emoji, { src, count }]) => (
+              <span class="reaction-chip" title={`${emoji} × ${count}`}>
+                {src == null ? (
+                  <span class="reaction-emoji">{emoji}</span>
+                ) : (
+                  <img class="reaction-emoji" src={src} alt={emoji} />
+                )}
+                {count > 1 && <span class="reaction-count">{count}</span>}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    </li>
+  );
 }
 
 interface ThreadMediaProps {
