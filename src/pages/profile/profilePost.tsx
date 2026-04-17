@@ -1,4 +1,5 @@
 import { and, desc, eq, or } from "drizzle-orm";
+import { escape } from "es-toolkit";
 import { Hono } from "hono";
 import { Layout } from "../../components/Layout.tsx";
 import { Profile } from "../../components/Profile.tsx";
@@ -246,6 +247,10 @@ interface ProfilePopupProps {
 }
 
 function ProfilePopup({ accountOwner }: ProfilePopupProps) {
+  const account = accountOwner.account;
+  const nameHtml = renderCustomEmojis(escape(account.name), account.emojis);
+  const bioHtml = renderCustomEmojis(account.bioHtml ?? "", account.emojis);
+  const url = account.url ?? account.iri;
   return (
     <>
       <div
@@ -264,8 +269,54 @@ function ProfilePopup({ accountOwner }: ProfilePopupProps) {
         >
           &times;
         </button>
+        {account.coverUrl && (
+          <div class="profile-popup-cover">
+            <img src={account.coverUrl} alt="" />
+          </div>
+        )}
         <div class="profile-popup-body">
-          <Profile accountOwner={accountOwner} />
+          <div class="profile-popup-ident">
+            {account.avatarUrl && (
+              <img
+                class="profile-popup-avatar"
+                src={account.avatarUrl}
+                alt=""
+                width={48}
+                height={48}
+              />
+            )}
+            <div class="profile-popup-ident-text">
+              <a
+                class="profile-popup-name"
+                href={url}
+                dangerouslySetInnerHTML={{ __html: nameHtml }}
+              />
+              <div class="profile-popup-handle">{account.handle}</div>
+              <div class="profile-popup-stats">
+                {account.followingCount} following &middot;{" "}
+                {account.followersCount === 1
+                  ? "1 follower"
+                  : `${account.followersCount} followers`}
+              </div>
+            </div>
+          </div>
+          {account.bioHtml && (
+            <div
+              class="profile-popup-bio"
+              dangerouslySetInnerHTML={{ __html: bioHtml }}
+            />
+          )}
+          {account.fieldHtmls &&
+            Object.keys(account.fieldHtmls).length > 0 && (
+              <dl class="profile-popup-fields">
+                {Object.entries(account.fieldHtmls).map(([key, value]) => (
+                  <>
+                    <dt>{key}</dt>
+                    <dd dangerouslySetInnerHTML={{ __html: value }} />
+                  </>
+                ))}
+              </dl>
+            )}
         </div>
       </div>
       <script
