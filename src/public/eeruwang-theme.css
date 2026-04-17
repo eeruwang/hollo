@@ -1167,20 +1167,21 @@ article ~ form {
   margin: 0;
 }
 
-.article-back {
-  margin: 0 0 40px;
-  font-size: 0.75em;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+/* Fixed site-name header — top-left of the article page. */
+.article-page .site-title-bar {
+  margin: 0 0 72px;
 }
-.article-back a {
-  color: #888;
+.article-page .site-title {
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: #000;
   text-decoration: none;
-  font-weight: 600;
+  letter-spacing: -0.01em;
 }
-.article-back a:hover {
-  color: var(--anthropic-slate);
+.article-page .site-title:hover {
   text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 4px;
 }
 
 /* Distill-inspired hero: big title with rule, italic inline byline */
@@ -1189,14 +1190,14 @@ article ~ form {
 }
 
 .article-title {
-  font-size: clamp(2rem, 5.2vw, 3rem);
-  line-height: 1.08;
+  font-size: clamp(2.2rem, 5.8vw, 3.4rem);
+  line-height: 1.05;
   margin: 0 0 1.25rem;
-  padding: 0 0 1.25rem;
-  border-bottom: 1px solid var(--anthropic-oat);
+  padding: 0 0 1.4rem;
+  border-bottom: 1px solid #e5e5e5;
   font-weight: 900;
-  color: var(--anthropic-slate);
-  letter-spacing: -0.02em;
+  color: #000;
+  letter-spacing: -0.025em;
   text-wrap: balance;
 }
 
@@ -1246,26 +1247,18 @@ article ~ form {
 /* Body typography — larger, airier for long-form reading */
 .article-page article.article-body {
   font-size: 1.05em;
-  line-height: 1.75;
-  color: var(--anthropic-slate);
+  line-height: 1.65;
+  color: #141413;
 }
 @media (min-width: 768px) {
   .article-page article.article-body {
     font-size: 1.125em;
-    line-height: 1.78;
+    line-height: 1.7;
   }
 }
 
-/* First paragraph of the body acts as a lead: slightly larger,
-   slightly darker, for that polished blog-first-line feel. */
-.article-page .article-body > .article-segment:first-of-type > p:first-child {
-  font-size: 1.18em;
-  font-weight: 400;
-  line-height: 1.55;
-  color: var(--anthropic-slate);
-  margin-bottom: 1.6em;
-  text-wrap: pretty;
-}
+/* Reference layout: no special lead-paragraph treatment — body flows
+   uniformly after the title rule. */
 
 /* Post page body: single continuous blog article spanning root + all
    descendant replies. No card chrome, no per-post borders. */
@@ -1311,22 +1304,23 @@ article ~ form {
   line-height: inherit;
 }
 .article-page article > div h2 {
-  font-size: 1.65rem;
+  font-size: 1.75rem;
   font-weight: 700;
-  line-height: 1.25;
-  letter-spacing: -0.01em;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
   margin: 3.5rem 0 1.25rem;
-  padding: 0 0 0.4rem;
-  border-bottom: 1px solid var(--anthropic-oat);
-  color: var(--anthropic-slate);
+  padding: 0 0 0.55rem;
+  border-bottom: 1px solid #e5e5e5;
+  color: #000;
   text-wrap: balance;
 }
 .article-page article > div h3 {
-  font-size: 1.22rem;
-  font-weight: 600;
+  font-size: 1.25rem;
+  font-weight: 700;
   line-height: 1.3;
   margin: 2.25rem 0 0.75rem;
-  color: var(--anthropic-slate);
+  letter-spacing: -0.01em;
+  color: #000;
   text-wrap: balance;
 }
 .article-page article > div p {

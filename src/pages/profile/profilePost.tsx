@@ -114,8 +114,10 @@ function PostPage({ root, descendants, accountOwner }: PostPageProps) {
       themeColor={accountOwner.themeColor}
     >
       <div class="article-page">
-        <p class="article-back">
-          <a href={`/@${accountOwner.handle}`}>&larr; Back to posts</a>
+        <p class="site-title-bar">
+          <a class="site-title" href={`/@${accountOwner.handle}`}>
+            {root.account.name}
+          </a>
         </p>
         <header class="article-hero">
           {title && <h1 class="article-title">{title}</h1>}
