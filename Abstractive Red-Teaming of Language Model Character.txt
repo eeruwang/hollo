@@ -1,0 +1,1541 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+    
+    
+    
+    <title>Abstractive Red-Teaming of Language Model Character</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style id="distill-prerendered-styles" type="text/css">/*
+ * Copyright 2018 The Distill Template Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+html {
+  font-size: 14px;
+	line-height: 1.6em;
+  /* font-family: "Libre Franklin", "Helvetica Neue", sans-serif; */
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", Arial, sans-serif;
+  /*, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";*/
+  text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+@media(min-width: 768px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+body {
+  margin: 0;
+}
+
+a {
+  color: #004276;
+}
+
+figure {
+  margin: 0;
+}
+
+table {
+	border-collapse: collapse;
+	border-spacing: 0;
+}
+
+table th {
+	text-align: left;
+}
+
+table thead {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+table thead th {
+  padding-bottom: 0.5em;
+}
+
+table tbody :first-child td {
+  padding-top: 0.5em;
+}
+
+pre {
+  overflow: auto;
+  max-width: 100%;
+}
+
+p {
+  margin-top: 0;
+  margin-bottom: 1em;
+}
+
+sup, sub {
+  vertical-align: baseline;
+  position: relative;
+  top: -0.4em;
+  line-height: 1em;
+}
+
+sub {
+  top: 0.4em;
+}
+
+.kicker,
+.marker {
+  font-size: 15px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+
+/* Headline */
+
+@media(min-width: 1024px) {
+  d-title h1 span {
+    display: block;
+  }
+}
+
+/* Figure */
+
+figure {
+  position: relative;
+  margin-bottom: 2.5em;
+  margin-top: 1.5em;
+}
+
+figcaption+figure {
+
+}
+
+figure img {
+  width: 100%;
+}
+
+figure svg text,
+figure svg tspan {
+}
+
+figcaption,
+.figcaption {
+  color: rgba(0, 0, 0, 0.6);
+  font-size: 12px;
+  line-height: 1.5em;
+}
+
+@media(min-width: 1024px) {
+figcaption,
+.figcaption {
+    font-size: 13px;
+  }
+}
+
+figure.external img {
+  background: white;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.1);
+  padding: 18px;
+  box-sizing: border-box;
+}
+
+figcaption a {
+  color: rgba(0, 0, 0, 0.6);
+}
+
+figcaption b,
+figcaption strong, {
+  font-weight: 600;
+  color: rgba(0, 0, 0, 1.0);
+}
+/*
+ * Copyright 2018 The Distill Template Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+@supports not (display: grid) {
+  .base-grid,
+  distill-header,
+  d-title,
+  d-abstract,
+  d-article,
+  d-appendix,
+  distill-appendix,
+  d-byline,
+  d-footnote-list,
+  d-citation-list,
+  distill-footer {
+    display: block;
+    padding: 8px;
+  }
+}
+
+.base-grid,
+distill-header,
+d-title,
+d-abstract,
+d-article,
+d-appendix,
+distill-appendix,
+d-byline,
+d-footnote-list,
+d-citation-list,
+distill-footer {
+  display: grid;
+  justify-items: stretch;
+  grid-template-columns: [screen-start] 8px [page-start kicker-start text-start gutter-start middle-start] 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr [text-end page-end gutter-end kicker-end middle-end] 8px [screen-end];
+  grid-column-gap: 8px;
+}
+
+.grid {
+  display: grid;
+  grid-column-gap: 8px;
+}
+
+@media(min-width: 768px) {
+  .base-grid,
+  distill-header,
+  d-title,
+  d-abstract,
+  d-article,
+  d-appendix,
+  distill-appendix,
+  d-byline,
+  d-footnote-list,
+  d-citation-list,
+  distill-footer {
+    grid-template-columns: [screen-start] 1fr [page-start kicker-start middle-start text-start] 45px 45px 45px 45px 45px 45px 45px 45px [ kicker-end text-end gutter-start] 45px [middle-end] 45px [page-end gutter-end] 1fr [screen-end];
+    grid-column-gap: 16px;
+  }
+
+  .grid {
+    grid-column-gap: 16px;
+  }
+}
+
+@media(min-width: 1000px) {
+  .base-grid,
+  distill-header,
+  d-title,
+  d-abstract,
+  d-article,
+  d-appendix,
+  distill-appendix,
+  d-byline,
+  d-footnote-list,
+  d-citation-list,
+  distill-footer {
+    grid-template-columns: [screen-start] 1fr [page-start kicker-start] 50px [middle-start] 50px [text-start kicker-end] 50px 50px 50px 50px 50px 50px 50px 50px [text-end gutter-start] 50px [middle-end] 50px [page-end gutter-end] 1fr [screen-end];
+    grid-column-gap: 16px;
+  }
+
+  .grid {
+    grid-column-gap: 16px;
+  }
+}
+
+@media(min-width: 1180px) {
+  .base-grid,
+  distill-header,
+  d-title,
+  d-abstract,
+  d-article,
+  d-appendix,
+  distill-appendix,
+  d-byline,
+  d-footnote-list,
+  d-citation-list,
+  distill-footer {
+    grid-template-columns: [screen-start] 1fr [page-start kicker-start] 60px [middle-start] 60px [text-start kicker-end] 60px 60px 60px 60px 60px 60px 60px 60px [text-end gutter-start] 60px [middle-end] 60px [page-end gutter-end] 1fr [screen-end];
+    grid-column-gap: 32px;
+  }
+
+  .grid {
+    grid-column-gap: 32px;
+  }
+}
+
+
+
+
+.base-grid {
+  grid-column: screen;
+}
+
+/* .l-body,
+d-article > *  {
+  grid-column: text;
+}
+
+.l-page,
+d-title > *,
+d-figure {
+  grid-column: page;
+} */
+
+.l-gutter {
+  grid-column: gutter;
+}
+
+.l-text,
+.l-body {
+  grid-column: text;
+}
+
+.l-page {
+  grid-column: page;
+}
+
+.l-body-outset {
+  grid-column: middle;
+}
+
+.l-page-outset {
+  grid-column: page;
+}
+
+.l-screen {
+  grid-column: screen;
+}
+
+.l-screen-inset {
+  grid-column: screen;
+  padding-left: 16px;
+  padding-left: 16px;
+}
+
+
+/* Aside */
+
+d-article aside {
+  grid-column: gutter;
+  font-size: 12px;
+  line-height: 1.6em;
+  color: rgba(0, 0, 0, 0.6)
+}
+
+@media(min-width: 768px) {
+  aside {
+    grid-column: gutter;
+  }
+
+  .side {
+    grid-column: gutter;
+  }
+}
+/*
+ * Copyright 2018 The Distill Template Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+d-title {
+  padding: 2rem 0 1.5rem;
+  contain: layout style;
+  overflow-x: hidden;
+}
+
+@media(min-width: 768px) {
+  d-title {
+    padding: 4rem 0 1.5rem;
+  }
+}
+
+d-title h1 {
+  grid-column: text;
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 1.1em;
+  margin: 0 0 0.5rem;
+}
+
+@media(min-width: 768px) {
+  d-title h1 {
+    font-size: 50px;
+  }
+}
+
+d-title p {
+  font-weight: 300;
+  font-size: 1.2rem;
+  line-height: 1.55em;
+  grid-column: text;
+}
+
+d-title .status {
+  margin-top: 0px;
+  font-size: 12px;
+  color: #009688;
+  opacity: 0.8;
+  grid-column: kicker;
+}
+
+d-title .status span {
+  line-height: 1;
+  display: inline-block;
+  padding: 6px 0;
+  border-bottom: 1px solid #80cbc4;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+/*
+ * Copyright 2018 The Distill Template Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+d-byline {
+  contain: style;
+  overflow: hidden;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  font-size: 0.8rem;
+  line-height: 1.8em;
+  padding: 1.5rem 0;
+  min-height: 1.8em;
+}
+
+
+d-byline .byline {
+  grid-template-columns: 1fr 1fr;
+  grid-column: text;
+}
+
+@media(min-width: 768px) {
+  d-byline .byline {
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+  }
+}
+
+d-byline .authors-affiliations {
+  grid-column-end: span 2;
+  grid-template-columns: 1fr 1fr;
+  margin-bottom: 1em;
+}
+
+@media(min-width: 768px) {
+  d-byline .authors-affiliations {
+    margin-bottom: 0;
+  }
+}
+
+d-byline h3 {
+  font-size: 0.6rem;
+  font-weight: 400;
+  color: rgba(0, 0, 0, 0.5);
+  margin: 0;
+  text-transform: uppercase;
+}
+
+d-byline p {
+  margin: 0;
+}
+
+d-byline a,
+d-article d-byline a {
+  color: rgba(0, 0, 0, 0.8);
+  text-decoration: none;
+  border-bottom: none;
+}
+
+d-article d-byline a:hover {
+  text-decoration: underline;
+  border-bottom: none;
+}
+
+d-byline p.author {
+  font-weight: 500;
+}
+
+d-byline .affiliations {
+
+}
+/*
+ * Copyright 2018 The Distill Template Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+d-article {
+  contain: layout style;
+  overflow-x: hidden;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  padding-top: 2rem;
+  color: rgba(0, 0, 0, 0.8);
+}
+
+d-article > * {
+  grid-column: text;
+}
+
+@media(min-width: 768px) {
+  d-article {
+    font-size: 16px;
+  }
+}
+
+@media(min-width: 1024px) {
+  d-article {
+    font-size: 1.06rem;
+    line-height: 1.7em;
+  }
+}
+
+
+/* H2 */
+
+
+d-article .marker {
+  text-decoration: none;
+  border: none;
+  counter-reset: section;
+  grid-column: kicker;
+  line-height: 1.7em;
+}
+
+d-article .marker:hover {
+  border: none;
+}
+
+d-article .marker span {
+  padding: 0 3px 4px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+  position: relative;
+  top: 4px;
+}
+
+d-article .marker:hover span {
+  color: rgba(0, 0, 0, 0.7);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.7);
+}
+
+d-article h2 {
+  font-weight: 600;
+  font-size: 24px;
+  line-height: 1.25em;
+  margin: 2rem 0 1.5rem 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  padding-bottom: 1rem;
+}
+
+@media(min-width: 1024px) {
+  d-article h2 {
+    font-size: 36px;
+  }
+}
+
+/* H3 */
+
+d-article h3 {
+  font-weight: 700;
+  font-size: 18px;
+  line-height: 1.4em;
+  margin-bottom: 1em;
+  margin-top: 2em;
+}
+
+@media(min-width: 1024px) {
+  d-article h3 {
+    font-size: 20px;
+  }
+}
+
+/* H4 */
+
+d-article h4 {
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 14px;
+  line-height: 1.4em;
+}
+
+d-article a {
+  color: inherit;
+}
+
+d-article p,
+d-article ul,
+d-article ol,
+d-article blockquote {
+  margin-top: 0;
+  margin-bottom: 1em;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+d-article blockquote {
+  border-left: 2px solid rgba(0, 0, 0, 0.2);
+  padding-left: 2em;
+  font-style: italic;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+d-article a {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.4);
+  text-decoration: none;
+}
+
+d-article a:hover {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.8);
+}
+
+d-article .link {
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+d-article ul,
+d-article ol {
+  padding-left: 24px;
+}
+
+d-article li {
+  margin-bottom: 1em;
+  margin-left: 0;
+  padding-left: 0;
+}
+
+d-article li:last-child {
+  margin-bottom: 0;
+}
+
+d-article pre {
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+d-article hr {
+  grid-column: screen;
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  margin-top: 60px;
+  margin-bottom: 60px;
+}
+
+d-article section {
+  margin-top: 60px;
+  margin-bottom: 60px;
+}
+
+d-article span.equation-mimic {
+  font-family: georgia;
+  font-size: 115%;
+  font-style: italic;
+}
+
+d-article > d-code,
+d-article section > d-code  {
+  display: block;
+}
+
+d-article > d-math[block],
+d-article section > d-math[block]  {
+  display: block;
+}
+
+@media (max-width: 768px) {
+  d-article > d-code,
+  d-article section > d-code,
+  d-article > d-math[block],
+  d-article section > d-math[block] {
+      overflow-x: scroll;
+      -ms-overflow-style: none;  // IE 10+
+      overflow: -moz-scrollbars-none;  // Firefox
+  }
+
+  d-article > d-code::-webkit-scrollbar,
+  d-article section > d-code::-webkit-scrollbar,
+  d-article > d-math[block]::-webkit-scrollbar,
+  d-article section > d-math[block]::-webkit-scrollbar {
+    display: none;  // Safari and Chrome
+  }
+}
+
+d-article .citation {
+  color: #668;
+  cursor: pointer;
+}
+
+d-include {
+  width: auto;
+  display: block;
+}
+
+d-figure {
+  contain: layout style;
+}
+
+/* KaTeX */
+
+.katex, .katex-prerendered {
+  contain: style;
+  display: inline-block;
+}
+
+/* Tables */
+
+d-article table {
+  border-collapse: collapse;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+d-article table th {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+d-article table td {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+d-article table tr:last-of-type td {
+  border-bottom: none;
+}
+
+d-article table th,
+d-article table td {
+  font-size: 15px;
+  padding: 2px 8px;
+}
+
+d-article table tbody :first-child td {
+  padding-top: 2px;
+}
+/*
+ * Copyright 2018 The Distill Template Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+span.katex-display {
+  text-align: left;
+  padding: 8px 0 8px 0;
+  margin: 0.5em 0 0.5em 1em;
+}
+
+span.katex {
+  -webkit-font-smoothing: antialiased;
+  color: rgba(0, 0, 0, 0.8);
+  font-size: 1.18em;
+}
+/*
+ * Copyright 2018 The Distill Template Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+@media print {
+
+  @page {
+    size: 8in 11in;
+    @bottom-right {
+      content: counter(page) " of " counter(pages);
+    }
+  }
+
+  html {
+    /* no general margins -- CSS Grid takes care of those */
+  }
+
+  p, code {
+    page-break-inside: avoid;
+  }
+
+  h2, h3 {
+    page-break-after: avoid;
+  }
+
+  d-header {
+    visibility: hidden;
+  }
+
+  d-footer {
+    display: none!important;
+  }
+
+}
+</style><script src="Abstractive%20Red-Teaming%20of%20Language%20Model%20Character_files/distill.template.v2.js" integrity="sha384-5u81IQundsxB54QMWC7D3R8yOS8hftmsuvKjNrvIMWj88iPXf3daN0lNUZRPy9OX"></script>
+<script>
+    // We number figures with a script since CSS counters don't work,
+    // likely because of the distill template.
+    function numberFigures() {
+        // Find all figcaption elements with class 'text-caption'
+        const figcaptions = document.querySelectorAll('figcaption.text-caption');
+
+        figcaptions.forEach((figcaption, index) => {
+            // Create a new span for the figure number
+            figcaption.style.marginBottom = '1.25rem';
+
+            const newSpan = document.createElement('span');
+            newSpan.style.fontWeight = '500';
+            newSpan.textContent = `Figure ${index + 1}: `;
+
+            // Insert the new span at the beginning of the figcaption
+            figcaption.insertBefore(newSpan, figcaption.firstChild);
+        });
+    }
+
+    // Function to create a slug from header text
+    function createSlug(text) {
+        return text
+            .toLowerCase()
+            .replace(/[^\w\s]/g, '') // Remove special characters
+            .replace(/\s+/g, '-')    // Replace spaces with hyphens
+            .trim();                 // Remove whitespace from start/end
+    }
+
+    // Function to add IDs to all headers and create a table of contents
+    function addHeaderSlugs() {
+        // Get all heading elements (h1 through h6)
+        const headings = document.querySelectorAll('h1, h2, h3, h4, h5, h6');
+
+        // Process each heading
+        headings.forEach((heading) => {
+            // Skip headings that already have IDs
+            if (heading.id) return;
+
+            // Create slug from heading text
+            const slug = createSlug(heading.textContent);
+
+            // Add ID to the heading
+            heading.id = slug;
+        });
+    }
+
+    // Run the function when the document is loaded
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', numberFigures);
+        document.addEventListener('DOMContentLoaded', addHeaderSlugs);
+    } else {
+        // Document already loaded, run the function
+        numberFigures();
+        addHeaderSlugs();
+    }
+</script>
+</head><body><d-front-matter>
+    <script type="text/json">
+        {
+            "title": "Abstractive Red-Teaming of Language Model Character",
+            "description": "Abstractive red-teaming is a new method for auditing language model character that searches for natural-language categories of user queries—rather than individual prompts—that reliably trigger violations of a character specification. This approach bridges the gap between static evaluations (which miss rare failures) and prompt optimization (which finds unrealistic adversarial strings), surfacing surprising, deployment-realistic failures across models and character principles.",
+            "authors": [null]
+        }
+    </script>
+</d-front-matter>
+<link rel="stylesheet" href="Abstractive%20Red-Teaming%20of%20Language%20Model%20Character_files/transcript-viewer.css">
+<script src="Abstractive%20Red-Teaming%20of%20Language%20Model%20Character_files/transcript-viewer.js" defer="defer"></script>
+    
+    
+
+
+    
+    <style>
+    .article-header {
+        width: 100%;
+        padding: 36px;
+        padding-bottom: 20px;
+        box-sizing: border-box;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .home-link {
+        font-size: 100%;
+        color: #333;
+        text-decoration: none;
+        cursor: pointer;
+        font-weight: 700;
+        font-size: 1.3em;
+    }
+
+    a.logo {
+        display: flex;
+        text-decoration: none;
+    }
+
+    span.commentary {
+        color: #804633;
+    }
+</style>
+
+<div class="article-header">
+    <a class="home-link" href="https://alignment.anthropic.com/">Alignment Science Blog</a>
+</div>
+<d-title class="real-title">
+    <h1 id="abstractive-redteaming-of-language-model-character">Abstractive Red-Teaming of Language Model Character</h1>
+</d-title>
+<style>
+    .safety-case-block p {
+        margin-bottom: 0.5em !important;
+        margin-top: 1em !important;
+    }
+
+    .safety-case-block p:first-of-type {
+        margin-top: 0.5em !important;
+    }
+
+    d-article {
+        padding-top: 60px !important;
+    }
+
+    d-article li:last-child {
+        margin-bottom: 0.5em !important;
+    }
+
+    d-article li {
+        margin-bottom: 0.5em !important;
+    }
+
+    ul {
+        padding-left: 0em !important;
+        margin-bottom: 0.2em !important;
+    }
+
+    ol {
+        padding-left: 0em !important;
+        margin-bottom: 0.2em !important;
+    }
+
+    d-byline {
+        display: none;
+    }
+
+    .d-byline-container {
+        border-top: 1px solid rgba(0, 0, 0, 0.1);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        padding-top: 20px;
+        padding-bottom: 20px;
+    }
+
+    .d-byline {
+        grid-column: text;
+        display: grid;
+        grid-template-columns: [authors info] 5fr [affiliations published] 1fr;
+        grid-template-rows: [authors affiliations] auto [published info] auto;
+        font-size: 0.8rem;
+        line-height: 1.8em;
+        grid-gap: 20px;
+    }
+
+    .d-byline h3 {
+        font-size: 0.6rem;
+        font-weight: 400;
+        color: rgba(0, 0, 0, 0.5);
+        margin: 0;
+        text-transform: uppercase;
+        margin-bottom: 4px;
+    }
+
+    .d-byline .info {
+        color: rgba(0, 0, 0, 0.5);
+        font-size: 80%;
+        line-height: 1.5;
+    }
+
+    .d-byline .authors div {
+        line-height: 1.5;
+    }
+
+    .d-byline .authors sup {
+        font-size: 80%;
+        margin-right: -4px;
+    }
+
+    .d-byline .author {
+        margin-right: 6px;
+        white-space: nowrap;
+    }
+
+    .d-byline a {
+        color: inherit;
+        text-decoration: none;
+    }
+
+    .safety-case-block {
+        padding: 16px;
+        padding-top: 8px;
+        padding-bottom: 8px;
+        border-radius: 4px;
+        background: #faf9f7;
+        border: 1px solid #e5e5e1;
+        border-left: 4px solid #cc9b7a;
+        opacity: 0.8;
+        margin-top: 10px;
+        margin-bottom: 10px;
+    }
+
+    @media screen and (min-width: 900px) {
+        .offset-gdoc-image {
+            margin-left: -65px;
+        }
+    }
+
+    .section-authors {
+        color: #777;
+        font-style: italic;
+        margin-top: -24px;
+        margin-bottom: 32px;
+        line-height: 1.3;
+        /* display: flex; */
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 0.5em;
+    }
+
+    .section-authors::before {
+        content: attr(data-author);
+    }
+
+    .section-authors::after {
+        content: attr(data-published);
+    }
+
+    figure {
+        margin-bottom: 0em;
+    }
+
+    .text-caption figcaption {
+        margin-bottom: 1em;
+    }
+
+    .code-box {
+        background-color: #f0f0f0;
+        padding: 16px;
+        border-radius: 8px;
+        font-family: monospace;
+        font-size: 0.8em;
+        white-space: pre-wrap;
+        line-height: 2;
+    }
+
+    .code-box br {
+        display: none;
+    }
+
+    .code-box p {
+        margin: -12px 0;
+    }
+
+    pre.code-block-wrap {
+        background-color: rgba(241, 243, 244, 0.8);
+        border: 1px solid #dadce0;
+        border-radius: 4px;
+        padding: 12px 16px;
+        margin: 0.5em 0;
+        font-family: 'Roboto Mono', 'Consolas', 'Monaco', 'Courier New', monospace;
+        font-size: 0.85em;
+        color: #137333;
+        line-height: 1.4;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+    }
+
+    pre.code-block-wrap .gray-box {
+        display: block;
+    }
+
+    pre.code-block-wrap html\:p {
+        margin: 0;
+        padding: 0;
+    }
+
+    /* Default: prevent breaking within individual words */
+    pre.code-block-wrap html\:span {
+        white-space: nowrap;
+    }
+
+    /* For spans that contain full sentences/lines - allow normal wrapping */
+    pre.code-block-wrap html\:span[class*="c4 c2"],
+    pre.code-block-wrap html\:span[class*="c7 c"] {
+        white-space: normal;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        word-break: normal;
+    }
+
+    pre.citation-block-wrap {
+        background-color: rgba(241, 243, 244, 0.8);
+        border: 1px solid #dadce0;
+        border-radius: 4px;
+        padding: 8px 12px;
+        margin: 0.5em 0;
+        font-family: 'Roboto Mono', 'Consolas', 'Monaco', 'Courier New', monospace;
+        font-size: 0.75em;
+        color: #000000;
+        line-height: 1.15;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        word-break: break-word;
+        hyphens: manual;
+        -webkit-hyphens: manual;
+        -ms-hyphens: manual;
+    }
+
+    details {
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        border-radius: 4px;
+        padding: 0.5em 1em;
+        margin-bottom: 1rem;
+        background-color: rgba(0, 0, 0, 0.03);
+        transition: all 0.3s ease;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .wide-figure {
+        /* text-align: center; */
+        overflow: visible;
+        position: relative;
+    }
+
+    .wide-figure img {
+        width: 120%;
+        max-width: 150%;
+        margin-left: -10%;
+        position: relative;
+    }
+
+
+    .tldr {
+        position: absolute;
+        right: calc(100% + 10px);
+        top: 0;
+        text-align: right;
+        color: #777;
+    }
+
+    @media (max-width: 768px) {
+        .tldr {
+            position: static;
+            display: inline-block;
+            margin-right: 10px;
+        }
+    }
+
+    /* Inline transcript chat bubbles */
+    .transcript-inline-rendered {
+        background: #FFFBF9;
+        border: 1px solid #E3DACC;
+        border-radius: 8px;
+        padding: 1.5rem 2rem;
+        margin: 1em 0;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .transcript-inline-rendered .t-bubble {
+        display: flex;
+    }
+
+    .transcript-inline-rendered .t-bubble-agent {
+        justify-content: flex-end;
+    }
+
+    .transcript-inline-rendered .t-bubble-result {
+        justify-content: flex-start;
+    }
+
+    .transcript-inline-rendered .t-bubble-summary {
+        justify-content: center;
+    }
+
+    .transcript-inline-rendered .t-bubble-content {
+        max-width: 65%;
+        padding: 0.875rem 1.25rem;
+        border-radius: 8px;
+        background: #FAF9F5;
+        border: 1px solid #E3DACC;
+        font-size: 0.95rem;
+        line-height: 1.6;
+        color: #141413;
+    }
+
+    .transcript-inline-rendered .t-bubble-summary .t-bubble-content {
+        max-width: 55%;
+        background: #F2E0BD;
+        border-color: #D19B75;
+        text-align: center;
+        font-weight: 500;
+    }
+
+    .transcript-inline-rendered .t-bubble-label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-bottom: 0.375rem;
+        letter-spacing: 0.3px;
+        color: #D19B75;
+    }
+
+    .transcript-inline-rendered .t-bubble-result .t-bubble-label {
+        color: #C46686;
+    }
+
+    .transcript-inline-rendered .t-bubble-summary .t-bubble-label {
+        color: #788C5D;
+    }
+
+    .transcript-inline-rendered .t-label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-top: 0.5rem;
+        margin-bottom: 0.25rem;
+        letter-spacing: 0.3px;
+        color: #D19B75;
+    }
+
+    .transcript-inline-rendered .t-label:first-child {
+        margin-top: 0;
+    }
+
+    .transcript-inline-rendered .t-code {
+        background: #FAF9F5;
+        border: 1px solid #E3DACC;
+        border-radius: 6px;
+        padding: 1rem;
+        margin: 0.5rem 0;
+        font-family: 'Monaco', 'Menlo', 'Consolas', 'Courier New', monospace;
+        font-size: 0.85em;
+        line-height: 1.6;
+        color: #141413;
+        white-space: pre-wrap;
+        word-break: break-word;
+        overflow-x: auto;
+    }
+
+    .transcript-inline-rendered .t-code .tok-kw {
+        color: #B86046;
+    }
+
+    .transcript-inline-rendered .t-code .tok-str {
+        color: #788C5D;
+    }
+
+    .transcript-inline-rendered .t-code .tok-cmt {
+        color: #8b8680;
+        font-style: italic;
+    }
+
+    .transcript-inline-rendered .t-code .tok-num {
+        color: #D97757;
+    }
+
+    .transcript-inline-rendered .t-code .tok-fn {
+        color: #6A9BCC;
+    }
+
+    .transcript-inline-rendered .t-code .tok-op {
+        color: #999;
+    }
+
+    .transcript-inline-rendered .t-inline-code {
+        background: rgba(20, 20, 19, 0.08);
+        padding: 0.125rem 0.375rem;
+        border-radius: 3px;
+        font-family: 'Monaco', 'Menlo', 'Consolas', 'Courier New', monospace;
+        font-size: 0.875em;
+        color: #D97757;
+    }
+
+    .transcript-inline-rendered .t-bubble-content p {
+        margin: 0.25em 0;
+    }
+
+    .transcript-inline-rendered .t-bubble-content p:first-of-type {
+        margin-top: 0;
+    }
+
+    .transcript-inline-rendered .t-bubble-content p:last-of-type {
+        margin-bottom: 0;
+    }
+
+    .tabbed-details-panel .transcript-inline-rendered {
+        max-height: none;
+        overflow-y: visible;
+        border: none;
+        padding: 0.5rem 0;
+        margin: 0;
+    }
+
+    @media (max-width: 768px) {
+        .transcript-inline-rendered .t-bubble-content {
+            max-width: 90%;
+        }
+    }
+
+    /* Tabbed details component */
+    .tabbed-details-container {
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        border-radius: 4px;
+        background-color: rgba(0, 0, 0, 0.03);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        margin-bottom: 1rem;
+    }
+
+    .tabbed-details-nav {
+        display: flex;
+        gap: 10px;
+        padding: 0.5em 1em;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    .tabbed-details-nav button {
+        padding: 8px 16px;
+        background-color: #f5f5f5;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        border-radius: 20px;
+        cursor: pointer;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        color: #555;
+        font-size: 14px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+
+    .tabbed-details-nav button.active {
+        background-color: #333;
+        color: white;
+        border-color: #222;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+    }
+
+    .tabbed-details-nav button:hover:not(.active) {
+        background-color: #e8e8e8;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .tabbed-details-panel {
+        display: none;
+        max-height: 500px;
+        overflow-y: auto;
+        padding: 0.5em 1em;
+    }
+
+    .tabbed-details-panel.active {
+        display: block;
+    }
+</style>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Remove whitespace text nodes between <p> elements in code blocks
+        // so that only block breaks contribute spacing (not pre-wrap newlines)
+        document.querySelectorAll('pre.code-block-wrap code').forEach(function (code) {
+            Array.from(code.childNodes).forEach(function (node) {
+                if (node.nodeType === 3 && !node.nodeValue.trim()) node.remove();
+            });
+        });
+
+        document.querySelectorAll('.tabbed-details').forEach(function (wrapper, wrapperIdx) {
+            var details = wrapper.querySelectorAll('details');
+            if (details.length === 0) return;
+
+            var container = document.createElement('div');
+            container.className = 'tabbed-details-container';
+
+            var nav = document.createElement('div');
+            nav.className = 'tabbed-details-nav';
+            container.appendChild(nav);
+
+            details.forEach(function (detail, i) {
+                var summary = detail.querySelector('summary');
+                var label = summary ? summary.textContent : 'Tab ' + (i + 1);
+
+                var btn = document.createElement('button');
+                btn.textContent = label;
+                btn.dataset.index = i;
+                btn.dataset.wrapper = wrapperIdx;
+                if (i === 0) btn.className = 'active';
+                btn.addEventListener('click', function () {
+                    var w = this.dataset.wrapper;
+                    var idx = this.dataset.index;
+                    var cont = this.closest('.tabbed-details-container');
+                    cont.querySelectorAll('.tabbed-details-panel').forEach(function (p) { p.classList.remove('active'); });
+                    cont.querySelectorAll('.tabbed-details-nav button').forEach(function (b) { b.classList.remove('active'); });
+                    cont.querySelectorAll('.tabbed-details-panel')[idx].classList.add('active');
+                    this.classList.add('active');
+                });
+                nav.appendChild(btn);
+
+                var panel = document.createElement('div');
+                panel.className = 'tabbed-details-panel' + (i === 0 ? ' active' : '');
+                // Copy all children except the summary
+                Array.from(detail.children).forEach(function (child) {
+                    if (child.tagName !== 'SUMMARY') {
+                        panel.appendChild(child.cloneNode(true));
+                    }
+                });
+                container.appendChild(panel);
+            });
+
+            wrapper.parentNode.replaceChild(container, wrapper);
+        });
+
+        // Transform inline transcript divs into chat bubbles
+        document.querySelectorAll('.transcript-inline').forEach(function (wrapper) {
+            var entries = wrapper.querySelectorAll('.t');
+            if (entries.length === 0) return;
+
+            var container = document.createElement('div');
+            container.className = 'transcript-inline-rendered';
+
+            entries.forEach(function (entry) {
+                var role = entry.getAttribute('data-role') || 'agent';
+                var name = entry.getAttribute('data-name') || '';
+
+                var bubble = document.createElement('div');
+                bubble.className = 't-bubble t-bubble-' + role;
+
+                var content = document.createElement('div');
+                content.className = 't-bubble-content';
+
+                if (name) {
+                    var label = document.createElement('div');
+                    label.className = 't-bubble-label';
+                    label.textContent = name;
+                    content.appendChild(label);
+                }
+
+                var body = document.createElement('div');
+                body.innerHTML = entry.innerHTML;
+                content.appendChild(body);
+
+                bubble.appendChild(content);
+                container.appendChild(bubble);
+            });
+
+            wrapper.parentNode.replaceChild(container, wrapper);
+        });
+
+        // Basic syntax highlighting for code blocks inside transcript bubbles
+        function highlightCode(text, lang) {
+            // HTML-escape first
+            var escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            // Order matters: comments and strings first (greedy), then keywords etc.
+            var rules = [
+                // Comments
+                { re: /(#.*$)/gm, cls: 'tok-cmt' },
+                // Triple-quoted strings
+                { re: /("""[\s\S]*?"""|'''[\s\S]*?''')/g, cls: 'tok-str' },
+                // Double-quoted strings
+                { re: /("(?:[^"\\]|\\.)*")/g, cls: 'tok-str' },
+                // Single-quoted strings
+                { re: /('(?:[^'\\]|\\.)*')/g, cls: 'tok-str' },
+                // Numbers
+                { re: /\b(\d+\.?\d*)\b/g, cls: 'tok-num' },
+                // Python keywords
+                { re: /\b(def|class|if|elif|else|for|while|return|import|from|as|try|except|finally|with|yield|lambda|pass|break|continue|raise|in|not|and|or|is|None|True|False|self|async|await|print)\b/g, cls: 'tok-kw' },
+                // Function calls
+                { re: /\b([a-zA-Z_]\w*)\s*(?=\()/g, cls: 'tok-fn' }
+            ];
+            // Apply rules sequentially, protecting already-wrapped spans
+            var placeholder = [];
+            rules.forEach(function (rule) {
+                escaped = escaped.replace(rule.re, function (match, g1) {
+                    var idx = placeholder.length;
+                    placeholder.push('<span class="' + rule.cls + '">' + g1 + '</span>');
+                    return '\x00_' + idx + '_\x01';
+                });
+            });
+            // Restore placeholders
+            placeholder.forEach(function (span, i) {
+                escaped = escaped.replace('\x00_' + i + '_\x01', span);
+            });
+            return escaped;
+        }
+
+        // Fix code blocks inside transcript bubbles: merge <p> elements into
+        // a single preformatted text block so indentation is preserved
+        document.querySelectorAll('.transcript-inline-rendered .t-code').forEach(function (block) {
+            var lines = [];
+            Array.from(block.childNodes).forEach(function (child) {
+                if (child.nodeType === 1 && child.tagName === 'P') {
+                    lines.push(child.textContent);
+                } else if (child.nodeType === 3 && child.textContent.trim()) {
+                    lines.push(child.textContent.trim());
+                }
+            });
+            if (lines.length > 0) {
+                var text = lines.join('\n');
+                var lang = block.getAttribute('data-lang') || 'python';
+                block.innerHTML = highlightCode(text, lang);
+            }
+        });
+    });
+</script>
+
+<protonpass-root-4297 data-protonpass-role="root" data-protonpass-theme="os"></protonpass-root-4297></body></html>
