@@ -120,23 +120,18 @@ function PostPage({ root, descendants, accountOwner }: PostPageProps) {
         <header class="article-hero">
           {title && <h1 class="article-title">{title}</h1>}
           <div class="article-byline">
-            <div class="byline-field">
-              <span class="byline-label">Author</span>
-              <a
-                class="byline-value"
-                href={root.account.url ?? root.account.iri}
-              >
+            <span class="byline-authors">
+              <a href={root.account.url ?? root.account.iri}>
                 {root.account.name}
               </a>
-            </div>
-            <div class="byline-field">
-              <span class="byline-label">Published</span>
-              <a class="byline-value" href={root.url ?? root.iri}>
+            </span>
+            <span class="byline-date">
+              <a href={root.url ?? root.iri}>
                 <time dateTime={publishedAt.toISOString()}>
                   {publishedAt.toLocaleString("en", { dateStyle: "long" })}
                 </time>
               </a>
-            </div>
+            </span>
           </div>
         </header>
         <article class="article-body">
