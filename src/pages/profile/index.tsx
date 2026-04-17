@@ -413,11 +413,12 @@ function groupByMonth<T extends { published: Date | null; updated: Date }>(
   return groups;
 }
 
-// Posts over this many plain-text characters render as a truncated
-// preview card linking to the full post page. Truncation cuts at the
-// last sentence boundary (., !, ?, 。, ？, ！) within the threshold.
-// Value matches the blog reference (cards max out around 300-310 chars).
-const LONG_POST_THRESHOLD = 310;
+// Posts whose combined (root + flattened descendants) word count
+// exceeds this limit render as a truncated preview card that links to
+// the blog-style full post page. Truncation cuts at the last sentence
+// boundary (., !, ?, 。, ？, ！) within the limit. Counted as
+// whitespace-separated tokens — a reasonable proxy for CJK/Latin mix.
+const LONG_POST_THRESHOLD_WORDS = 130;
 
 function stripHtml(html: string | null | undefined): string {
   if (!html) return "";
@@ -427,37 +428,46 @@ function stripHtml(html: string | null | undefined): string {
     .trim();
 }
 
-function makePreview(
-  post: { contentHtml: string | null },
-  maxLen = LONG_POST_THRESHOLD,
-): string {
-  const text = stripHtml(post.contentHtml);
-  if (text.length <= maxLen) return text;
+function countWords(text: string): number {
+  const trimmed = text.trim();
+  if (trimmed === "") return 0;
+  return trimmed.split(/\s+/).length;
+}
 
-  // Find the last sentence-ending punctuation within maxLen
+function truncateToWords(text: string, maxWords: number): string {
+  const tokens = text.trim().split(/\s+/);
+  if (tokens.length <= maxWords) return text;
+
+  // Hard word-count boundary first
+  const hardCut = tokens.slice(0, maxWords).join(" ");
+
+  // Prefer the last sentence-ending punctuation followed by whitespace
+  // or end-of-string (avoids breaking inside decimals like "v2.0")
   const sentenceEnd = /[.!?。！？]/g;
   let bestEnd = -1;
-  let match: RegExpExecArray | null = sentenceEnd.exec(text);
+  let match: RegExpExecArray | null = sentenceEnd.exec(hardCut);
   while (match !== null) {
-    const end = match.index + 1;
-    if (end > maxLen) break;
-    // Require the punctuation to be followed by whitespace or end
-    // (avoids cutting inside decimals like "v2.0")
-    const next = text.charAt(end);
-    if (next === "" || /\s/.test(next)) bestEnd = end;
-    match = sentenceEnd.exec(text);
+    const next = hardCut.charAt(match.index + 1);
+    if (next === "" || /\s/.test(next)) {
+      bestEnd = match.index + 1;
+    }
+    match = sentenceEnd.exec(hardCut);
   }
 
-  if (bestEnd > maxLen * 0.3) {
-    return text.substring(0, bestEnd).trim();
+  // Require the boundary to land past 30% so the preview isn't a
+  // single teaser sentence when the rest of the content has no breaks.
+  if (bestEnd > hardCut.length * 0.3) {
+    return hardCut.substring(0, bestEnd).trim();
   }
 
-  // Fallback: word boundary with ellipsis
-  const cut = text.substring(0, maxLen);
-  const lastSpace = cut.lastIndexOf(" ");
-  const sliced =
-    lastSpace > maxLen * 0.6 ? cut.substring(0, lastSpace) : cut;
-  return `${sliced}…`;
+  return `${hardCut.trim()}…`;
+}
+
+function makePreview(
+  post: { contentHtml: string | null },
+  maxWords = LONG_POST_THRESHOLD_WORDS,
+): string {
+  return truncateToWords(stripHtml(post.contentHtml), maxWords);
 }
 
 interface ProfilePageProps {
@@ -567,15 +577,35 @@ function ProfilePage({
           <>
             <div class="date-group">{group.label}</div>
             {group.posts.map((post) => {
-              // Check combined thread length (root + all flattened
-              // descendants). If over threshold, render a clickable
-              // truncated preview card linking to the full post page.
+              const hasReplies = post.replies.length > 0;
+              const postUrl = `/@${accountOwner.handle}/${post.id}`;
               const combinedText = [
                 stripHtml(post.contentHtml),
                 ...post.replies.map((r) => stripHtml(r.contentHtml)),
               ].join(" ");
-              if (combinedText.length > LONG_POST_THRESHOLD) {
-                const postUrl = `/@${accountOwner.handle}/${post.id}`;
+              const totalWords = countWords(combinedText);
+
+              // Threads with replies are clickable; render combined
+              // content truncated to 130 words (at sentence boundary
+              // if possible) as a single preview card.
+              if (hasReplies) {
+                return (
+                  <article class="post-preview">
+                    <a href={postUrl}>
+                      {totalWords > LONG_POST_THRESHOLD_WORDS
+                        ? truncateToWords(
+                            combinedText,
+                            LONG_POST_THRESHOLD_WORDS,
+                          )
+                        : combinedText}
+                    </a>
+                  </article>
+                );
+              }
+
+              // Standalone post: preview-truncate long ones (also
+              // clickable), otherwise render inline .note.
+              if (totalWords > LONG_POST_THRESHOLD_WORDS) {
                 return (
                   <article class="post-preview">
                     <a href={postUrl}>
@@ -584,16 +614,7 @@ function ProfilePage({
                   </article>
                 );
               }
-              return post.replies.length > 0 ? (
-                <div class="thread">
-                  <PostView post={post} />
-                  {post.replies.map((reply) => (
-                    <PostView post={reply} />
-                  ))}
-                </div>
-              ) : (
-                <PostView post={post} />
-              );
+              return <PostView post={post} />;
             })}
           </>
         ))}

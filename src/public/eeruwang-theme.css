@@ -1203,39 +1203,33 @@ article ~ form {
   text-decoration: underline;
 }
 
-/* Post page: strip Mastodon card chrome for clean blog-style article.
-   PostView renders <article><header/><content/><footer/></article>;
-   hide the author header + footer and drop background/padding so the
-   content flows as plain article text. */
-.article-page > article {
+/* Post page body: single continuous blog article spanning root + all
+   descendant replies. No card chrome, no per-post borders. */
+.article-page > article.article-body {
   background: transparent !important;
   border: none !important;
   padding: 0 !important;
-  margin: 0 0 1.5rem !important;
+  margin: 0 !important;
   font-size: 100% !important;
 }
-.article-page > article > header,
-.article-page > article > footer {
-  display: none;
-}
-.article-page > article:hover {
+.article-page > article.article-body:hover {
   border: none !important;
 }
 
-/* Replies on post page: keep a subtle card look to distinguish from body */
-.article-page > article ~ article {
-  background: #f9f8f8 !important;
-  padding: 14px 16px !important;
-  margin-top: 0.75rem !important;
-  border-left: 2px solid var(--anthropic-oat) !important;
-  font-size: 0.95em !important;
+/* Reply segments flow as continuous body text — subtle spacing above
+   each reply to separate it from the previous segment. */
+.article-body .article-segment + .article-segment {
+  margin-top: 1.5rem;
 }
-.article-page > article ~ article > header {
-  display: block;
-  margin-bottom: 0.5rem;
+
+.article-body .article-media {
+  margin: 1.5rem 0;
 }
-.article-page > article ~ article > footer {
-  display: block;
+.article-body .article-media img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+  border: 1px solid var(--line);
 }
 
 .article-page .cover {
