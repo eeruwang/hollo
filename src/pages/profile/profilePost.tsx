@@ -247,26 +247,58 @@ interface ProfilePopupProps {
 
 function ProfilePopup({ accountOwner }: ProfilePopupProps) {
   return (
-    <div
-      id="profile-popup"
-      class="profile-popup"
-      {...({ popover: "auto" } as Record<string, string>)}
-    >
-      <button
-        type="button"
-        class="profile-popup-close"
-        aria-label="Close profile"
-        {...({
-          popovertarget: "profile-popup",
-          popovertargetaction: "hide",
-        } as Record<string, string>)}
+    <>
+      <div
+        id="profile-popup"
+        class="profile-popup"
+        {...({ popover: "auto" } as Record<string, string>)}
       >
-        &times;
-      </button>
-      <div class="profile-popup-body">
-        <Profile accountOwner={accountOwner} />
+        <button
+          type="button"
+          class="profile-popup-close"
+          aria-label="Close profile"
+          {...({
+            popovertarget: "profile-popup",
+            popovertargetaction: "hide",
+          } as Record<string, string>)}
+        >
+          &times;
+        </button>
+        <div class="profile-popup-body">
+          <Profile accountOwner={accountOwner} />
+        </div>
       </div>
-    </div>
+      <script
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: inline positioning script
+        dangerouslySetInnerHTML={{
+          __html: `(() => {
+  const popup = document.getElementById('profile-popup');
+  if (!popup) return;
+  const place = () => {
+    const btn = document.querySelector('[popovertarget="profile-popup"]');
+    if (!btn) return;
+    const r = btn.getBoundingClientRect();
+    const pw = popup.offsetWidth || 340;
+    const ph = popup.offsetHeight || 200;
+    const vw = document.documentElement.clientWidth;
+    const vh = document.documentElement.clientHeight;
+    let top = r.bottom + 8;
+    let left = r.left;
+    if (top + ph > vh - 12) top = Math.max(12, r.top - ph - 8);
+    if (left + pw > vw - 12) left = Math.max(12, vw - pw - 12);
+    popup.style.top = top + 'px';
+    popup.style.left = left + 'px';
+  };
+  popup.addEventListener('toggle', (e) => {
+    if (e.newState === 'open') requestAnimationFrame(place);
+  });
+  window.addEventListener('resize', () => {
+    if (popup.matches(':popover-open')) place();
+  });
+})();`,
+        }}
+      />
+    </>
   );
 }
 

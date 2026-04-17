@@ -79,7 +79,7 @@ main.container {
   margin-right: var(--indent);
   padding-left: env(safe-area-inset-left, 0px);
   padding-right: env(safe-area-inset-right, 0px);
-  font-size: 120%;
+  font-size: 110%;
   line-height: 1.6;
 }
 
@@ -1256,45 +1256,46 @@ article ~ form {
    ================================================================ */
 
 .profile-popup {
-  /* Native popover element (popover="auto") — centers itself by
-     default. Size it down and give it a card look. */
+  /* Menu-style popover — top/left are set by the positioning script
+     so the card appears anchored to the avatar button. */
   position: fixed;
-  margin: auto;
-  inset: 0;
-  width: min(92vw, 440px);
-  max-height: min(86vh, 640px);
+  margin: 0;
+  inset: auto;
+  width: min(92vw, 340px);
+  max-height: min(70vh, 480px);
   height: fit-content;
   padding: 0;
   border: 1px solid var(--anthropic-oat);
-  border-radius: 12px;
+  border-radius: 10px;
   background: #fff;
-  box-shadow: 0 24px 64px rgba(20, 20, 19, 0.22),
-    0 4px 16px rgba(20, 20, 19, 0.08);
+  box-shadow: 0 12px 32px rgba(20, 20, 19, 0.16),
+    0 2px 8px rgba(20, 20, 19, 0.06);
   color: var(--anthropic-slate);
   overflow: hidden;
 }
+/* No backdrop tint — behaves like a dropdown menu. */
 .profile-popup::backdrop {
-  background: rgba(20, 20, 19, 0.38);
-  backdrop-filter: blur(2px);
+  background: transparent;
 }
 
 .profile-popup-body {
   overflow-y: auto;
   max-height: inherit;
-  padding: 1.25rem 1.5rem 1.5rem;
+  padding: 1rem 1.25rem 1.25rem;
+  font-size: 0.95rem;
 }
 .profile-popup-body > .profile-header {
   margin: 0;
 }
 .profile-popup-body > .profile-header img[alt=""] {
-  /* Cover image — bleed to edges, shorter inside popup */
-  margin: -1.25rem -1.5rem 1rem !important;
-  width: calc(100% + 3rem) !important;
-  max-height: 140px;
+  /* Cover image — bleed to edges, shorter inside the menu card */
+  margin: -1rem -1.25rem 0.85rem !important;
+  width: calc(100% + 2.5rem) !important;
+  max-height: 96px;
   object-fit: cover;
 }
 .profile-popup-body hgroup h1 {
-  font-size: 1.35rem;
+  font-size: 1.15rem;
   margin: 0 0 0.25rem;
 }
 .profile-popup-body hgroup h1 a {
@@ -1362,11 +1363,11 @@ article ~ form {
   outline: none;
 }
 
-/* Fade/scale in when opened */
+/* Fade/scale in from top-left origin when opened (menu feel) */
 @keyframes profilePopupIn {
   from {
     opacity: 0;
-    transform: translateY(8px) scale(0.98);
+    transform: translateY(-4px) scale(0.97);
   }
   to {
     opacity: 1;
@@ -1374,7 +1375,8 @@ article ~ form {
   }
 }
 .profile-popup:popover-open {
-  animation: profilePopupIn 0.18s ease both;
+  animation: profilePopupIn 0.15s ease-out both;
+  transform-origin: top left;
 }
 
 /* Fallback for browsers without :popover-open support — still
