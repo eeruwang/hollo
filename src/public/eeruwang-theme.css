@@ -996,6 +996,96 @@ main.container > div[style*="justify-content"]:not(:has(a)) {
   }
 }
 
+/* ==== Social composer ==== */
+.social-composer fieldset {
+  margin-bottom: 1.5rem;
+}
+.social-composer textarea {
+  resize: vertical;
+  margin-bottom: 0.75rem;
+  min-height: 110px;
+}
+.social-composer-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}
+.social-composer-row > select,
+.social-composer-row > input[type="text"],
+.social-composer-row > button {
+  margin: 0;
+}
+.social-composer-row > select {
+  width: auto;
+}
+.social-composer-cw {
+  flex: 1;
+  min-width: 180px;
+}
+.social-composer-sensitive {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  white-space: nowrap;
+  font-size: 0.9rem;
+}
+.social-composer-sensitive input[type="checkbox"] {
+  margin: 0;
+}
+.social-composer-attach {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0;
+  font-size: 0.85rem;
+  color: #666;
+  flex: 0 0 auto;
+}
+.social-composer-attach span {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #888;
+}
+.social-composer-attach input[type="file"] {
+  margin: 0;
+  padding: 0;
+  font-size: 0.85rem;
+}
+.social-composer-alt {
+  flex: 1;
+  min-width: 220px;
+}
+.social-composer-bottom {
+  justify-content: flex-end;
+}
+.social-composer-bottom > select {
+  flex: 0 0 auto;
+}
+.social-composer-submit {
+  width: auto !important;
+  margin: 0 !important;
+  padding: 0.5rem 1.2rem;
+  flex: 0 0 auto;
+}
+@media (max-width: 640px) {
+  .social-composer-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .social-composer-row > select,
+  .social-composer-row > input,
+  .social-composer-row > button {
+    width: 100% !important;
+  }
+  .social-composer-bottom {
+    justify-content: stretch;
+  }
+}
+
 /* ==== Custom emoji admin helpers ==== */
 .emoji-import-filters {
   margin-bottom: 0.75rem;
