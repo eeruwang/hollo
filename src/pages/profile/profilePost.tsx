@@ -117,16 +117,28 @@ function PostPage({ root, descendants, accountOwner }: PostPageProps) {
         <p class="article-back">
           <a href={`/@${accountOwner.handle}`}>&larr; Back to posts</a>
         </p>
-        {title && <h1 class="article-title">{title}</h1>}
-        <p class="article-meta">
-          <a href={root.url ?? root.iri}>
-            <time dateTime={publishedAt.toISOString()}>
-              {publishedAt.toLocaleString("en", { dateStyle: "long" })}
-            </time>
-          </a>
-          {" · "}
-          <a href={root.account.url ?? root.account.iri}>{root.account.name}</a>
-        </p>
+        <header class="article-hero">
+          {title && <h1 class="article-title">{title}</h1>}
+          <div class="article-byline">
+            <div class="byline-field">
+              <span class="byline-label">Author</span>
+              <a
+                class="byline-value"
+                href={root.account.url ?? root.account.iri}
+              >
+                {root.account.name}
+              </a>
+            </div>
+            <div class="byline-field">
+              <span class="byline-label">Published</span>
+              <a class="byline-value" href={root.url ?? root.iri}>
+                <time dateTime={publishedAt.toISOString()}>
+                  {publishedAt.toLocaleString("en", { dateStyle: "long" })}
+                </time>
+              </a>
+            </div>
+          </div>
+        </header>
         <article class="article-body">
           {rootBodyHtml && (
             <div

@@ -1170,25 +1170,71 @@ article ~ form {
 .article-back {
   margin: 0 0 40px;
   font-size: 0.75em;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 .article-back a {
-  color: #333;
+  color: #888;
   text-decoration: none;
-  font-weight: bold;
+  font-weight: 600;
 }
 .article-back a:hover {
+  color: var(--anthropic-slate);
   text-decoration: underline;
 }
 
-.article-title {
-  font-size: 240%;
-  line-height: 1.15;
-  margin: 8px 0 16px;
-  font-weight: 900;
-  color: var(--anthropic-slate);
-  letter-spacing: -0.01em;
+/* Distill-inspired hero: big title + structured byline */
+.article-page .article-hero {
+  margin: 0 0 3rem;
+  padding: 0 0 1.5rem;
+  border-bottom: 1px solid var(--anthropic-oat);
 }
 
+.article-title {
+  font-size: clamp(2rem, 5.2vw, 3rem);
+  line-height: 1.08;
+  margin: 0 0 1.25rem;
+  font-weight: 900;
+  color: var(--anthropic-slate);
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.article-page .article-byline {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, max-content));
+  gap: 0.75rem 2.5rem;
+  margin: 0;
+  padding: 0;
+  color: var(--anthropic-slate);
+}
+.article-page .byline-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+.article-page .byline-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--anthropic-kraft);
+}
+.article-page .byline-value {
+  font-size: 0.95rem;
+  color: var(--anthropic-slate);
+  text-decoration: none;
+  font-weight: 500;
+}
+.article-page .byline-value:hover {
+  color: var(--anthropic-book-cloth);
+  text-decoration: underline;
+  text-decoration-color: var(--anthropic-clay);
+  text-underline-offset: 3px;
+}
+
+/* Legacy article-meta (kept as safety net if rendered elsewhere) */
 .article-page .article-meta {
   font-size: 0.85em;
   color: #999;
@@ -1211,14 +1257,22 @@ article ~ form {
   line-height: 1.75;
   color: var(--anthropic-slate);
 }
+@media (min-width: 768px) {
+  .article-page article.article-body {
+    font-size: 1.125em;
+    line-height: 1.78;
+  }
+}
 
 /* First paragraph of the body acts as a lead: slightly larger,
    slightly darker, for that polished blog-first-line feel. */
 .article-page .article-body > .article-segment:first-of-type > p:first-child {
-  font-size: 1.1em;
-  font-weight: 500;
+  font-size: 1.18em;
+  font-weight: 400;
+  line-height: 1.55;
   color: var(--anthropic-slate);
-  margin-bottom: 1.25em;
+  margin-bottom: 1.6em;
+  text-wrap: pretty;
 }
 
 /* Post page body: single continuous blog article spanning root + all
@@ -1262,15 +1316,24 @@ article ~ form {
    Applies to PostView's content div inside .article-page. */
 .article-page article > div {
   font-size: 1em;
-  line-height: 1.6;
+  line-height: inherit;
 }
 .article-page article > div h2 {
-  font-size: 140%;
-  margin-top: 2rem;
+  font-size: 1.65rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  margin: 3.5rem 0 1rem;
+  color: var(--anthropic-slate);
+  text-wrap: balance;
 }
 .article-page article > div h3 {
-  font-size: 120%;
-  margin-top: 1.5rem;
+  font-size: 1.22rem;
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 2.25rem 0 0.75rem;
+  color: var(--anthropic-slate);
+  text-wrap: balance;
 }
 .article-page article > div p {
   margin: 0 0 1.2em;
@@ -1468,23 +1531,128 @@ article ~ form {
 .article-page article > div h4 {
   font-weight: 600;
   text-transform: uppercase;
-  font-size: 0.88em;
+  font-size: 0.82em;
   line-height: 1.4em;
-  letter-spacing: 0.04em;
-  color: var(--anthropic-slate);
-  margin: 1.5rem 0 0.5rem;
+  letter-spacing: 0.08em;
+  color: var(--anthropic-kraft);
+  margin: 1.75rem 0 0.6rem;
 }
 
 /* Blockquote (distill d-article style) */
 .article-page article > div blockquote {
-  border-left: 2px solid rgba(0, 0, 0, 0.2);
-  padding-left: 2em;
+  border-left: 2px solid rgba(20, 20, 19, 0.2);
+  padding: 0 0 0 2em;
   font-style: italic;
-  color: rgba(0, 0, 0, 0.6);
+  color: rgba(20, 20, 19, 0.65);
   background: none;
   box-shadow: none;
   border-radius: 0;
+  margin: 1.75rem 0;
+}
+
+/* ========== Distill-style layout escape-hatches ========== */
+
+/* TL;DR callout — sits before first paragraph or floated left on wide screens */
+.article-page .tldr {
+  font-size: 0.92em;
+  color: var(--anthropic-kraft);
+  letter-spacing: 0.02em;
+  margin: 0 0 1.5rem;
+  padding: 0.75rem 1rem;
+  border-left: 3px solid var(--anthropic-kraft);
+  background: var(--anthropic-ivory);
+}
+.article-page .tldr::before {
+  content: "TL;DR ";
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.85em;
+  color: var(--anthropic-book-cloth);
+}
+@media (min-width: 1200px) {
+  .article-page .tldr {
+    float: left;
+    clear: left;
+    width: 220px;
+    margin-left: -260px;
+    margin-top: 0.25rem;
+    padding: 0.25rem 0 0.25rem 0.75rem;
+    background: transparent;
+    text-align: right;
+    border-left: none;
+    border-right: 2px solid var(--anthropic-oat);
+  }
+  .article-page .tldr::before {
+    display: block;
+    margin-bottom: 0.25rem;
+  }
+}
+
+/* Figure that visually breaks out of the reading column */
+.article-page .wide-figure {
+  margin: 2rem 0;
+  position: relative;
+}
+.article-page .wide-figure img {
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+  border: 1px solid var(--anthropic-oat);
+}
+.article-page .wide-figure figcaption {
+  font-size: 0.88em;
+  color: #888;
+  margin-top: 0.5rem;
+  line-height: 1.5;
+}
+@media (min-width: 1100px) {
+  .article-page .wide-figure {
+    width: 120%;
+    max-width: 120%;
+    margin-left: -10%;
+  }
+}
+
+/* Sidenote / margin note — floats into the right gutter on wide screens */
+.article-page .sidenote,
+.article-page aside.sidenote {
+  display: block;
+  background: var(--anthropic-ivory);
+  border: 1px solid var(--anthropic-oat);
+  border-radius: 6px;
+  padding: 0.85rem 1rem;
   margin: 1.5rem 0;
+  font-size: 0.92em;
+  line-height: 1.55;
+  color: rgba(20, 20, 19, 0.72);
+}
+.article-page .sidenote-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--anthropic-kraft);
+  margin-bottom: 0.3rem;
+}
+@media (min-width: 1200px) {
+  .article-page .sidenote,
+  .article-page aside.sidenote {
+    float: right;
+    clear: right;
+    width: 240px;
+    margin: 0.25rem -280px 1rem 1.5rem;
+  }
+}
+
+/* Section divider — subtle break between major sections */
+.article-page article > div hr {
+  border: none;
+  height: 1px;
+  background: var(--anthropic-oat);
+  margin: 3rem auto;
+  width: 40%;
 }
 
 /* ========== Transcript Viewer (chat-style embeds) ========== */
