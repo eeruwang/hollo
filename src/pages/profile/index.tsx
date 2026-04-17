@@ -413,12 +413,11 @@ function groupByMonth<T extends { published: Date | null; updated: Date }>(
   return groups;
 }
 
-// Posts whose combined (root + flattened descendants) word count
+// Posts whose combined (root + flattened descendants) character count
 // exceeds this limit render as a truncated preview card that links to
 // the blog-style full post page. Truncation cuts at the last sentence
-// boundary (., !, ?, 。, ？, ！) within the limit. Counted as
-// whitespace-separated tokens — a reasonable proxy for CJK/Latin mix.
-const LONG_POST_THRESHOLD_WORDS = 130;
+// boundary (., !, ?, 。, ？, ！) within the limit.
+const LONG_POST_THRESHOLD_CHARS = 130;
 
 function stripHtml(html: string | null | undefined): string {
   if (!html) return "";
@@ -428,18 +427,12 @@ function stripHtml(html: string | null | undefined): string {
     .trim();
 }
 
-function countWords(text: string): number {
+function truncateToChars(text: string, maxChars: number): string {
   const trimmed = text.trim();
-  if (trimmed === "") return 0;
-  return trimmed.split(/\s+/).length;
-}
+  if (trimmed.length <= maxChars) return trimmed;
 
-function truncateToWords(text: string, maxWords: number): string {
-  const tokens = text.trim().split(/\s+/);
-  if (tokens.length <= maxWords) return text;
-
-  // Hard word-count boundary first
-  const hardCut = tokens.slice(0, maxWords).join(" ");
+  // Hard character-count boundary first
+  const hardCut = trimmed.substring(0, maxChars);
 
   // Prefer the last sentence-ending punctuation followed by whitespace
   // or end-of-string (avoids breaking inside decimals like "v2.0")
@@ -460,14 +453,18 @@ function truncateToWords(text: string, maxWords: number): string {
     return hardCut.substring(0, bestEnd).trim();
   }
 
-  return `${hardCut.trim()}…`;
+  // Fallback: word boundary with ellipsis (keeps CJK text whole)
+  const lastSpace = hardCut.lastIndexOf(" ");
+  const sliced =
+    lastSpace > maxChars * 0.6 ? hardCut.substring(0, lastSpace) : hardCut;
+  return `${sliced.trim()}…`;
 }
 
 function makePreview(
   post: { contentHtml: string | null },
-  maxWords = LONG_POST_THRESHOLD_WORDS,
+  maxChars = LONG_POST_THRESHOLD_CHARS,
 ): string {
-  return truncateToWords(stripHtml(post.contentHtml), maxWords);
+  return truncateToChars(stripHtml(post.contentHtml), maxChars);
 }
 
 interface ProfilePageProps {
@@ -583,19 +580,18 @@ function ProfilePage({
                 stripHtml(post.contentHtml),
                 ...post.replies.map((r) => stripHtml(r.contentHtml)),
               ].join(" ");
-              const totalWords = countWords(combinedText);
 
               // Threads with replies are clickable; render combined
-              // content truncated to 130 words (at sentence boundary
+              // content truncated to 130 chars (at sentence boundary
               // if possible) as a single preview card.
               if (hasReplies) {
                 return (
                   <article class="post-preview">
                     <a href={postUrl}>
-                      {totalWords > LONG_POST_THRESHOLD_WORDS
-                        ? truncateToWords(
+                      {combinedText.length > LONG_POST_THRESHOLD_CHARS
+                        ? truncateToChars(
                             combinedText,
-                            LONG_POST_THRESHOLD_WORDS,
+                            LONG_POST_THRESHOLD_CHARS,
                           )
                         : combinedText}
                     </a>
@@ -605,7 +601,7 @@ function ProfilePage({
 
               // Standalone post: preview-truncate long ones (also
               // clickable), otherwise render inline .note.
-              if (totalWords > LONG_POST_THRESHOLD_WORDS) {
+              if (combinedText.length > LONG_POST_THRESHOLD_CHARS) {
                 return (
                   <article class="post-preview">
                     <a href={postUrl}>
