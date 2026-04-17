@@ -1761,10 +1761,41 @@ article ~ form {
   font-weight: 500;
 }
 
-/* ========== Generic markdown-content helper ========== */
+/* ========== Generic markdown-content helper ==========
+   Comprehensive rules from the reference stylesheet so post-page body
+   text actually picks up the Anthropic-themed typography. */
 
 .article-page .markdown-content {
   line-height: 1.7;
+}
+.article-page .markdown-content h1,
+.article-page .markdown-content h2,
+.article-page .markdown-content h3 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+  color: var(--anthropic-slate);
+}
+.article-page .markdown-content h1 {
+  font-size: 1.5rem;
+}
+.article-page .markdown-content h2 {
+  font-size: 1.3rem;
+}
+.article-page .markdown-content h3 {
+  font-size: 1.1rem;
+}
+.article-page .markdown-content p {
+  margin-bottom: 1rem;
+}
+.article-page .markdown-content ul,
+.article-page .markdown-content ol {
+  margin-left: 1.5rem;
+  margin-bottom: 1rem;
+  padding-left: 0;
+}
+.article-page .markdown-content li {
+  margin-bottom: 0.5rem;
 }
 .article-page .markdown-content strong {
   font-weight: 600;
@@ -1779,6 +1810,26 @@ article ~ form {
 }
 .article-page .markdown-content a:hover {
   color: var(--anthropic-clay);
+}
+.article-page .markdown-content blockquote {
+  border-left: 3px solid var(--anthropic-oat);
+  background: var(--anthropic-background);
+  padding: 12px 16px 12px 20px;
+  margin: 1.5rem 0;
+  font-style: italic;
+  color: var(--anthropic-slate);
+  border-radius: 4px;
+}
+
+/* Override the generic .article-page article > div clay link color —
+   .markdown-content takes precedence for blog body text. */
+.article-page article.article-body > div.markdown-content a {
+  color: var(--anthropic-sky);
+  text-decoration-color: rgba(106, 155, 204, 0.35);
+}
+.article-page article.article-body > div.markdown-content a:hover {
+  color: var(--anthropic-clay);
+  text-decoration-color: var(--anthropic-clay);
 }
 
 /* Feature / inlay blocks (Anthropic transcripts) */

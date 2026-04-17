@@ -146,7 +146,7 @@ function ThreadSegment({ post }: ThreadSegmentProps) {
     <>
       {post.contentHtml && (
         <div
-          class="article-segment"
+          class="article-segment markdown-content"
           dangerouslySetInnerHTML={{ __html: html }}
           lang={post.language ?? undefined}
         />
