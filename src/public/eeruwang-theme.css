@@ -979,8 +979,8 @@ main.container > div[style*="justify-content"]:not(:has(a)) {
 }
 
 /* ==== Responsive ==== */
-/* Tablet/iPad: container edge-to-edge, content inside gets indent */
-@media only screen and (max-width: 1200px) {
+/* Mobile: container edge-to-edge, content inside gets indent */
+@media only screen and (max-width: 750px) {
   main.container {
     margin-inline-start: 0;
     margin-inline-end: 0;
@@ -995,9 +995,7 @@ main.container > div[style*="justify-content"]:not(:has(a)) {
     padding-left: var(--indent);
     padding-right: var(--indent);
   }
-}
 
-@media only screen and (max-width: 750px) {
   h1 {
     font-size: 200%;
   }
