@@ -427,10 +427,6 @@ function stripHtml(html: string | null | undefined): string {
     .trim();
 }
 
-function isLongPost(post: { contentHtml: string | null }): boolean {
-  return stripHtml(post.contentHtml).length > LONG_POST_THRESHOLD;
-}
-
 function makePreview(
   post: { contentHtml: string | null },
   maxLen = LONG_POST_THRESHOLD,
@@ -571,11 +567,18 @@ function ProfilePage({
           <>
             <div class="date-group">{group.label}</div>
             {group.posts.map((post) => {
-              if (isLongPost(post)) {
+              // Check combined thread length (root + all replies)
+              const combinedText = [
+                stripHtml(post.contentHtml),
+                ...post.replies.map((r) => stripHtml(r.contentHtml)),
+              ].join(" ");
+              if (combinedText.length > LONG_POST_THRESHOLD) {
                 const postUrl = `/@${accountOwner.handle}/${post.id}`;
                 return (
                   <article class="post-preview">
-                    <a href={postUrl}>{makePreview(post)}</a>
+                    <a href={postUrl}>
+                      {makePreview({ contentHtml: post.contentHtml })}
+                    </a>
                   </article>
                 );
               }
