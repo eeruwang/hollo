@@ -475,6 +475,35 @@ div[role="group"] > :last-child {
   border-radius: 0 6px 6px 0;
 }
 
+/* Input+button group (Pico fieldset role="group" pattern) —
+   lays out the input and its action button on the same row. */
+fieldset[role="group"] {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  border: none;
+  padding: 0;
+  margin: 0 0 1rem;
+}
+fieldset[role="group"] > input,
+fieldset[role="group"] > select,
+fieldset[role="group"] > textarea {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  border-radius: 6px 0 0 6px;
+}
+fieldset[role="group"] > button,
+fieldset[role="group"] > a[role="button"] {
+  flex: 0 0 auto;
+  margin: 0;
+  border-radius: 0 6px 6px 0;
+  white-space: nowrap;
+}
+fieldset[role="group"] > *:not(:first-child) {
+  margin-left: -1px;
+}
+
 /* Contrast (secondary) button */
 a[role="button"].contrast,
 button.contrast,
