@@ -427,6 +427,10 @@ function stripHtml(html: string | null | undefined): string {
     .trim();
 }
 
+function isLongPost(post: { contentHtml: string | null }): boolean {
+  return stripHtml(post.contentHtml).length > LONG_POST_THRESHOLD;
+}
+
 function makePreview(
   post: { contentHtml: string | null },
   maxLen = LONG_POST_THRESHOLD,
@@ -567,12 +571,10 @@ function ProfilePage({
           <>
             <div class="date-group">{group.label}</div>
             {group.posts.map((post) => {
-              // Check combined thread length (root + all replies)
-              const combinedText = [
-                stripHtml(post.contentHtml),
-                ...post.replies.map((r) => stripHtml(r.contentHtml)),
-              ].join(" ");
-              if (combinedText.length > LONG_POST_THRESHOLD) {
+              // Only the root post's length decides preview card vs
+              // inline thread. Short roots with many nested replies
+              // still render inline so the reply chain stays visible.
+              if (isLongPost(post)) {
                 const postUrl = `/@${accountOwner.handle}/${post.id}`;
                 return (
                   <article class="post-preview">

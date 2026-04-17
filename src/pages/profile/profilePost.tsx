@@ -187,6 +187,8 @@ function PostPage({ post, accountOwner }: PostPageProps) {
     ((post.content ?? "").length > 30
       ? `${(post.content ?? "").substring(0, 30)}…`
       : (post.content ?? ""));
+  const hasTitle = post.summary != null && post.summary.trim() !== "";
+  const publishedAt = post.published ?? post.updated;
   return (
     <Layout
       title={`${summary} — ${post.account.name}`}
@@ -202,6 +204,20 @@ function PostPage({ post, accountOwner }: PostPageProps) {
       <div class="article-page">
         <p class="article-back">
           <a href={`/@${accountOwner.handle}`}>&larr; Back to posts</a>
+        </p>
+        {hasTitle && <h1 class="article-title">{post.summary}</h1>}
+        <p class="article-meta">
+          <a href={post.url ?? post.iri}>
+            <time dateTime={publishedAt.toISOString()}>
+              {publishedAt.toLocaleString("en", {
+                dateStyle: "long",
+              })}
+            </time>
+          </a>
+          {" · "}
+          <a href={post.account.url ?? post.account.iri}>
+            {post.account.name}
+          </a>
         </p>
         <PostView post={post} />
         {post.replies.map((reply) => (
