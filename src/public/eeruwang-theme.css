@@ -1181,26 +1181,44 @@ article ~ form {
 }
 
 .article-title {
-  font-size: 220%;
+  font-size: 240%;
   line-height: 1.15;
-  margin: 0 0 12px;
+  margin: 8px 0 16px;
   font-weight: 900;
-  color: #000;
+  color: var(--anthropic-slate);
+  letter-spacing: -0.01em;
 }
 
-.article-meta {
+.article-page .article-meta {
   font-size: 0.85em;
-  color: #666;
-  margin: 0 0 32px;
+  color: #999;
+  margin: 0 0 48px;
   font-style: italic;
+  letter-spacing: 0.02em;
 }
-.article-meta a {
-  color: #666;
-  text-decoration: none;
+.article-page .article-meta a {
+  color: #999 !important;
+  text-decoration: none !important;
 }
-.article-meta a:hover {
-  color: #000;
-  text-decoration: underline;
+.article-page .article-meta a:hover {
+  color: var(--anthropic-slate) !important;
+  text-decoration: underline !important;
+}
+
+/* Body typography — larger, airier for long-form reading */
+.article-page article.article-body {
+  font-size: 1.05em;
+  line-height: 1.75;
+  color: var(--anthropic-slate);
+}
+
+/* First paragraph of the body acts as a lead: slightly larger,
+   slightly darker, for that polished blog-first-line feel. */
+.article-page .article-body > .article-segment:first-of-type > p:first-child {
+  font-size: 1.1em;
+  font-weight: 500;
+  color: var(--anthropic-slate);
+  margin-bottom: 1.25em;
 }
 
 /* Post page body: single continuous blog article spanning root + all

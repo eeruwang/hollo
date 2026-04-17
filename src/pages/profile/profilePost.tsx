@@ -92,18 +92,19 @@ interface PostPageProps {
 }
 
 function PostPage({ root, descendants, accountOwner }: PostPageProps) {
-  const summary =
-    root.summary ??
+  const publishedAt = root.published ?? root.updated;
+  const thread: ThreadPost[] = [root, ...descendants];
+  const { title, bodyHtml } = deriveTitleAndBody(root);
+  const rootBodyHtml = renderCustomEmojis(bodyHtml, root.emojis);
+  const metaTitle =
+    title ??
     ((root.content ?? "").length > 30
       ? `${(root.content ?? "").substring(0, 30)}…`
       : (root.content ?? ""));
-  const hasTitle = root.summary != null && root.summary.trim() !== "";
-  const publishedAt = root.published ?? root.updated;
-  const thread: ThreadPost[] = [root, ...descendants];
   return (
     <Layout
-      title={`${summary} — ${root.account.name}`}
-      shortTitle={summary}
+      title={`${metaTitle} — ${root.account.name}`}
+      shortTitle={metaTitle}
       description={root.summary ?? root.content}
       imageUrl={root.account.avatarUrl}
       url={root.url ?? root.iri}
@@ -116,7 +117,7 @@ function PostPage({ root, descendants, accountOwner }: PostPageProps) {
         <p class="article-back">
           <a href={`/@${accountOwner.handle}`}>&larr; Back to posts</a>
         </p>
-        {hasTitle && <h1 class="article-title">{root.summary}</h1>}
+        {title && <h1 class="article-title">{title}</h1>}
         <p class="article-meta">
           <a href={root.url ?? root.iri}>
             <time dateTime={publishedAt.toISOString()}>
@@ -127,12 +128,68 @@ function PostPage({ root, descendants, accountOwner }: PostPageProps) {
           <a href={root.account.url ?? root.account.iri}>{root.account.name}</a>
         </p>
         <article class="article-body">
-          {thread.map((post) => (
+          {rootBodyHtml && (
+            <div
+              class="article-segment markdown-content"
+              dangerouslySetInnerHTML={{ __html: rootBodyHtml }}
+              lang={root.language ?? undefined}
+            />
+          )}
+          {root.media.map((medium) => (
+            <ThreadMedia medium={medium} />
+          ))}
+          {descendants.map((post) => (
             <ThreadSegment post={post} />
           ))}
         </article>
       </div>
     </Layout>
+  );
+}
+
+// If a post has no explicit summary, promote its first paragraph to
+// the article title and drop it from the body so content doesn't
+// repeat. Otherwise use summary as title and keep body intact.
+function deriveTitleAndBody(post: ThreadPost): {
+  title: string | null;
+  bodyHtml: string;
+} {
+  if (post.summary != null && post.summary.trim() !== "") {
+    return { title: post.summary.trim(), bodyHtml: post.contentHtml ?? "" };
+  }
+  const html = post.contentHtml ?? "";
+  const firstParagraph = html.match(/^\s*<p\b[^>]*>([\s\S]*?)<\/p>\s*/i);
+  if (firstParagraph) {
+    const titleText = firstParagraph[1]
+      .replace(/<[^>]+>/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (titleText !== "") {
+      return {
+        title: titleText,
+        bodyHtml: html.substring(firstParagraph[0].length),
+      };
+    }
+  }
+  return { title: null, bodyHtml: html };
+}
+
+interface ThreadMediaProps {
+  readonly medium: Medium;
+}
+
+function ThreadMedia({ medium }: ThreadMediaProps) {
+  return (
+    <div class="article-media">
+      <a href={medium.url}>
+        <img
+          src={medium.thumbnailUrl}
+          alt={medium.description ?? ""}
+          width={medium.thumbnailWidth ?? undefined}
+          height={medium.thumbnailHeight ?? undefined}
+        />
+      </a>
+    </div>
   );
 }
 
@@ -152,16 +209,7 @@ function ThreadSegment({ post }: ThreadSegmentProps) {
         />
       )}
       {post.media.map((medium) => (
-        <div class="article-media">
-          <a href={medium.url}>
-            <img
-              src={medium.thumbnailUrl}
-              alt={medium.description ?? ""}
-              width={medium.thumbnailWidth ?? undefined}
-              height={medium.thumbnailHeight ?? undefined}
-            />
-          </a>
-        </div>
+        <ThreadMedia medium={medium} />
       ))}
     </>
   );
