@@ -70,13 +70,15 @@ body {
 /* ==== Container ==== */
 main.container {
   --indent: clamp(1rem, 5vw, 2rem);
-  --side-offset: calc((100% - var(--page-max)) * 0.2);
-  max-inline-size: var(--page-max);
-  margin-block: clamp(48px, 10vw, 100px);
-  margin-inline-start: max(var(--indent), var(--side-offset));
-  margin-inline-end: var(--indent);
-  padding-inline-start: env(safe-area-inset-left, 0px);
-  padding-inline-end: env(safe-area-inset-right, 0px);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--page-max);
+  margin-top: clamp(48px, 10vw, 100px);
+  margin-bottom: clamp(48px, 10vw, 100px);
+  margin-left: max(var(--indent), calc((100vw - var(--page-max)) * 0.2));
+  margin-right: var(--indent);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
   font-size: 120%;
   line-height: 1.6;
 }
@@ -982,9 +984,9 @@ main.container > div[style*="justify-content"]:not(:has(a)) {
 /* Mobile: container edge-to-edge, content inside gets indent */
 @media only screen and (max-width: 750px) {
   main.container {
-    margin-inline-start: 0;
-    margin-inline-end: 0;
-    max-inline-size: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    max-width: 100%;
   }
 
   /* Text content needs padding-left since container is edge-to-edge */
