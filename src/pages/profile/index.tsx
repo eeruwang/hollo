@@ -576,36 +576,60 @@ function ProfilePage({
             {group.posts.map((post) => {
               const hasReplies = post.replies.length > 0;
               const postUrl = `/@${accountOwner.handle}/${post.id}`;
-              const combinedText = [
-                stripHtml(post.contentHtml),
-                ...post.replies.map((r) => stripHtml(r.contentHtml)),
-              ].join(" ");
+              const rootText = stripHtml(post.contentHtml);
+              const repliesText = post.replies
+                .map((r) => stripHtml(r.contentHtml))
+                .filter((t) => t !== "")
+                .join(" ");
+              const combinedLen =
+                rootText.length +
+                (repliesText ? 1 + repliesText.length : 0);
 
-              // Threads with replies are clickable; render combined
-              // content truncated to 130 chars (at sentence boundary
-              // if possible) as a single preview card.
+              // Threads with replies: root text bold, replies normal.
+              // Whole card is a clickable link to the full post page.
               if (hasReplies) {
+                if (combinedLen <= LONG_POST_THRESHOLD_CHARS) {
+                  return (
+                    <article class="post-preview">
+                      <a href={postUrl}>
+                        <strong>{rootText}</strong>
+                        {repliesText && ` ${repliesText}`}
+                      </a>
+                    </article>
+                  );
+                }
+                if (rootText.length >= LONG_POST_THRESHOLD_CHARS) {
+                  return (
+                    <article class="post-preview">
+                      <a href={postUrl}>
+                        <strong>
+                          {truncateToChars(rootText, LONG_POST_THRESHOLD_CHARS)}
+                        </strong>
+                      </a>
+                    </article>
+                  );
+                }
+                const remaining =
+                  LONG_POST_THRESHOLD_CHARS - rootText.length - 1;
                 return (
                   <article class="post-preview">
                     <a href={postUrl}>
-                      {combinedText.length > LONG_POST_THRESHOLD_CHARS
-                        ? truncateToChars(
-                            combinedText,
-                            LONG_POST_THRESHOLD_CHARS,
-                          )
-                        : combinedText}
+                      <strong>{rootText}</strong>{" "}
+                      {truncateToChars(repliesText, remaining)}
                     </a>
                   </article>
                 );
               }
 
-              // Standalone post: preview-truncate long ones (also
-              // clickable), otherwise render inline .note.
-              if (combinedText.length > LONG_POST_THRESHOLD_CHARS) {
+              // Standalone post over the limit: clickable preview
+              // card with the (bold) truncated root text.
+              if (rootText.length > LONG_POST_THRESHOLD_CHARS) {
                 return (
                   <article class="post-preview">
                     <a href={postUrl}>
-                      {makePreview({ contentHtml: post.contentHtml })}
+                      <strong>
+                        {makePreview({ contentHtml: post.contentHtml })}
+                      </strong>
                     </a>
                   </article>
                 );
