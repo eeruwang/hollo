@@ -301,6 +301,52 @@ emojis.get("/import", async (c) => {
         <p>You can import custom emojis from your peer servers.</p>
       </hgroup>
       <form method="post">
+        <fieldset class="grid emoji-import-filters">
+          <label>
+            Search shortcode
+            <input
+              type="search"
+              id="emoji-import-search"
+              placeholder=":shortcode..."
+              autocomplete="off"
+            />
+          </label>
+          <label>
+            Domain
+            <select id="emoji-import-domain">
+              <option value="">All domains</option>
+              {[...new Set(Object.values(emojis).map((e) => e.domain))]
+                .sort()
+                .map((domain) => (
+                  <option value={domain}>{domain}</option>
+                ))}
+            </select>
+          </label>
+        </fieldset>
+        <p class="emoji-import-status">
+          <span id="emoji-import-count">
+            Showing {Object.keys(emojis).length} of{" "}
+            {Object.keys(emojis).length}
+          </span>
+          <span>
+            {" "}
+            &middot;{" "}
+            <button
+              type="button"
+              class="secondary emoji-import-bulk"
+              id="emoji-import-select-visible"
+            >
+              Select visible
+            </button>{" "}
+            <button
+              type="button"
+              class="secondary emoji-import-bulk"
+              id="emoji-import-clear"
+            >
+              Clear selection
+            </button>
+          </span>
+        </p>
         <table>
           <thead>
             <tr>
@@ -310,9 +356,9 @@ emojis.get("/import", async (c) => {
               <th>Image</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="emoji-import-rows">
             {Object.values(emojis).map(({ id, shortcode, url, domain }) => (
-              <tr>
+              <tr data-domain={domain} data-shortcode={shortcode.toLowerCase()}>
                 <td>
                   <input
                     type="checkbox"
@@ -335,6 +381,7 @@ emojis.get("/import", async (c) => {
                       src={url}
                       alt={`:${shortcode}:`}
                       style="height: 24px"
+                      loading="lazy"
                     />
                   </label>
                 </td>
@@ -369,6 +416,51 @@ emojis.get("/import", async (c) => {
         </label>
         <button type="submit">Import selected custom emojis</button>
       </form>
+      <script
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: client-side filter helper
+        dangerouslySetInnerHTML={{
+          __html: `(() => {
+  const search = document.getElementById('emoji-import-search');
+  const dom = document.getElementById('emoji-import-domain');
+  const rows = Array.from(
+    document.querySelectorAll('#emoji-import-rows tr[data-shortcode]')
+  );
+  const count = document.getElementById('emoji-import-count');
+  const selectVisible = document.getElementById('emoji-import-select-visible');
+  const clearSel = document.getElementById('emoji-import-clear');
+  const total = rows.length;
+  let visibleRows = rows.slice();
+  const apply = () => {
+    const q = (search.value || '').toLowerCase().trim();
+    const d = dom.value;
+    visibleRows = [];
+    for (const row of rows) {
+      const okQ = !q || row.dataset.shortcode.indexOf(q) !== -1;
+      const okD = !d || row.dataset.domain === d;
+      const show = okQ && okD;
+      row.style.display = show ? '' : 'none';
+      if (show) visibleRows.push(row);
+    }
+    count.textContent = 'Showing ' + visibleRows.length + ' of ' + total;
+  };
+  search.addEventListener('input', apply);
+  dom.addEventListener('change', apply);
+  selectVisible.addEventListener('click', () => {
+    for (const row of visibleRows) {
+      const cb = row.querySelector('input[type=checkbox]');
+      if (cb) cb.checked = true;
+    }
+  });
+  clearSel.addEventListener('click', () => {
+    for (const row of rows) {
+      const cb = row.querySelector('input[type=checkbox]');
+      if (cb) cb.checked = false;
+    }
+  });
+  apply();
+})();`,
+        }}
+      />
     </DashboardLayout>,
   );
 });

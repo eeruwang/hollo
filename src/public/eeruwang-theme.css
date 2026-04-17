@@ -996,6 +996,28 @@ main.container > div[style*="justify-content"]:not(:has(a)) {
   }
 }
 
+/* ==== Custom emoji import page filters ==== */
+.emoji-import-filters {
+  margin-bottom: 0.75rem;
+}
+.emoji-import-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  color: #666;
+}
+.emoji-import-bulk {
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  width: auto !important;
+  margin: 0 !important;
+  display: inline-block !important;
+}
+
 /* ==== Logout form (dashboard) ==== */
 .logout-form {
   display: inline-flex;
