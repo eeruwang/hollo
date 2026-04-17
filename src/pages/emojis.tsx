@@ -362,6 +362,11 @@ emojis.get("/import", async (c) => {
             <input type="text" name="new" disabled={true} />
           </label>
         </fieldset>
+        <label>
+          <input type="checkbox" name="mirror" value="true" checked />
+          Mirror emoji images to local storage (recommended — keeps
+          the emoji working even if the source instance disappears)
+        </label>
         <button type="submit">Import selected custom emojis</button>
       </form>
     </DashboardLayout>,
@@ -369,6 +374,7 @@ emojis.get("/import", async (c) => {
 });
 
 emojis.post("/import", async (c) => {
+  const disk = drive.use();
   const form = await c.req.formData();
   const categoryValue = form.get("category")?.toString();
   const category = categoryValue?.startsWith("category:")
@@ -376,10 +382,25 @@ emojis.post("/import", async (c) => {
     : categoryValue === "new"
       ? (form.get("new")?.toString() ?? "")
       : null;
+  const mirror = form.get("mirror") === "true";
   const imports = form.getAll("import").map((i) => JSON.parse(i.toString()));
   for (const { shortcode, url } of imports) {
+    let finalUrl: string = url;
+    if (mirror) {
+      try {
+        const localUrl = await mirrorEmojiImage(disk, shortcode, url);
+        if (localUrl != null) finalUrl = localUrl;
+      } catch (error) {
+        logger.warning(
+          "Failed to mirror emoji {shortcode} from {url}: {error} — keeping remote URL.",
+          { shortcode, url, error },
+        );
+      }
+    }
     try {
-      await db.insert(customEmojis).values({ category, shortcode, url });
+      await db
+        .insert(customEmojis)
+        .values({ category, shortcode, url: finalUrl });
     } catch (error) {
       logger.error(
         "Failed to import emoji {shortcode} to {category}: {error}",
@@ -389,5 +410,64 @@ emojis.post("/import", async (c) => {
   }
   return c.redirect("/emojis");
 });
+
+const ALLOWED_EMOJI_MIME = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+]);
+const MAX_EMOJI_BYTES = 1024 * 1024; // 1 MB
+
+async function mirrorEmojiImage(
+  disk: ReturnType<typeof drive.use>,
+  shortcode: string,
+  remoteUrl: string,
+): Promise<string | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10_000);
+  let response: Response;
+  try {
+    response = await fetch(remoteUrl, {
+      signal: controller.signal,
+      redirect: "follow",
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+  if (!response.ok) {
+    logger.warning(
+      "Emoji mirror skipped: status {status} from {url}",
+      { status: response.status, url: remoteUrl },
+    );
+    return null;
+  }
+  const contentType =
+    response.headers.get("content-type")?.split(";")[0].trim() ?? "";
+  if (!ALLOWED_EMOJI_MIME.has(contentType)) {
+    logger.warning(
+      "Emoji mirror skipped: unsupported content type {contentType} for {url}",
+      { contentType, url: remoteUrl },
+    );
+    return null;
+  }
+  const extension = mime.getExtension(contentType);
+  if (extension == null) return null;
+  const buffer = new Uint8Array(await response.arrayBuffer());
+  if (buffer.byteLength === 0 || buffer.byteLength > MAX_EMOJI_BYTES) {
+    logger.warning(
+      "Emoji mirror skipped: size {bytes}B out of range for {url}",
+      { bytes: buffer.byteLength, url: remoteUrl },
+    );
+    return null;
+  }
+  const path = `emojis/${shortcode}.${extension}`;
+  await disk.put(path, buffer, {
+    contentType,
+    contentLength: buffer.byteLength,
+    visibility: "public",
+  });
+  return await disk.getUrl(path);
+}
 
 export default emojis;
