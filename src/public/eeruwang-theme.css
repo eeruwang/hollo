@@ -1038,8 +1038,8 @@ input[type="button"]:active {
 
 /* ==== Page fade-in on load (blog #page.ready) ====
    Animate each direct child of main.container except the persistent
-   Profile header, so the header stays anchored in place while the
-   rest of the page whooshes in. */
+   headers (dashboard <header> nav and the Profile block), so those
+   stay anchored in place while the rest of the page whooshes in. */
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -1050,7 +1050,7 @@ input[type="button"]:active {
     transform: translateY(0);
   }
 }
-main.container > *:not(.profile-header) {
+main.container > *:not(.profile-header, header, footer) {
   animation: fadeInUp 0.25s ease both;
 }
 
