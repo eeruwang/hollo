@@ -1008,6 +1008,41 @@ main.container > div[style*="justify-content"]:not(:has(a)) {
   padding-top: 1rem;
   border-top: 1px solid var(--line);
 }
+
+/* Listing action row — flex-wrap individual buttons instead of a
+   Pico pill group, so labels don't wrap to 3-4 lines. */
+.emoji-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+.emoji-actions > a[role="button"],
+.emoji-actions > button {
+  margin: 0;
+  padding: 0.45rem 0.95rem;
+  width: auto !important;
+  min-width: 0;
+  white-space: nowrap;
+  font-size: 0.88rem;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+/* Push the selection-dependent actions (Move / Delete) to the right
+   so destructive / bulk actions sit apart from the "add / import"
+   group. */
+.emoji-actions-split {
+  margin-left: auto;
+}
+@media (max-width: 640px) {
+  .emoji-actions-split {
+    margin-left: 0;
+  }
+}
 .emoji-import-bulk-group {
   display: inline-flex;
   flex-wrap: wrap;

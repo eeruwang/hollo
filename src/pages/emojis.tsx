@@ -131,37 +131,41 @@ emojis.get("/", async (c) => {
             </label>
           </fieldset>
         )}
-        <div role="group">
+        <div class="emoji-actions">
           <a role="button" href="/emojis/new">
-            Add a custom emoji
+            + Add emoji
           </a>
           <a role="button" href="/emojis/import" class="secondary">
-            Import from federated
+            From federated
           </a>
           <a role="button" href="/emojis/import/remote" class="secondary">
-            Import from remote instance
+            From instance
           </a>
           <a role="button" href="/emojis/import/zip" class="secondary">
-            Import zip pack
+            Import zip
           </a>
           {rows.length > 0 && (
             <a role="button" href="/emojis/export" class="secondary">
-              Export zip pack
+              Export zip
             </a>
           )}
           {rows.length > 0 && (
             <button
               type="submit"
               formaction="/emojis/move"
-              class="emoji-selection-btn"
+              class="emoji-selection-btn emoji-actions-split secondary"
               disabled
             >
               Move selected
             </button>
           )}
           {rows.length > 0 && (
-            <button type="submit" class="contrast emoji-selection-btn" disabled>
-              Delete selected emojis
+            <button
+              type="submit"
+              class="contrast emoji-selection-btn"
+              disabled
+            >
+              Delete selected
             </button>
           )}
         </div>
