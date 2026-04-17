@@ -582,6 +582,13 @@
       "when": 1776451200000,
       "tag": "0082_add_filters",
       "breakpoints": true
+    },
+    {
+      "idx": 83,
+      "version": "7",
+      "when": 1776455531886,
+      "tag": "0083_add_custom_emoji_aliases",
+      "breakpoints": true
     }
   ]
 }

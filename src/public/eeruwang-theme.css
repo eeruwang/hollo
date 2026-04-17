@@ -996,9 +996,17 @@ main.container > div[style*="justify-content"]:not(:has(a)) {
   }
 }
 
-/* ==== Custom emoji import page filters ==== */
+/* ==== Custom emoji admin helpers ==== */
 .emoji-import-filters {
   margin-bottom: 0.75rem;
+}
+.emoji-bulk-row {
+  margin-top: 0.75rem;
+}
+.emoji-rename-category {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
 }
 .emoji-import-bulk-group {
   display: inline-flex;

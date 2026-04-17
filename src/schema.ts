@@ -1038,6 +1038,7 @@ export const customEmojis = pgTable("custom_emojis", {
   shortcode: text("shortcode").primaryKey(),
   url: text("url").notNull(),
   category: text("category"),
+  aliases: text("aliases").array().notNull().default([]),
   created: timestamp("created", { withTimezone: true })
     .notNull()
     .default(currentTimestamp),

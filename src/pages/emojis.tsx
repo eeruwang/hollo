@@ -24,9 +24,14 @@ const emojis = new Hono();
 emojis.use(loginRequired);
 
 emojis.get("/", async (c) => {
-  const emojis = await db.query.customEmojis.findMany({
+  const rows = await db.query.customEmojis.findMany({
     orderBy: [customEmojis.category, desc(customEmojis.created)],
   });
+  const categories = [
+    ...new Set(
+      rows.map((r) => r.category).filter((c): c is string => c != null),
+    ),
+  ].sort();
 
   return c.html(
     <DashboardLayout title="Hollo: Custom emojis" selectedMenu="emojis">
@@ -37,20 +42,22 @@ emojis.get("/", async (c) => {
       <form
         method="post"
         action="/emojis/delete"
-        onsubmit="const cnt = this.querySelectorAll('input[name=emoji]:checked').length; return window.confirm('Are you sure you want to delete the selected ' + (cnt > 1 ? cnt + ' emojis' : cnt + ' emoji') + '?');"
+        onsubmit="if (event.submitter && event.submitter.formAction && event.submitter.formAction.indexOf('/delete') === -1) return true; const cnt = this.querySelectorAll('input[name=emoji]:checked').length; return window.confirm('Are you sure you want to delete the selected ' + (cnt > 1 ? cnt + ' emojis' : cnt + ' emoji') + '?');"
       >
-        {emojis.length > 0 && (
+        {rows.length > 0 && (
           <table>
             <thead>
               <tr>
                 <th>Check</th>
                 <th>Category</th>
                 <th>Short code</th>
+                <th>Aliases</th>
                 <th>Image</th>
+                <th>Edit</th>
               </tr>
             </thead>
             <tbody>
-              {emojis.map((emoji) => (
+              {rows.map((emoji) => (
                 <tr>
                   <td>
                     <input
@@ -58,7 +65,7 @@ emojis.get("/", async (c) => {
                       id={`emoji-${emoji.shortcode}`}
                       name="emoji"
                       value={emoji.shortcode}
-                      onchange="this.form.querySelector('button[type=submit]').disabled = !this.form.querySelectorAll('input[name=emoji]:checked').length"
+                      class="emoji-row-check"
                     />
                   </td>
                   <td>
@@ -74,6 +81,13 @@ emojis.get("/", async (c) => {
                     </tt>
                   </td>
                   <td>
+                    <small>
+                      {(emoji.aliases ?? []).length === 0
+                        ? "—"
+                        : (emoji.aliases ?? []).map((a) => `:${a}:`).join(", ")}
+                    </small>
+                  </td>
+                  <td>
                     <label for={`emoji-${emoji.shortcode}`}>
                       <img
                         src={emoji.url}
@@ -82,10 +96,40 @@ emojis.get("/", async (c) => {
                       />
                     </label>
                   </td>
+                  <td>
+                    <a
+                      href={`/emojis/${encodeURIComponent(emoji.shortcode)}/edit`}
+                      class="secondary"
+                    >
+                      Edit
+                    </a>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        )}
+        {rows.length > 0 && (
+          <fieldset class="grid emoji-bulk-row">
+            <label>
+              Move selected to category
+              <select
+                name="category"
+                onchange="this.form.new.disabled = this.value != 'new'"
+              >
+                <option value="">None (uncategorized)</option>
+                <option value="new">New category</option>
+                <hr />
+                {categories.map((cat) => (
+                  <option value={`category:${cat}`}>{cat}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              New category
+              <input type="text" name="new" disabled={true} />
+            </label>
+          </fieldset>
         )}
         <div role="group">
           <a role="button" href="/emojis/new">
@@ -100,16 +144,75 @@ emojis.get("/", async (c) => {
           <a role="button" href="/emojis/import/zip" class="secondary">
             Import zip pack
           </a>
-          {emojis.length > 0 && (
+          {rows.length > 0 && (
             <a role="button" href="/emojis/export" class="secondary">
               Export zip pack
             </a>
           )}
-          <button type="submit" class="contrast" disabled>
-            Delete selected emojis
-          </button>
+          {rows.length > 0 && (
+            <button
+              type="submit"
+              formaction="/emojis/move"
+              class="emoji-selection-btn"
+              disabled
+            >
+              Move selected
+            </button>
+          )}
+          {rows.length > 0 && (
+            <button type="submit" class="contrast emoji-selection-btn" disabled>
+              Delete selected emojis
+            </button>
+          )}
         </div>
       </form>
+      {categories.length > 0 && (
+        <form
+          method="post"
+          action="/emojis/rename-category"
+          class="emoji-rename-category"
+        >
+          <fieldset class="grid">
+            <label>
+              Rename category
+              <select name="from">
+                {categories.map((cat) => (
+                  <option value={`category:${cat}`}>{cat}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              To
+              <input
+                type="text"
+                name="to"
+                placeholder="new name (blank to clear)"
+              />
+            </label>
+          </fieldset>
+          <button type="submit" class="secondary">
+            Rename category
+          </button>
+        </form>
+      )}
+      {rows.length > 0 && (
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(() => {
+  const form = document.querySelector('form[action="/emojis/delete"]');
+  if (!form) return;
+  const checkboxes = form.querySelectorAll('input.emoji-row-check');
+  const actionBtns = form.querySelectorAll('.emoji-selection-btn');
+  const sync = () => {
+    const hasSelection = Array.from(checkboxes).some((c) => c.checked);
+    for (const btn of actionBtns) btn.disabled = !hasSelection;
+  };
+  for (const cb of checkboxes) cb.addEventListener('change', sync);
+  sync();
+})();`,
+          }}
+        />
+      )}
     </DashboardLayout>,
   );
 });
@@ -1116,6 +1219,7 @@ emojis.post("/import/zip", async (c) => {
       emoji?: {
         name?: string;
         category?: string | null;
+        aliases?: unknown;
         type?: string;
       };
     };
@@ -1167,13 +1271,16 @@ emojis.post("/import/zip", async (c) => {
       });
       const url = await disk.getUrl(path);
       const category = entry.emoji?.category ?? null;
+      const aliases = normalizeAliases(entry.emoji?.aliases, shortcode);
       if (existingCodes.has(shortcode)) {
         await db
           .update(customEmojis)
-          .set({ url, category })
+          .set({ url, category, aliases })
           .where(inArray(customEmojis.shortcode, [shortcode]));
       } else {
-        await db.insert(customEmojis).values({ shortcode, url, category });
+        await db
+          .insert(customEmojis)
+          .values({ shortcode, url, category, aliases });
         existingCodes.add(shortcode);
       }
       imported++;
@@ -1240,7 +1347,7 @@ emojis.get("/export", async (c) => {
         emoji: {
           name: row.shortcode,
           category: row.category,
-          aliases: [],
+          aliases: row.aliases ?? [],
           url: row.url,
           type: contentType,
         },
@@ -1280,5 +1387,189 @@ function sanitizeShortcode(raw: string | undefined): string | null {
     .replace(/^_+|_+$/g, "");
   return s.length > 0 ? s : null;
 }
+
+function normalizeAliases(raw: unknown, exclude: string): string[] {
+  if (!Array.isArray(raw)) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const item of raw) {
+    const clean = sanitizeShortcode(
+      typeof item === "string" ? item : undefined,
+    );
+    if (clean == null || clean === exclude || seen.has(clean)) continue;
+    seen.add(clean);
+    out.push(clean);
+  }
+  return out;
+}
+
+function parseAliasesText(raw: string | undefined, exclude: string): string[] {
+  if (raw == null) return [];
+  return normalizeAliases(
+    raw
+      .split(/[\s,]+/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0),
+    exclude,
+  );
+}
+
+// ---------------------------------------------------------------
+// Per-emoji edit page
+// ---------------------------------------------------------------
+
+emojis.get("/:shortcode/edit", async (c) => {
+  const shortcode = c.req.param("shortcode");
+  const row = await db.query.customEmojis.findFirst({
+    where: inArray(customEmojis.shortcode, [shortcode]),
+  });
+  if (row == null) return c.notFound();
+
+  const categoryRows = await db
+    .select({ category: customEmojis.category })
+    .from(customEmojis)
+    .where(isNotNull(customEmojis.category))
+    .groupBy(customEmojis.category);
+  const categories = categoryRows
+    .map((r) => r.category)
+    .filter((c): c is string => c != null)
+    .sort();
+
+  return c.html(
+    <DashboardLayout
+      title={`Hollo: Edit :${row.shortcode}:`}
+      selectedMenu="emojis"
+    >
+      <hgroup>
+        <h1>
+          Edit <tt>:{row.shortcode}:</tt>
+        </h1>
+        <p>
+          Change this emoji's category or give it alternative shortcodes. The
+          primary shortcode itself can't be renamed (doing so would break posts
+          that already reference it).
+        </p>
+      </hgroup>
+      <form
+        method="post"
+        action={`/emojis/${encodeURIComponent(row.shortcode)}/edit`}
+      >
+        <img
+          src={row.url}
+          alt={`:${row.shortcode}:`}
+          style="height: 48px; margin-bottom: 1rem;"
+        />
+        <fieldset class="grid">
+          <label>
+            Category
+            <select
+              name="category"
+              onchange="this.form.new.disabled = this.value != 'new'"
+            >
+              <option value="" selected={row.category == null}>
+                None
+              </option>
+              <option value="new">New category</option>
+              <hr />
+              {categories.map((cat) => (
+                <option
+                  value={`category:${cat}`}
+                  selected={row.category === cat}
+                >
+                  {cat}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            New category
+            <input type="text" name="new" disabled={true} />
+          </label>
+        </fieldset>
+        <label>
+          Aliases (comma- or space-separated)
+          <input
+            type="text"
+            name="aliases"
+            value={(row.aliases ?? []).join(", ")}
+            placeholder="kitty, meow, smiley"
+            autocomplete="off"
+          />
+          <small>
+            Lowercase, digits, <tt>_</tt> and <tt>-</tt> only. Rendering of
+            aliases in posts is not yet supported — aliases are exported with
+            the emoji to the Misskey zip pack.
+          </small>
+        </label>
+        <div role="group">
+          <button type="submit">Save</button>
+          <a role="button" href="/emojis" class="secondary">
+            Cancel
+          </a>
+        </div>
+      </form>
+    </DashboardLayout>,
+  );
+});
+
+emojis.post("/:shortcode/edit", async (c) => {
+  const shortcode = c.req.param("shortcode");
+  const existing = await db.query.customEmojis.findFirst({
+    where: inArray(customEmojis.shortcode, [shortcode]),
+  });
+  if (existing == null) return c.notFound();
+
+  const form = await c.req.formData();
+  const categoryValue = form.get("category")?.toString() ?? "";
+  const category = categoryValue.startsWith("category:")
+    ? categoryValue.slice(9)
+    : categoryValue === "new"
+      ? form.get("new")?.toString()?.trim() || null
+      : null;
+  const aliases = parseAliasesText(form.get("aliases")?.toString(), shortcode);
+  await db
+    .update(customEmojis)
+    .set({ category, aliases })
+    .where(inArray(customEmojis.shortcode, [shortcode]));
+  return c.redirect("/emojis");
+});
+
+// ---------------------------------------------------------------
+// Bulk category moves + rename
+// ---------------------------------------------------------------
+
+emojis.post("/move", async (c) => {
+  const form = await c.req.formData();
+  const shortcodes = form
+    .getAll("emoji")
+    .map((s) => s.toString())
+    .filter((s) => s.length > 0);
+  if (shortcodes.length === 0) return c.redirect("/emojis");
+  const categoryValue = form.get("category")?.toString() ?? "";
+  const category = categoryValue.startsWith("category:")
+    ? categoryValue.slice(9)
+    : categoryValue === "new"
+      ? form.get("new")?.toString()?.trim() || null
+      : null;
+  await db
+    .update(customEmojis)
+    .set({ category })
+    .where(inArray(customEmojis.shortcode, shortcodes));
+  return c.redirect("/emojis");
+});
+
+emojis.post("/rename-category", async (c) => {
+  const form = await c.req.formData();
+  const fromRaw = form.get("from")?.toString() ?? "";
+  const from = fromRaw.startsWith("category:") ? fromRaw.slice(9) : null;
+  const toRaw = form.get("to")?.toString()?.trim() ?? "";
+  const to = toRaw.length > 0 ? toRaw : null;
+  if (from == null) return c.redirect("/emojis");
+  await db
+    .update(customEmojis)
+    .set({ category: to })
+    .where(inArray(customEmojis.category, [from]));
+  return c.redirect("/emojis");
+});
 
 export default emojis;
