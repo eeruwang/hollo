@@ -1315,6 +1315,11 @@ article ~ form {
   border-top: 1px solid var(--line);
   padding-top: 16px;
 }
+/* markdown-it-footnote inserts an <hr class="footnotes-sep"> before
+   the section; hide it since .footnotes already has its own border-top. */
+.footnotes-sep {
+  display: none;
+}
 .footnotes h3 {
   margin: 0 0 10px;
   font-size: 0.78rem;

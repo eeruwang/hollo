@@ -83,6 +83,9 @@ importers:
       '@supercharge/promise-pool':
         specifier: ^3.2.0
         version: 3.2.0
+      '@types/markdown-it-footnote':
+        specifier: ^3.0.4
+        version: 3.0.4
       argon2:
         specifier: ^0.44.0
         version: 0.44.0
@@ -116,6 +119,9 @@ importers:
       markdown-it:
         specifier: ^14.1.1
         version: 14.1.1
+      markdown-it-footnote:
+        specifier: ^4.0.0
+        version: 4.0.0
       markdown-it-replace-link:
         specifier: ^1.2.2
         version: 1.2.2(@types/markdown-it@14.1.2)(markdown-it@14.1.1)
@@ -2662,6 +2668,9 @@ packages:
   '@types/linkify-it@5.0.0':
     resolution: {integrity: sha512-sVDA58zAw4eWAffKOaQH5/5j3XeayukzDk+ewSsnv3p4yJEZHCCzMDiZM8e0OUrRvmpGZ85jf4yDHkHsgBNr9Q==}
 
+  '@types/markdown-it-footnote@3.0.4':
+    resolution: {integrity: sha512-XJ6n+v+2u+2gmYLSHcxyoNT/YrgrKvHuDJQlykFjuxCQCr86P2/fx1V6/0lcKxv5cSIlCaJ6sUcNS3zDI7I+LA==}
+
   '@types/markdown-it@14.1.2':
     resolution: {integrity: sha512-promo4eFwuiW+TfGxhi+0x3czqTYJkG8qB17ZUJiVF10Xm7NLVRSLUsfRTU/6h1e24VvRnXCx+hG7li58lkzog==}
 
@@ -3843,6 +3852,9 @@ packages:
   markdown-extensions@2.0.0:
     resolution: {integrity: sha512-o5vL7aDWatOTX8LzaS1WMoaoxIiLRQJuIKKe2wAw6IeULDHaqbiqiggmx+pKvZDb1Sj+pE46Sn1T7lCqfFtg1Q==}
     engines: {node: '>=16'}
+
+  markdown-it-footnote@4.0.0:
+    resolution: {integrity: sha512-WYJ7urf+khJYl3DqofQpYfEYkZKbmXmwxQV8c8mO/hGIhgZ1wOe7R4HLFNwqx7TjILbnC98fuyeSsin19JdFcQ==}
 
   markdown-it-replace-link@1.2.2:
     resolution: {integrity: sha512-JpeY+TMKqttF+tZQDmkFxXs/8PTohFvw4Z76h98O06ZEx66PNd1wMV0Odp094O/mvvf6iOnjdHpTKAfDUwhH1A==}
@@ -8388,6 +8400,10 @@ snapshots:
 
   '@types/linkify-it@5.0.0': {}
 
+  '@types/markdown-it-footnote@3.0.4':
+    dependencies:
+      '@types/markdown-it': 14.1.2
+
   '@types/markdown-it@14.1.2':
     dependencies:
       '@types/linkify-it': 5.0.0
@@ -9814,6 +9830,8 @@ snapshots:
       semver: 7.7.4
 
   markdown-extensions@2.0.0: {}
+
+  markdown-it-footnote@4.0.0: {}
 
   markdown-it-replace-link@1.2.2(@types/markdown-it@14.1.2)(markdown-it@14.1.1):
     dependencies:

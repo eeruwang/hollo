@@ -9,6 +9,7 @@ import type { PgDatabase } from "drizzle-orm/pg-core";
 import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
 import { escape } from "es-toolkit";
 import MarkdownIt from "markdown-it";
+import footnote from "markdown-it-footnote";
 import replaceLink from "markdown-it-replace-link";
 import { persistAccount } from "./federation/account";
 import { type ASPost, isPost } from "./federation/post";
@@ -156,6 +157,7 @@ export async function formatText(
         return new URL(link, new URL("/", options.url)).href;
       },
     })
+    .use(footnote)
     .use(shiki);
   const env: Env = {
     hashtags: [],

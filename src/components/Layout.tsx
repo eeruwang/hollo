@@ -11,7 +11,7 @@ export interface LayoutProps {
   themeColor?: ThemeColor;
 }
 
-const ASSET_VERSION = "43";
+const ASSET_VERSION = "44";
 
 export function Layout(props: PropsWithChildren<LayoutProps>) {
   const themeColor = props.themeColor ?? "azure";
