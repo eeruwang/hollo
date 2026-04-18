@@ -99,63 +99,86 @@ social.get("/", async (c) => {
         enctype="multipart/form-data"
         class="social-composer"
       >
-        <fieldset>
+        <div class="social-composer-card">
           <textarea
             name="content"
             placeholder="What's on your mind?"
             required
             rows={4}
+            class="social-composer-text"
           />
+          <div class="social-composer-divider" />
           <div class="social-composer-row">
             <input
               type="text"
               name="spoiler_text"
               placeholder="Content warning (optional)"
-              class="social-composer-cw"
+              class="social-composer-field"
             />
-            <label class="social-composer-sensitive">
+            <label class="social-composer-chip">
               <input type="checkbox" name="sensitive" value="true" />
-              Sensitive
+              <span>Sensitive</span>
             </label>
           </div>
           <div class="social-composer-row">
             <label class="social-composer-attach">
-              <span>Attach images / video</span>
               <input
                 type="file"
                 name="media"
                 multiple
                 accept="image/png,image/jpeg,image/gif,image/webp,video/mp4,video/webm"
               />
+              <span class="social-composer-attach-label">&#43; Attach</span>
+              <span class="social-composer-attach-count" />
             </label>
             <input
               type="text"
               name="media_description"
-              placeholder="Alt text (applies to all attachments)"
-              class="social-composer-alt"
+              placeholder="Alt text for attachments"
+              class="social-composer-field"
             />
           </div>
-          <div class="social-composer-row social-composer-bottom">
-            <select name="visibility">
-              <option value="public">Public</option>
-              <option value="unlisted">Unlisted</option>
-              <option value="private">Followers only</option>
-              <option value="direct">Direct</option>
-            </select>
-            <select name="language">
-              <option value="">Default ({owner.language})</option>
-              {LANGUAGE_OPTIONS.map((opt) => (
-                <option value={opt.code}>
-                  {opt.label} ({opt.code})
-                </option>
-              ))}
-            </select>
+          <div class="social-composer-divider" />
+          <div class="social-composer-bottom">
+            <div class="social-composer-selects">
+              <select name="visibility" class="social-composer-select">
+                <option value="public">Public</option>
+                <option value="unlisted">Unlisted</option>
+                <option value="private">Followers only</option>
+                <option value="direct">Direct</option>
+              </select>
+              <select name="language" class="social-composer-select">
+                <option value="">Default ({owner.language})</option>
+                {LANGUAGE_OPTIONS.map((opt) => (
+                  <option value={opt.code}>
+                    {opt.label} ({opt.code})
+                  </option>
+                ))}
+              </select>
+            </div>
             <button type="submit" class="social-composer-submit">
               Post
             </button>
           </div>
-        </fieldset>
+        </div>
       </form>
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `(() => {
+  const attach = document.querySelector('.social-composer-attach');
+  if (!attach) return;
+  const input = attach.querySelector('input[type="file"]');
+  const count = attach.querySelector('.social-composer-attach-count');
+  if (!input || !count) return;
+  input.addEventListener('change', () => {
+    const n = input.files ? input.files.length : 0;
+    if (n === 0) { count.textContent = ''; attach.classList.remove('has-files'); return; }
+    count.textContent = n + ' file' + (n > 1 ? 's' : '');
+    attach.classList.add('has-files');
+  });
+})();`,
+        }}
+      />
 
       <h2>Recent Posts</h2>
       {timeline.length === 0 ? (

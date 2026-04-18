@@ -996,93 +996,253 @@ main.container > div[style*="justify-content"]:not(:has(a)) {
   }
 }
 
-/* ==== Social composer ==== */
-.social-composer fieldset {
-  margin-bottom: 1.5rem;
+/* ==== Social composer — warm card with pill controls ==== */
+.social-composer {
+  margin: 1.25rem 0 2.5rem;
 }
-.social-composer textarea {
+.social-composer-card {
+  background: var(--anthropic-background);
+  border: 1px solid var(--anthropic-oat);
+  border-radius: 14px;
+  padding: 1rem 1.15rem 1.1rem;
+  box-shadow: 0 1px 2px rgba(20, 20, 19, 0.03),
+    0 6px 20px rgba(20, 20, 19, 0.04);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.social-composer-card:focus-within {
+  border-color: var(--anthropic-kraft);
+  box-shadow: 0 1px 2px rgba(20, 20, 19, 0.03),
+    0 6px 20px rgba(20, 20, 19, 0.08);
+}
+
+.social-composer-text {
+  width: 100%;
+  margin: 0;
+  padding: 0.35rem 0.15rem;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--anthropic-slate);
   resize: vertical;
-  margin-bottom: 0.75rem;
-  min-height: 110px;
+  min-height: 120px;
+  outline: none;
+  box-shadow: none;
 }
+.social-composer-text:focus {
+  border: none;
+  outline: none;
+  box-shadow: none;
+}
+.social-composer-text::placeholder {
+  color: #b5b1a7;
+  font-style: italic;
+}
+
+.social-composer-divider {
+  height: 1px;
+  background: var(--anthropic-oat);
+  opacity: 0.7;
+  margin: 0.6rem -1.15rem;
+}
+
 .social-composer-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
   align-items: center;
-  margin-top: 8px;
+  gap: 0.55rem 0.65rem;
+  padding: 0.25rem 0;
 }
-.social-composer-row > select,
-.social-composer-row > input[type="text"],
-.social-composer-row > button {
+
+.social-composer-field {
+  flex: 1 1 200px;
   margin: 0;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.92rem;
+  color: var(--anthropic-slate);
+  background: var(--anthropic-ivory);
+  border: 1px solid transparent;
+  border-radius: 9px;
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
-.social-composer-row > select {
-  width: auto;
+.social-composer-field::placeholder {
+  color: #a8a59b;
 }
-.social-composer-cw {
-  flex: 1;
-  min-width: 180px;
+.social-composer-field:focus {
+  border-color: var(--anthropic-kraft);
+  background: #fff;
+  outline: none;
+  box-shadow: none;
 }
-.social-composer-sensitive {
+
+/* Sensitive toggle rendered as a chip */
+.social-composer-chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  margin: 0;
+  gap: 0.4rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: 9px;
+  background: var(--anthropic-ivory);
+  font-size: 0.88rem;
+  color: var(--anthropic-slate);
   white-space: nowrap;
-  font-size: 0.9rem;
-}
-.social-composer-sensitive input[type="checkbox"] {
+  cursor: pointer;
+  user-select: none;
   margin: 0;
+  transition: background 0.15s ease, color 0.15s ease;
 }
+.social-composer-chip:hover {
+  background: var(--anthropic-manilla);
+}
+.social-composer-chip input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--anthropic-clay);
+  cursor: pointer;
+}
+.social-composer-chip:has(input:checked) {
+  background: var(--anthropic-manilla);
+  color: var(--anthropic-book-cloth);
+  font-weight: 600;
+}
+
+/* Attach control: hide the native file input, style the label as a pill */
 .social-composer-attach {
+  position: relative;
   display: inline-flex;
-  flex-direction: column;
-  gap: 0.2rem;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.95rem;
+  border-radius: 999px;
+  border: 1px dashed var(--anthropic-oat);
+  background: var(--anthropic-ivory);
+  font-size: 0.88rem;
+  color: var(--anthropic-slate);
+  cursor: pointer;
   margin: 0;
-  font-size: 0.85rem;
-  color: #666;
   flex: 0 0 auto;
+  transition: border-color 0.15s ease, background 0.15s ease,
+    border-style 0.15s ease;
 }
-.social-composer-attach span {
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #888;
+.social-composer-attach:hover {
+  border-color: var(--anthropic-kraft);
+  background: #fff;
+}
+.social-composer-attach.has-files {
+  border-style: solid;
+  border-color: var(--anthropic-kraft);
+  background: var(--anthropic-manilla);
 }
 .social-composer-attach input[type="file"] {
-  margin: 0;
-  padding: 0;
-  font-size: 0.85rem;
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
 }
-.social-composer-alt {
-  flex: 1;
-  min-width: 220px;
+.social-composer-attach-label {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  pointer-events: none;
 }
+.social-composer-attach-count {
+  font-size: 0.78rem;
+  color: var(--anthropic-kraft);
+  font-weight: 600;
+  pointer-events: none;
+}
+.social-composer-attach-count:empty::before {
+  content: "no files";
+  color: #b5b1a7;
+  font-weight: 400;
+  font-style: italic;
+}
+.social-composer-attach.has-files .social-composer-attach-count {
+  color: var(--anthropic-book-cloth);
+}
+
+/* Bottom row: selects + submit */
 .social-composer-bottom {
-  justify-content: flex-end;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: space-between;
+  margin-top: 0.3rem;
 }
-.social-composer-bottom > select {
-  flex: 0 0 auto;
+.social-composer-selects {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
 }
+.social-composer-select {
+  margin: 0;
+  padding: 0.45rem 2rem 0.45rem 0.85rem;
+  width: auto;
+  border: 1px solid var(--anthropic-oat);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--anthropic-slate);
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+.social-composer-select:hover {
+  border-color: var(--anthropic-kraft);
+}
+.social-composer-select:focus {
+  border-color: var(--anthropic-kraft);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(217, 119, 87, 0.18);
+}
+
 .social-composer-submit {
-  width: auto !important;
   margin: 0 !important;
-  padding: 0.5rem 1.2rem;
+  padding: 0.55rem 1.6rem !important;
+  width: auto !important;
+  border: none !important;
+  border-radius: 999px !important;
+  background: var(--anthropic-slate) !important;
+  color: #fff !important;
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+  cursor: pointer;
   flex: 0 0 auto;
+  transition: background 0.15s ease, transform 0.1s ease;
 }
+.social-composer-submit:hover {
+  background: var(--anthropic-book-cloth) !important;
+}
+.social-composer-submit:active {
+  transform: translateY(1px);
+}
+
 @media (max-width: 640px) {
-  .social-composer-row {
+  .social-composer-card {
+    padding: 0.85rem 0.9rem 0.95rem;
+    border-radius: 12px;
+  }
+  .social-composer-divider {
+    margin: 0.55rem -0.9rem;
+  }
+  .social-composer-bottom {
     flex-direction: column;
     align-items: stretch;
   }
-  .social-composer-row > select,
-  .social-composer-row > input,
-  .social-composer-row > button {
-    width: 100% !important;
+  .social-composer-selects {
+    width: 100%;
   }
-  .social-composer-bottom {
-    justify-content: stretch;
+  .social-composer-select {
+    flex: 1 1 auto;
+  }
+  .social-composer-submit {
+    width: 100% !important;
+    padding: 0.65rem 1rem !important;
   }
 }
 
