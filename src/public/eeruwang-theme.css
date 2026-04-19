@@ -1369,7 +1369,8 @@ main.container > div[style*="justify-content"]:not(:has(a)) {
   main.container > div > hgroup > h1,
   .profile-timeline > h2,
   main.container > div > hgroup + div,
-  .profile-footer {
+  .profile-footer,
+  .article-page {
     padding-left: var(--indent);
     padding-right: var(--indent);
   }
