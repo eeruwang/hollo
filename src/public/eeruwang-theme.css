@@ -65,6 +65,10 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Full-bleed title rule extends to 100vw via negative margin; clip
+     any sub-pixel overflow so it never introduces a horizontal
+     scrollbar. */
+  overflow-x: clip;
 }
 
 /* ==== Container ==== */
@@ -1558,8 +1562,14 @@ article ~ form {
 .article-title {
   font-size: clamp(2.2rem, 5.8vw, 3.4rem);
   line-height: 1.05;
-  margin: 0 0 1.25rem;
-  padding: 0 0 1.4rem;
+  /* Extend the title's box to the full viewport width so the
+     border-bottom hits the screen edges, while the inner text
+     stays aligned to the container via matching padding. Works at
+     every breakpoint because calc(50% - 50vw) equals the negative
+     of whatever horizontal gutter the parent has (padding or
+     auto-margin). */
+  margin: 0 calc(50% - 50vw) 1.25rem;
+  padding: 0 calc(50vw - 50%) 1.4rem;
   border-bottom: 1px solid #e5e5e5;
   font-weight: 900;
   color: #000;
