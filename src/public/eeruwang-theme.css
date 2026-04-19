@@ -1346,7 +1346,7 @@ main.container > div[style*="justify-content"]:not(:has(a)) {
 
 /* ==== Responsive ==== */
 /* Mobile: container edge-to-edge, content inside gets indent */
-@media only screen and (max-width: 750px) {
+@media only screen and (max-width: 699px) {
   main.container {
     margin-left: 0;
     margin-right: 0;
@@ -1378,7 +1378,6 @@ main.container > div[style*="justify-content"]:not(:has(a)) {
   fieldset.grid {
     grid-template-columns: 1fr;
   }
-
 }
 
 /* ==== Press-in feedback (blog .is-pressing — via :active) ==== */
