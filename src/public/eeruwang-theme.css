@@ -8,7 +8,7 @@
   --indent: 16px;
   --code-font: "InconsolataNF", ui-monospace, SFMono-Regular, Menlo, Consolas,
     monospace;
-  --page-max: 700px;
+  --page-max: 780px;
   --line: #d8d8d8;
 
   /* Press-in animation (matches blog feel) */
@@ -86,15 +86,27 @@ main.container {
 /* Tablet widths (iPad Mini, iPad portrait) — the left-leaning
    desktop layout pushes content almost flush to the viewport edge
    because there isn't enough horizontal space to both honour the
-   700px measure and the 20% left bias. Follow Distill's 768px
-   breakpoint and centre the container with generous symmetric
-   gutters instead. */
+   measure and the 20% left bias. Follow Distill's 768px
+   breakpoint and centre the container with trim symmetric
+   gutters instead. Body stays comfortably wide on a 744px iPad
+   Mini while still leaving breathing room for the title rule. */
 @media (min-width: 700px) and (max-width: 1099px) {
   main.container {
     margin-left: auto;
     margin-right: auto;
-    max-width: min(var(--page-max), calc(100vw - 6rem));
+    max-width: min(var(--page-max), calc(100vw - 3rem));
   }
+}
+
+/* Reference-style body measure: paragraph text wraps tighter than
+   the container so the title underline, h2 rule, and <hr> still
+   span the full container width. The effect is most visible on
+   tablet + desktop where the container comfortably exceeds 640px. */
+.article-page article.article-body > .article-segment > p,
+.article-page article.article-body > .article-segment > ul,
+.article-page article.article-body > .article-segment > ol,
+.article-page article.article-body > .article-segment > blockquote {
+  max-width: 640px;
 }
 
 /* ==== Typography ==== */
