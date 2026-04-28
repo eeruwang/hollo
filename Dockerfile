@@ -23,5 +23,15 @@ RUN \
     && mv .pkg.json package.json; \
   fi
 
+# Beszel agent 설치
+ADD https://github.com/henrygd/beszel/releases/latest/download/beszel-agent_linux_amd64.tar.gz /tmp/agent.tar.gz
+RUN cd /tmp && tar -xzf agent.tar.gz \
+    && mv beszel-agent /usr/local/bin/ \
+    && chmod +x /usr/local/bin/beszel-agent \
+    && rm agent.tar.gz
+
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
+
 EXPOSE 3000
 CMD ["pnpm", "run", "prod"]
