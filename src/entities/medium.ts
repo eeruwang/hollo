@@ -1,3 +1,4 @@
+import { proxyUrl } from "../media-proxy";
 import type { Medium } from "../schema";
 
 function normalizeAttachmentType(type: string): string {
@@ -11,12 +12,15 @@ function normalizeAttachmentType(type: string): string {
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: JSON
-export function serializeMedium(medium: Medium): Record<string, any> {
+export function serializeMedium(
+  medium: Medium,
+  baseUrl: URL | string,
+): Record<string, any> {
   return {
     id: medium.id,
     type: normalizeAttachmentType(medium.type),
-    url: medium.url,
-    preview_url: medium.thumbnailUrl,
+    url: proxyUrl(medium.url, baseUrl),
+    preview_url: proxyUrl(medium.thumbnailUrl, baseUrl),
     remote_url: null,
     text_url: null,
     meta: {
