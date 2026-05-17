@@ -55,6 +55,19 @@ function isAllowedContentType(value: string): boolean {
   return ALLOWED_TYPE_PREFIXES.some((p) => lower.startsWith(p));
 }
 
+function parseProxyCacheMetadata(
+  content: string | null | undefined,
+): { contentType: string } | null {
+  if (content == null) return null;
+  const meta = JSON.parse(content) as unknown;
+  if (meta == null || typeof meta !== "object") return null;
+  const contentType = (meta as { contentType?: unknown }).contentType;
+  if (typeof contentType !== "string" || !isAllowedContentType(contentType)) {
+    return null;
+  }
+  return { contentType };
+}
+
 // Convert a Uint8Array to an ArrayBuffer with no surrounding bytes.  Node's
 // `Buffer` uses a shared backing pool, so `.buffer` on a small read can expose
 // unrelated memory if we don't slice to the view's exact range.
@@ -167,15 +180,8 @@ export async function readProxyCacheEntry(
   const disk = drive.use();
   try {
     if (!(await disk.exists(`${key}.bin`))) return null;
-    const meta = JSON.parse(await disk.get(`${key}.json`)) as {
-      contentType?: unknown;
-    };
-    if (
-      typeof meta.contentType !== "string" ||
-      !isAllowedContentType(meta.contentType)
-    ) {
-      return null;
-    }
+    const meta = parseProxyCacheMetadata(await disk.get(`${key}.json`));
+    if (meta == null) return null;
     const body = await disk.getBytes(`${key}.bin`);
     return { body, contentType: meta.contentType };
   } catch (error) {
@@ -184,6 +190,20 @@ export async function readProxyCacheEntry(
       error: error instanceof Error ? error.message : String(error),
     });
     return null;
+  }
+}
+
+export async function hasProxyCacheEntry(key: string): Promise<boolean> {
+  const disk = drive.use();
+  try {
+    if (!(await disk.exists(`${key}.bin`))) return false;
+    return parseProxyCacheMetadata(await disk.get(`${key}.json`)) != null;
+  } catch (error) {
+    logger.warn("Failed to inspect proxy cache entry {key}: {error}", {
+      key,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return false;
   }
 }
 

@@ -10,7 +10,12 @@ import {
 
 import { signProxyUrl } from "./media-proxy";
 import { createProxyApp } from "./proxy";
-import { prefetchProxyCacheForMode, proxyCacheKeyForUrl } from "./proxy-cache";
+import {
+  hasProxyCacheEntry,
+  prefetchProxyCacheForMode,
+  proxyCacheKeyForUrl,
+  readProxyCacheEntry,
+} from "./proxy-cache";
 import { drive } from "./storage";
 
 function buildResponse(
@@ -82,6 +87,37 @@ describe.sequential("proxy cache prefetch", () => {
     await expect(prefetchProxyCacheForMode("cache", url)).resolves.toBe(true);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("treats missing or null cache metadata as a cache miss", async () => {
+    expect.assertions(4);
+
+    const disk = drive.use();
+    const missingMetaKey = proxyCacheKeyForUrl(
+      "https://remote.example/missing-meta.png",
+    );
+    await disk.put(`${missingMetaKey}.bin`, new Uint8Array([1, 2, 3]), {
+      contentType: "image/png",
+      visibility: "public",
+    });
+
+    await expect(readProxyCacheEntry(missingMetaKey)).resolves.toBeNull();
+    await expect(hasProxyCacheEntry(missingMetaKey)).resolves.toBe(false);
+
+    const nullMetaKey = proxyCacheKeyForUrl(
+      "https://remote.example/null-meta.png",
+    );
+    await disk.put(`${nullMetaKey}.bin`, new Uint8Array([4, 5, 6]), {
+      contentType: "image/png",
+      visibility: "public",
+    });
+    await disk.put(`${nullMetaKey}.json`, "null", {
+      contentType: "application/json",
+      visibility: "public",
+    });
+
+    await expect(readProxyCacheEntry(nullMetaKey)).resolves.toBeNull();
+    await expect(hasProxyCacheEntry(nullMetaKey)).resolves.toBe(false);
   });
 
   it("is a no-op outside cache mode", async () => {
