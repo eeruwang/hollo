@@ -7,6 +7,7 @@ import {
   getLogger,
   getStreamSink,
   jsonLinesFormatter,
+  logfmtFormatter,
   type LogLevel,
   type LogRecord,
   parseLogLevel,
@@ -19,6 +20,10 @@ const LOG_LEVEL: LogLevel = parseLogLevel(process.env["LOG_LEVEL"] ?? "info");
 const LOG_QUERY: boolean = process.env["LOG_QUERY"] === "true";
 // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
 const LOG_FILE: string | undefined = process.env["LOG_FILE"];
+// oxlint-disable-next-line typescript/dot-notation
+const LOG_FILE_FORMAT = process.env["LOG_FILE_FORMAT"] ?? "jsonl";
+const fileFormatter =
+  LOG_FILE_FORMAT === "logfmt" ? logfmtFormatter : jsonLinesFormatter;
 
 await configure({
   contextLocalStorage: new AsyncLocalStorage(),
@@ -32,7 +37,7 @@ await configure({
       LOG_FILE == null
         ? () => undefined
         : getFileSink(LOG_FILE, {
-            formatter: jsonLinesFormatter,
+            formatter: fileFormatter,
           }),
     debugger: federation.sink ?? ((_: LogRecord) => {}),
   },
