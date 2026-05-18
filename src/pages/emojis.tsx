@@ -2,6 +2,7 @@ import { getLogger } from "@logtape/logtape";
 import { desc, inArray, isNotNull, ne } from "drizzle-orm";
 import type { Context } from "hono";
 import { Hono } from "hono";
+import { csrf } from "hono/csrf";
 import JSZip from "jszip";
 import mime from "mime";
 import { DashboardLayout } from "../components/DashboardLayout";
@@ -21,6 +22,7 @@ interface DiscoveredEmoji {
 
 const emojis = new Hono();
 
+emojis.use(csrf());
 emojis.use(loginRequired);
 
 emojis.get("/", async (c) => {
