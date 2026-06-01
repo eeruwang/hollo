@@ -26,7 +26,7 @@ import type { Uuid } from "../uuid";
 
 export const TIMELINE_INBOXES =
   // biome-ignore lint/complexity/useLiteralKeys: tsc rants about this (TS4111)
-  process.env["TIMELINE_INBOXES"]?.trim()?.toLowerCase() === "true";
+  process.env["TIMELINE_INBOXES"]?.trim()?.toLowerCase() !== "false";
 
 export const TIMELINE_INBOX_LIMIT = 1000;
 
