@@ -2,8 +2,10 @@ import { isIP } from "node:net";
 import { serve } from "@hono/node-server";
 import { behindProxy } from "x-forwarded-fetch";
 import { federation } from "../src/federation";
+import { checkHandleHostConsistency } from "../src/handle-host-check";
 import { startImportWorker, stopImportWorker } from "../src/import/worker";
 import app from "../src/index";
+import "../src/logging";
 import { configureSentry } from "../src/sentry";
 
 // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
@@ -39,6 +41,9 @@ if (!["all", "web", "worker"].includes(NODE_TYPE)) {
   );
   process.exit(1);
 }
+
+// Warn if the configured HANDLE_HOST disagrees with an existing account.
+await checkHandleHostConsistency();
 
 // Start web server if running as web or all node
 if (NODE_TYPE === "web" || NODE_TYPE === "all") {

@@ -1,3 +1,4 @@
+import { getInstanceHost } from "../instance-host";
 import type { Account, AccountOwner, Block, Follow, Mute } from "../schema";
 import type { Uuid } from "../uuid";
 import { sanitizeHtml } from "../xss";
@@ -18,7 +19,7 @@ export function serializeAccount(
     baseUrl,
   ).href;
   let acct = account.handle.replace(/^@/, "");
-  if (acct.endsWith(`@${baseUrl.host}`)) {
+  if (acct.endsWith(`@${getInstanceHost(baseUrl)}`)) {
     acct = acct.replace(/@[^@]+$/, "");
   }
   return {

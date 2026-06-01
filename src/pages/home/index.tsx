@@ -2,6 +2,7 @@ import { escape } from "es-toolkit";
 import { Hono } from "hono";
 import { Layout } from "../../components/Layout.tsx";
 import db from "../../db.ts";
+import { getInstanceHost } from "../../instance-host.ts";
 import { renderCustomEmojis } from "../../text.ts";
 
 const homePage = new Hono().basePath("/");
@@ -23,7 +24,7 @@ homePage.get("/", async (c) => {
     // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
     return c.redirect(process.env["HOME_URL"]);
   }
-  const host = new URL(c.req.url).host;
+  const host = getInstanceHost(new URL(c.req.url));
   return c.html(
     <Layout title={host}>
       <hgroup>

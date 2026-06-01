@@ -19,14 +19,20 @@ export interface AccountFormProps {
     visibility?: PostVisibility;
     themeColor?: ThemeColor;
     news?: boolean;
+    avatarUrl?: string | null;
+    coverUrl?: string | null;
+    fields?: Array<{ name: string; value: string }>;
   };
   errors?: {
     username?: string;
     name?: string;
     bio?: string;
+    avatar?: string;
+    header?: string;
   };
   officialAccount: string;
   submitLabel: string;
+  host?: string;
 }
 
 export function AccountForm(props: AccountFormProps) {

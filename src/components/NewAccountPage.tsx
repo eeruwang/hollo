@@ -14,13 +14,19 @@ export interface NewAccountPageProps {
     visibility?: PostVisibility;
     themeColor?: ThemeColor;
     news?: boolean;
+    avatarUrl?: string | null;
+    coverUrl?: string | null;
+    fields?: Array<{ name: string; value: string }>;
   };
   errors?: {
     username?: string;
     name?: string;
     bio?: string;
+    avatar?: string;
+    header?: string;
   };
   officialAccount: string;
+  host: string;
 }
 
 export function NewAccountPage(props: NewAccountPageProps) {
@@ -36,6 +42,7 @@ export function NewAccountPage(props: NewAccountPageProps) {
         errors={props.errors}
         submitLabel="Create a new account"
         officialAccount={props.officialAccount}
+        host={props.host}
       />
     </DashboardLayout>
   );

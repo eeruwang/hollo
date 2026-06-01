@@ -5,6 +5,7 @@ import { sanitizeHtml } from "../xss";
 
 export interface AccountListProps {
   accountOwners: (AccountOwner & { account: Account })[];
+  baseUrl?: URL | string;
 }
 
 export function AccountList({ accountOwners }: AccountListProps) {

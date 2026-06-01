@@ -83,9 +83,9 @@ if (
 }
 
 // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
-const storageUrlBase = process.env["STORAGE_URL_BASE"];
+export const STORAGE_URL_BASE = process.env["STORAGE_URL_BASE"];
 
-if (!storageUrlBase) {
+if (!STORAGE_URL_BASE) {
   throw new Error("STORAGE_URL_BASE is required");
 }
 
@@ -100,10 +100,10 @@ export const drive = new DriveManager({
     location: new URL("../tmp/fakes", import.meta.url),
     urlBuilder: {
       async generateURL(key) {
-        return new URL(`/assets/${key}`, storageUrlBase).href;
+        return new URL(`/assets/${key}`, STORAGE_URL_BASE).href;
       },
       async generateSignedURL(key) {
-        const url = new URL(`/assets/${key}`, storageUrlBase);
+        const url = new URL(`/assets/${key}`, STORAGE_URL_BASE);
         url.searchParams.set("signature", "true");
 
         return url.href;
@@ -146,7 +146,7 @@ export const drive = new DriveManager({
         visibility: "public",
         urlBuilder: {
           async generateURL(key: string) {
-            return new URL(`/assets/${key}`, storageUrlBase).href;
+            return new URL(`/assets/${key}`, STORAGE_URL_BASE).href;
           },
         },
       });
@@ -167,7 +167,7 @@ export const drive = new DriveManager({
         // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
         forcePathStyle: process.env["S3_FORCE_PATH_STYLE"] === "true",
         visibility: "public",
-        cdnUrl: storageUrlBase,
+        cdnUrl: STORAGE_URL_BASE,
       });
     },
   },
