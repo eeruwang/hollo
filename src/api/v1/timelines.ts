@@ -185,7 +185,7 @@ app.get(
       limit: query.limit,
     });
     const nextMaxId =
-      timeline.length >= query.limit ? timeline[timeline.length - 1].id : null;
+      timeline.length > 0 ? timeline[timeline.length - 1].id : null;
     const nextLink = nextMaxId == null ? undefined : new URL(c.req.url);
     nextLink?.searchParams.set("max_id", nextMaxId ?? "");
     return c.json(
@@ -482,7 +482,7 @@ app.get(
       });
     }
     const nextMaxId =
-      timeline.length >= query.limit ? timeline[timeline.length - 1].id : null;
+      timeline.length > 0 ? timeline[timeline.length - 1].id : null;
     const nextLink = nextMaxId == null ? undefined : new URL(c.req.url);
     nextLink?.searchParams.set("max_id", nextMaxId ?? "");
     return c.json(
@@ -760,7 +760,7 @@ app.get(
       });
     }
     const nextMaxId =
-      timeline.length >= query.limit ? timeline[timeline.length - 1].id : null;
+      timeline.length > 0 ? timeline[timeline.length - 1].id : null;
     const nextLink = nextMaxId == null ? undefined : new URL(c.req.url);
     nextLink?.searchParams.set("max_id", nextMaxId ?? "");
     return c.json(
@@ -869,7 +869,7 @@ app.get(
       limit: query.limit,
     });
     const nextMaxId =
-      timeline.length >= query.limit ? timeline[timeline.length - 1].id : null;
+      timeline.length > 0 ? timeline[timeline.length - 1].id : null;
     const nextLink = nextMaxId == null ? undefined : new URL(c.req.url);
     nextLink?.searchParams.set("max_id", nextMaxId ?? "");
     return c.json(
