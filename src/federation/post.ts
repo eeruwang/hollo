@@ -308,6 +308,9 @@ export async function persistPost(
       }
     }
     if (options.length > 0 && object.endTime != null) {
+      const expires = toDate(
+        object.endTime as Parameters<typeof toDate>[0],
+      ) as Date;
       if (post.pollId == null) {
         const [poll] = await db
           .insert(polls)
@@ -315,7 +318,7 @@ export async function persistPost(
             id: uuidv7(),
             multiple,
             votersCount: object.voters ?? 0,
-            expires: toDate(object.endTime),
+            expires,
           })
           .returning();
         await db.insert(pollOptions).values(
@@ -336,7 +339,7 @@ export async function persistPost(
           .set({
             multiple,
             votersCount: object.voters ?? 0,
-            expires: toDate(object.endTime),
+            expires,
           })
           .where(eq(polls.id, post.pollId))
           .returning();
