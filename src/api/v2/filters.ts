@@ -12,7 +12,7 @@ import {
   filterKeywords,
   filters,
 } from "../../schema";
-import { uuidv7 } from "../../uuid";
+import { type Uuid, uuidv7 } from "../../uuid";
 
 const app = new Hono<{ Variables: AccountOwnerVariables }>();
 
@@ -59,7 +59,7 @@ app.get("/", scopeRequired(["read:filters"]), async (c) => {
 // GET /api/v2/filters/:id — Get a single filter
 app.get("/:id", scopeRequired(["read:filters"]), async (c) => {
   const owner = c.get("accountOwner");
-  const filterId = c.req.param("id");
+  const filterId = c.req.param("id") as Uuid;
   const filter = await db.query.filters.findFirst({
     where: {
       RAW: (filters, { and, eq }) =>
@@ -119,7 +119,7 @@ app.post("/", scopeRequired(["write:filters"]), async (c) => {
 // PUT /api/v2/filters/:id — Update a filter
 app.put("/:id", scopeRequired(["write:filters"]), async (c) => {
   const owner = c.get("accountOwner");
-  const filterId = c.req.param("id");
+  const filterId = c.req.param("id") as Uuid;
   const existing = await db.query.filters.findFirst({
     where: {
       RAW: (filters, { and, eq }) =>
@@ -185,7 +185,7 @@ app.put("/:id", scopeRequired(["write:filters"]), async (c) => {
 // DELETE /api/v2/filters/:id — Delete a filter
 app.delete("/:id", scopeRequired(["write:filters"]), async (c) => {
   const owner = c.get("accountOwner");
-  const filterId = c.req.param("id");
+  const filterId = c.req.param("id") as Uuid;
   const result = await db
     .delete(filters)
     .where(

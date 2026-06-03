@@ -3,12 +3,8 @@ import { Hono } from "hono";
 import { DashboardLayout } from "../components/DashboardLayout.tsx";
 import db from "../db.ts";
 import { loginRequired } from "../login.ts";
-import {
-  accountOwners,
-  type WebhookEvent,
-  webhooks,
-} from "../schema.ts";
-import { uuidv7 } from "../uuid.ts";
+import { type WebhookEvent, webhooks } from "../schema.ts";
+import { type Uuid, uuidv7 } from "../uuid.ts";
 
 const webhookPages = new Hono();
 
@@ -31,7 +27,7 @@ webhookPages.get("/", async (c) => {
   if (owner == null) return c.redirect("/accounts");
 
   const hooks = await db.query.webhooks.findMany({
-    where: eq(webhooks.accountOwnerId, owner.id),
+    where: { accountOwnerId: { eq: owner.id } },
   });
 
   return c.html(
@@ -123,7 +119,7 @@ webhookPages.post("/", async (c) => {
 });
 
 webhookPages.post("/delete/:id", async (c) => {
-  const id = c.req.param("id");
+  const id = c.req.param("id") as Uuid;
   await db.delete(webhooks).where(eq(webhooks.id, id));
   return c.redirect("/webhooks");
 });

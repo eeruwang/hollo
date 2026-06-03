@@ -4,6 +4,7 @@ import { renderCustomEmojis } from "../text";
 
 export interface ProfileProps {
   accountOwner: AccountOwner & { account: Account };
+  baseUrl?: URL | string;
 }
 
 export function Profile({ accountOwner }: ProfileProps) {

@@ -10,10 +10,9 @@ import { serializeReaction } from "../../entities/emoji";
 import { getPostRelations, serializePost } from "../../entities/status";
 import { proxyUrl } from "../../media-proxy";
 import {
+  type AccountOwnerVariables,
   scopeRequired,
   tokenRequired,
-  withAccountOwner,
-  type AccountOwnerVariables,
   withAccountOwner,
 } from "../../oauth/middleware";
 import {

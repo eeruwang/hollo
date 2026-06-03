@@ -1,9 +1,15 @@
 import type { PropsWithChildren } from "hono/jsx";
 import db from "../db";
-import { accountOwners } from "../schema";
 import { Layout, type LayoutProps } from "./Layout";
 
-export type Menu = "social" | "accounts" | "emojis" | "federation" | "settings";
+export type Menu =
+  | "social"
+  | "accounts"
+  | "emojis"
+  | "federation"
+  | "settings"
+  | "auth"
+  | "thumbnail_cleanup";
 
 export interface DashboardLayoutProps extends LayoutProps {
   selectedMenu?: Menu;

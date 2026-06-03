@@ -375,17 +375,19 @@ export async function persistPost(
     published,
     updated,
   } as const;
+  // biome-ignore lint/suspicious/noExplicitAny: Drizzle 1.0 RC value type narrowing
+  const valuesAny = values as any;
   await db
     .insert(posts)
     .values({
-      ...values,
+      ...valuesAny,
       repliesCount: existingPost?.repliesCount ?? 0,
       id: uuidv7(Math.max(0, +(published ?? updated))),
       iri: object.id.href,
     })
     .onConflictDoUpdate({
       target: [posts.iri],
-      set: values,
+      set: { ...valuesAny },
       setWhere: eq(posts.iri, object.id.href),
     });
   let post = await db.query.posts.findFirst({
@@ -412,13 +414,16 @@ export async function persistPost(
     }
     if (options.length > 0 && object.endTime != null) {
       if (post.pollId == null) {
+        const expires = toDate(
+          object.endTime as Parameters<typeof toDate>[0],
+        ) as Date;
         const [poll] = await db
           .insert(polls)
           .values({
             id: uuidv7(),
             multiple,
             votersCount: object.voters ?? 0,
-            expires: toDate(object.endTime),
+            expires,
           })
           .returning();
         await db.insert(pollOptions).values(
@@ -439,7 +444,7 @@ export async function persistPost(
           .set({
             multiple,
             votersCount: object.voters ?? 0,
-            expires: toDate(object.endTime),
+            expires: toDate(object.endTime as Parameters<typeof toDate>[0]) ?? undefined,
           })
           .where(eq(polls.id, post.pollId))
           .returning();

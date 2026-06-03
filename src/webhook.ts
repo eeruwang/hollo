@@ -1,7 +1,7 @@
 import { getLogger } from "@logtape/logtape";
-import { eq } from "drizzle-orm";
 import db from "./db";
-import { type WebhookEvent, webhooks } from "./schema";
+import { type WebhookEvent } from "./schema";
+import type { Uuid } from "./uuid";
 
 const logger = getLogger(["hollo", "webhook"]);
 
@@ -11,7 +11,7 @@ export async function dispatchWebhook(
   payload: Record<string, unknown>,
 ): Promise<void> {
   const hooks = await db.query.webhooks.findMany({
-    where: eq(webhooks.accountOwnerId, accountOwnerId),
+    where: { accountOwnerId: { eq: accountOwnerId as Uuid } },
   });
 
   for (const hook of hooks) {

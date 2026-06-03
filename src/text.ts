@@ -8,6 +8,9 @@ import MarkdownIt from "markdown-it";
 import replaceLink from "markdown-it-replace-link";
 
 import { CUSTOM_EMOJI_REGEXP } from "./custom-emoji";
+
+export { renderCustomEmojis } from "./custom-emoji";
+
 import type { DatabaseLike } from "./db";
 import { persistAccount } from "./federation/account";
 import { type ASPost, isPost } from "./federation/post";

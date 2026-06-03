@@ -6,10 +6,9 @@ import { db } from "../../db";
 import { serializeMedium } from "../../entities/medium";
 import { makeVideoScreenshot, uploadThumbnail } from "../../media";
 import {
+  type AccountOwnerVariables,
   scopeRequired,
   tokenRequired,
-  withAccountOwner,
-  type AccountOwnerVariables,
   withAccountOwner,
 } from "../../oauth/middleware";
 import { media } from "../../schema";
@@ -78,7 +77,7 @@ export async function postMedia(c: Context<{ Variables: AccountOwnerVariables }>
   return c.json(serializeMedium(result[0], c.req.url));
 }
 
-app.post("/", tokenRequired, scopeRequired(["write:media"]), postMedia);
+app.post("/", tokenRequired, withAccountOwner, scopeRequired(["write:media"]), postMedia);
 
 app.get("/:id", async (c) => {
   const mediumId = c.req.param("id");
@@ -90,7 +89,7 @@ app.get("/:id", async (c) => {
   return c.json(serializeMedium(medium, c.req.url));
 });
 
-app.put("/:id", tokenRequired, scopeRequired(["write:media"]), async (c) => {
+app.put("/:id", tokenRequired, withAccountOwner, scopeRequired(["write:media"]), async (c) => {
   const mediumId = c.req.param("id");
   if (!isUuid(mediumId)) return c.json({ error: "Not found" }, 404);
   let description: string | undefined;

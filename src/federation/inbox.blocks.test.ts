@@ -16,7 +16,6 @@ import db from "../db";
 import {
   accounts,
   blocks,
-  follows,
   instances,
   likes,
   posts,
