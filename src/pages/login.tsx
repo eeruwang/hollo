@@ -23,7 +23,7 @@ import {
   getRpInfo,
   verifyAuthentication,
 } from "../passkey.ts";
-import { credentials, passkeyLoginChallenges, passkeys } from "../schema.ts";
+import { passkeyLoginChallenges, passkeys } from "../schema.ts";
 
 const PASSKEY_LOGIN_COOKIE = "passkey_login";
 const PASSKEY_LOGIN_MAX_AGE_SECONDS = 5 * 60;
@@ -120,7 +120,7 @@ login.post("/", async (c) => {
     );
   }
   const credential = await db.query.credentials.findFirst({
-    where: eq(credentials.email, email),
+    where: { email: { eq: email } },
   });
   if (
     credential == null ||
@@ -417,7 +417,7 @@ login.post("/passkey/finish", async (c) => {
   const body = parsed.data;
   const credentialId = body.authenticationResponse.id;
   const storedPasskey = await db.query.passkeys.findFirst({
-    where: eq(passkeys.id, credentialId),
+    where: { id: { eq: credentialId } },
   });
   if (storedPasskey == null) {
     return c.json({ error: "Unknown credential." }, 400);

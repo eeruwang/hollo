@@ -1,10 +1,11 @@
-import { and, eq, isNull, or, gt } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { db } from "../../db";
 import {
+  type AccountOwnerVariables,
   scopeRequired,
   tokenRequired,
-  type Variables,
+  withAccountOwner,
 } from "../../oauth/middleware";
 import {
   type FilterContext,
@@ -13,7 +14,10 @@ import {
 } from "../../schema";
 import { uuidv7 } from "../../uuid";
 
-const app = new Hono<{ Variables: Variables }>();
+const app = new Hono<{ Variables: AccountOwnerVariables }>();
+
+app.use(tokenRequired);
+app.use(withAccountOwner);
 
 function serializeFilter(
   filter: typeof filters.$inferSelect & {
@@ -41,7 +45,7 @@ app.get(
   tokenRequired,
   scopeRequired(["read:filters"]),
   async (c) => {
-    const owner = c.get("token").accountOwner;
+    const owner = c.get("accountOwner");
     if (owner == null) {
       return c.json(
         { error: "This method requires an authenticated user" },
@@ -49,14 +53,15 @@ app.get(
       );
     }
 
+    const now = new Date();
     const result = await db.query.filters.findMany({
-      where: and(
-        eq(filters.accountOwnerId, owner.id),
-        or(
-          isNull(filters.expiresAt),
-          gt(filters.expiresAt, new Date()),
-        ),
-      ),
+      where: {
+        RAW: (filters, { and, eq, or, isNull, gt }) =>
+          and(
+            eq(filters.accountOwnerId, owner.id),
+            or(isNull(filters.expiresAt), gt(filters.expiresAt, now)),
+          )!,
+      },
       with: { keywords: true },
     });
 
@@ -70,7 +75,7 @@ app.get(
   tokenRequired,
   scopeRequired(["read:filters"]),
   async (c) => {
-    const owner = c.get("token").accountOwner;
+    const owner = c.get("accountOwner");
     if (owner == null) {
       return c.json(
         { error: "This method requires an authenticated user" },
@@ -97,7 +102,7 @@ app.post(
   tokenRequired,
   scopeRequired(["write:filters"]),
   async (c) => {
-    const owner = c.get("token").accountOwner;
+    const owner = c.get("accountOwner");
     if (owner == null) {
       return c.json(
         { error: "This method requires an authenticated user" },
@@ -152,7 +157,7 @@ app.put(
   tokenRequired,
   scopeRequired(["write:filters"]),
   async (c) => {
-    const owner = c.get("token").accountOwner;
+    const owner = c.get("accountOwner");
     if (owner == null) {
       return c.json(
         { error: "This method requires an authenticated user" },
@@ -230,7 +235,7 @@ app.delete(
   tokenRequired,
   scopeRequired(["write:filters"]),
   async (c) => {
-    const owner = c.get("token").accountOwner;
+    const owner = c.get("accountOwner");
     if (owner == null) {
       return c.json(
         { error: "This method requires an authenticated user" },

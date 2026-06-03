@@ -7,37 +7,19 @@ import {
   Person,
   PUBLIC_COLLECTION,
   QuoteAuthorization,
+  type RemoteDocument,
 } from "@fedify/vocab";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
 import { cleanDatabase } from "../../tests/helpers";
 import { createAccount } from "../../tests/helpers/oauth";
 import db from "../db";
-import { accounts, follows, instances, posts, timelinePosts } from "../schema";
+import { accounts, follows, instances, posts } from "../schema";
 import type { Uuid } from "../uuid";
+import { toTemporalInstant } from "./date";
 import { onPostShared } from "./inbox";
 import { persistPost, persistSharingPost, toObject } from "./post";
-
-async function getObjectJson(postId: Uuid) {
-  return await getObjectJsonWithContext(postId, {} as Context<unknown>);
-}
-
-async function getObjectJsonWithContext(postId: Uuid, ctx: Context<unknown>) {
-  const post = await db.query.posts.findFirst({
-    where: eq(posts.id, postId),
-    with: {
-      account: { with: { owner: true } },
-      replyTarget: true,
-      quoteTarget: true,
-      media: true,
-      poll: { with: { options: true } },
-      mentions: { with: { account: true } },
-      replies: true,
-    },
-  });
-  if (post == null) throw new Error("Failed to load post");
-  return await toObject(post, ctx).toJsonLd();
-}
 
 async function seedRemoteAccount(username: string) {
   const id = crypto.randomUUID() as Uuid;
@@ -69,7 +51,7 @@ async function seedRemoteAccount(username: string) {
     published: new Date(),
   });
   const account = await db.query.accounts.findFirst({
-    where: eq(accounts.id, id),
+    where: { id: { eq: id } },
     with: { owner: true },
   });
   if (account == null) throw new Error("Failed to seed remote account");
@@ -109,10 +91,9 @@ function createCtx() {
   return { ctx, forwardActivity };
 }
 
-async function seedShareScenario(options: { authorHost?: string } = {}) {
-  const authorHost = options.authorHost ?? "remote.test";
+async function seedShareScenario() {
   const owner = await createAccount({ username: "hollo" });
-  const author = await seedRemoteAccountOn(authorHost, "author");
+  const author = await seedRemoteAccount("author");
   const sharer = await seedRemoteAccount("sharer");
   await db.insert(follows).values({
     iri: `https://hollo.test/@hollo#follows/${sharer.id}`,
@@ -123,7 +104,7 @@ async function seedShareScenario(options: { authorHost?: string } = {}) {
     notify: false,
   });
   const originalPostId = crypto.randomUUID() as Uuid;
-  const originalPostIri = `${author.iri}/posts/1`;
+  const originalPostIri = "https://remote.test/@author/posts/1";
   await db.insert(posts).values({
     id: originalPostId,
     iri: originalPostIri,
@@ -145,43 +126,6 @@ async function seedShareScenario(options: { authorHost?: string } = {}) {
     originalPostIri,
     sharer,
   };
-}
-
-async function seedRemoteAccountOn(host: string, username: string) {
-  const id = crypto.randomUUID() as Uuid;
-  const iri = `https://${host}/@${username}`;
-  await db
-    .insert(instances)
-    .values({
-      host,
-      software: "mastodon",
-      softwareVersion: null,
-    })
-    .onConflictDoNothing();
-  await db.insert(accounts).values({
-    id,
-    iri,
-    type: "Person",
-    name: username,
-    handle: `@${username}@${host}`,
-    bioHtml: "",
-    emojis: {},
-    fieldHtmls: {},
-    aliases: [],
-    protected: false,
-    inboxUrl: `${iri}/inbox`,
-    followersUrl: `${iri}/followers`,
-    sharedInboxUrl: `https://${host}/inbox`,
-    featuredUrl: `${iri}/featured`,
-    instanceHost: host,
-    published: new Date(),
-  });
-  const account = await db.query.accounts.findFirst({
-    where: eq(accounts.id, id),
-    with: { owner: true },
-  });
-  if (account == null) throw new Error("Failed to seed remote account");
-  return account;
 }
 
 async function seedLocalPostShareScenario() {
@@ -244,16 +188,19 @@ describe("persistSharingPost", () => {
     );
 
     const sharingPosts = await db.query.posts.findMany({
-      where: and(
-        eq(posts.accountId, sharer.id),
-        eq(posts.sharingId, originalPostId),
-      ),
+      where: {
+        RAW: (posts, { and, eq }) =>
+          and(
+            eq(posts.accountId, sharer.id),
+            eq(posts.sharingId, originalPostId),
+          )!,
+      },
     });
     const timelineRows = await db.query.timelinePosts.findMany({
-      where: eq(timelinePosts.postId, first!.id),
+      where: { postId: { eq: first!.id } },
     });
     const originalPost = await db.query.posts.findFirst({
-      where: eq(posts.id, originalPostId),
+      where: { id: { eq: originalPostId } },
     });
     expect(first).not.toBeNull();
     expect(second?.id).toBe(first?.id);
@@ -293,16 +240,19 @@ describe("persistSharingPost", () => {
     ]);
 
     const sharingPosts = await db.query.posts.findMany({
-      where: and(
-        eq(posts.accountId, sharer.id),
-        eq(posts.sharingId, originalPostId),
-      ),
+      where: {
+        RAW: (posts, { and, eq }) =>
+          and(
+            eq(posts.accountId, sharer.id),
+            eq(posts.sharingId, originalPostId),
+          )!,
+      },
     });
     const timelineRows = await db.query.timelinePosts.findMany({
-      where: eq(timelinePosts.postId, first!.id),
+      where: { postId: { eq: first!.id } },
     });
     const originalPost = await db.query.posts.findFirst({
-      where: eq(posts.id, originalPostId),
+      where: { id: { eq: originalPostId } },
     });
     expect(first).not.toBeNull();
     expect(second?.id).toBe(first?.id);
@@ -327,78 +277,440 @@ describe("persistSharingPost", () => {
 
     expect(forwardActivity).toHaveBeenCalledOnce();
   });
+});
 
-  it("refuses to first-materialize a new post whose attribution claims a different origin", async () => {
-    expect.assertions(2);
-    // Sharer is on remote.test. The announce embeds a brand-new Note
-    // hosted on remote.test (matching the announcer's origin) but the
-    // attribution names an actor on victim.test. Without validation,
-    // persistPost would dereference victim.test for the attribution
-    // and cache the forged content as victim.test/@author's post.
-    const sharer = await seedRemoteAccount("sharer");
-    const forgedIri = "https://remote.test/@sharer/posts/forged";
-    const forgedObject = new Note({
-      id: new URL(forgedIri),
-      attribution: new Person({
-        id: new URL("https://victim.test/@author"),
-      }),
-      content: "<p>masquerade</p>",
-      to: PUBLIC_COLLECTION,
-    });
-
-    const share = await persistSharingPost(
-      db,
-      createAnnounce(
-        "https://remote.test/@sharer/announces/forge",
-        createPerson(sharer),
-        forgedObject,
-      ),
-      forgedObject,
-      "https://hollo.test",
-      { account: sharer },
-    );
-
-    const inserted = await db.query.posts.findFirst({
-      where: eq(posts.iri, forgedIri),
-    });
-    expect(share).toBeNull();
-    expect(inserted).toBeUndefined();
+describe("persistPost", () => {
+  beforeEach(async () => {
+    await cleanDatabase();
   });
 
-  it("ignores embedded content from a cross-origin announce for a known post", async () => {
-    expect.assertions(3);
-    // Sharer is on remote.test, author/post are on victim.test (different
-    // origin). The embedded Note carries a hijacked body for the known
-    // post IRI; the canonical row in the DB must win.
-    const { actor, originalPostId, originalPostIri, sharer } =
-      await seedShareScenario({ authorHost: "victim.test" });
-
-    const forgedObject = new Note({
-      id: new URL(originalPostIri),
-      content: "<p>HIJACKED</p>",
-      to: PUBLIC_COLLECTION,
-    });
-
-    const share = await persistSharingPost(
-      db,
-      createAnnounce(
-        "https://remote.test/@sharer/announces/1",
-        actor,
-        forgedObject,
-      ),
-      forgedObject,
-      "https://hollo.test",
-      { account: sharer },
+  it("does not fetch remote replies collections synchronously", async () => {
+    expect.assertions(4);
+    const author = await seedRemoteAccount("author");
+    const repliesIri = "https://remote.test/@author/posts/1/replies";
+    const documentLoader = vi.fn(
+      async (url: string): Promise<RemoteDocument> => {
+        if (url === repliesIri) {
+          throw new Error("replies collection was fetched synchronously");
+        }
+        throw new Error(`Unexpected fetch: ${url}`);
+      },
     );
 
-    const original = await db.query.posts.findFirst({
-      where: eq(posts.id, originalPostId),
+    const first = await persistPost(
+      db,
+      new Note({
+        id: new URL("https://remote.test/@author/posts/1"),
+        attribution: createPerson(author),
+        content: "<p>Hello</p>",
+        replies: new URL(repliesIri),
+        to: PUBLIC_COLLECTION,
+      }),
+      "https://hollo.test",
+      { account: author, documentLoader },
+    );
+    const second = await persistPost(
+      db,
+      new Note({
+        id: new URL("https://remote.test/@author/posts/1"),
+        attribution: createPerson(author),
+        content: "<p>Hello again</p>",
+        replies: new URL(repliesIri),
+        to: PUBLIC_COLLECTION,
+      }),
+      "https://hollo.test",
+      { account: author, documentLoader },
+    );
+    const jobs = await db.query.remoteReplyScrapeJobs.findMany();
+
+    expect(first).not.toBeNull();
+    expect(second?.id).toBe(first?.id);
+    expect(documentLoader).not.toHaveBeenCalledWith(repliesIri);
+    expect(jobs.map((job) => job.repliesIri)).toEqual([repliesIri]);
+  });
+
+  it("does not overwrite replies counts during post updates", async () => {
+    expect.assertions(2);
+    const author = await seedRemoteAccount("author");
+    const repliesIri = "https://remote.test/@author/posts/1/replies";
+
+    const first = await persistPost(
+      db,
+      new Note({
+        id: new URL("https://remote.test/@author/posts/1"),
+        attribution: createPerson(author),
+        content: "<p>Hello</p>",
+        replies: new URL(repliesIri),
+        to: PUBLIC_COLLECTION,
+      }),
+      "https://hollo.test",
+      { account: author },
+    );
+    if (first == null) throw new Error("Failed to persist post");
+
+    await persistPost(
+      db,
+      new Note({
+        id: new URL("https://remote.test/@author/posts/1"),
+        attribution: new URL(author.iri),
+        content: "<p>Hello again</p>",
+        replies: new URL(repliesIri),
+        to: PUBLIC_COLLECTION,
+      }),
+      "https://hollo.test",
+      {
+        documentLoader: async (url): Promise<RemoteDocument> => {
+          if (url !== author.iri) throw new Error(`Unexpected fetch: ${url}`);
+          await db
+            .update(posts)
+            .set({ repliesCount: 3 })
+            .where(eq(posts.id, first.id));
+          return {
+            contextUrl: null,
+            document: {
+              "@context": "https://www.w3.org/ns/activitystreams",
+              id: author.iri,
+              type: "Person",
+              name: author.handle,
+              inbox: `${author.iri}/inbox`,
+              followers: author.followersUrl,
+            },
+            documentUrl: url,
+          };
+        },
+      },
+    );
+
+    const post = await db.query.posts.findFirst({
+      where: { id: { eq: first.id } },
     });
-    expect(share).not.toBeNull();
-    // The original post must keep its canonical content, not the
-    // attacker-supplied "HIJACKED" version.
-    expect(original?.content).toBe("Shared once");
-    expect(original?.contentHtml).toBe("<p>Shared once</p>");
+    const jobs = await db.query.remoteReplyScrapeJobs.findMany();
+    expect(post?.repliesCount).toBe(3);
+    expect(jobs.map((job) => job.repliesIri)).toEqual([repliesIri]);
+  });
+
+  it("ignores posts with a published date more than 12 hours in the future", async () => {
+    expect.assertions(3);
+    const author = await seedRemoteAccount("author");
+    const futureDate = new Date(Date.now() + 13 * 60 * 60 * 1000);
+    const iri = "https://remote.test/@author/posts/future";
+
+    const result = await persistPost(
+      db,
+      new Note({
+        id: new URL(iri),
+        attribution: createPerson(author),
+        content: "<p>From the future</p>",
+        to: PUBLIC_COLLECTION,
+        published: toTemporalInstant(futureDate),
+      }),
+      "https://hollo.test",
+      { account: author },
+    );
+    const row = await db.query.posts.findFirst({
+      where: { iri: { eq: iri } },
+    });
+    const timelineRows = await db.query.timelinePosts.findMany();
+
+    expect(result).toBeNull();
+    expect(row).toBeUndefined();
+    expect(timelineRows).toHaveLength(0);
+  });
+
+  it("ignores posts with an updated date more than 12 hours in the future", async () => {
+    expect.assertions(3);
+    const author = await seedRemoteAccount("author");
+    const futureDate = new Date(Date.now() + 13 * 60 * 60 * 1000);
+    const iri = "https://remote.test/@author/posts/future-updated";
+
+    const result = await persistPost(
+      db,
+      new Note({
+        id: new URL(iri),
+        attribution: createPerson(author),
+        content: "<p>Updated in the future</p>",
+        to: PUBLIC_COLLECTION,
+        updated: toTemporalInstant(futureDate),
+      }),
+      "https://hollo.test",
+      { account: author },
+    );
+    const row = await db.query.posts.findFirst({
+      where: { iri: { eq: iri } },
+    });
+    const timelineRows = await db.query.timelinePosts.findMany();
+
+    expect(result).toBeNull();
+    expect(row).toBeUndefined();
+    expect(timelineRows).toHaveLength(0);
+  });
+
+  it("accepts posts with a published date slightly in the future (within 12 hours)", async () => {
+    expect.assertions(1);
+    const author = await seedRemoteAccount("author");
+    const slightlyFutureDate = new Date(Date.now() + 11 * 60 * 60 * 1000);
+
+    const result = await persistPost(
+      db,
+      new Note({
+        id: new URL("https://remote.test/@author/posts/near-future"),
+        attribution: createPerson(author),
+        content: "<p>Slightly future</p>",
+        to: PUBLIC_COLLECTION,
+        published: toTemporalInstant(slightlyFutureDate),
+      }),
+      "https://hollo.test",
+      { account: author },
+    );
+
+    expect(result).not.toBeNull();
+  });
+
+  it("accepts posts with a pre-epoch timestamp without crashing", async () => {
+    expect.assertions(2);
+    const author = await seedRemoteAccount("author");
+    // 1963-11-22, before Unix epoch (1970-01-01)
+    const preEpochDate = new Date("1963-11-22T12:30:00Z");
+
+    const result = await persistPost(
+      db,
+      new Note({
+        id: new URL("https://remote.test/@author/posts/old-post"),
+        attribution: createPerson(author),
+        content: "<p>A very old post</p>",
+        to: PUBLIC_COLLECTION,
+        published: toTemporalInstant(preEpochDate),
+      }),
+      "https://hollo.test",
+      { account: author },
+    );
+
+    expect(result).not.toBeNull();
+    expect(result?.published).toEqual(preEpochDate);
+  });
+});
+
+describe("toObject", () => {
+  beforeEach(async () => {
+    await cleanDatabase();
+  });
+
+  async function getObjectJson(postId: Uuid) {
+    return await getObjectJsonWithContext(postId, {} as Context<unknown>);
+  }
+
+  async function getObjectJsonWithContext(postId: Uuid, ctx: Context<unknown>) {
+    const post = await db.query.posts.findFirst({
+      where: { id: { eq: postId } },
+      with: {
+        account: { with: { owner: true } },
+        replyTarget: true,
+        quoteTarget: true,
+        media: true,
+        poll: { with: { options: true } },
+        mentions: { with: { account: true } },
+        replies: true,
+      },
+    });
+    if (post == null) throw new Error("Failed to load post");
+    return await toObject(post, ctx).toJsonLd();
+  }
+
+  it("adds a quote-inline fallback to explicit quote content", async () => {
+    const account = await createAccount({ username: "quote-author" });
+    const quotedPostId = crypto.randomUUID() as Uuid;
+    const quotePostId = crypto.randomUUID() as Uuid;
+    const quoteTargetUrl = "https://remote.test/@quoted/1";
+
+    await db.insert(posts).values([
+      {
+        id: quotedPostId,
+        iri: "https://remote.test/objects/1",
+        type: "Note",
+        accountId: account.id as Uuid,
+        visibility: "public",
+        contentHtml: "<p>Quoted post</p>",
+        content: "Quoted post",
+        url: quoteTargetUrl,
+        published: new Date(),
+      },
+      {
+        id: quotePostId,
+        iri: `https://hollo.test/@quote-author/${quotePostId}`,
+        type: "Note",
+        accountId: account.id as Uuid,
+        quoteTargetId: quotedPostId,
+        visibility: "public",
+        contentHtml: "<p>My take</p>\n",
+        content: "My take",
+        published: new Date(),
+      },
+    ]);
+
+    const json = await getObjectJson(quotePostId);
+
+    expect(json).toMatchObject({
+      content:
+        '<p>My take</p>\n<p class="quote-inline">RE: ' +
+        `<a href="${quoteTargetUrl}">${quoteTargetUrl}</a></p>`,
+    });
+  });
+
+  it("emits quote-inline fallback content for quote-only posts", async () => {
+    const account = await createAccount({ username: "quote-author" });
+    const quotedPostId = crypto.randomUUID() as Uuid;
+    const quotePostId = crypto.randomUUID() as Uuid;
+    const quoteTargetUrl = "https://remote.test/@quoted/2";
+
+    await db.insert(posts).values([
+      {
+        id: quotedPostId,
+        iri: "https://remote.test/objects/2",
+        type: "Note",
+        accountId: account.id as Uuid,
+        visibility: "public",
+        contentHtml: "<p>Quoted post</p>",
+        content: "Quoted post",
+        url: quoteTargetUrl,
+        published: new Date(),
+      },
+      {
+        id: quotePostId,
+        iri: `https://hollo.test/@quote-author/${quotePostId}`,
+        type: "Note",
+        accountId: account.id as Uuid,
+        quoteTargetId: quotedPostId,
+        visibility: "public",
+        contentHtml: null,
+        content: null,
+        published: new Date(),
+      },
+    ]);
+
+    const json = await getObjectJson(quotePostId);
+
+    expect(json).toMatchObject({
+      content:
+        `<p class="quote-inline">RE: ` +
+        `<a href="${quoteTargetUrl}">${quoteTargetUrl}</a></p>`,
+    });
+  });
+
+  it("does not duplicate quote-inline fallback when content links the quote target", async () => {
+    const account = await createAccount({ username: "quote-author" });
+    const quotedPostId = crypto.randomUUID() as Uuid;
+    const quotePostId = crypto.randomUUID() as Uuid;
+    const quoteTargetUrl = "https://remote.test/@quoted/3";
+    const contentHtml = `<p>Read <a href="${quoteTargetUrl}">${quoteTargetUrl}</a></p>`;
+
+    await db.insert(posts).values([
+      {
+        id: quotedPostId,
+        iri: "https://remote.test/objects/3",
+        type: "Note",
+        accountId: account.id as Uuid,
+        visibility: "public",
+        contentHtml: "<p>Quoted post</p>",
+        content: "Quoted post",
+        url: quoteTargetUrl,
+        published: new Date(),
+      },
+      {
+        id: quotePostId,
+        iri: `https://hollo.test/@quote-author/${quotePostId}`,
+        type: "Note",
+        accountId: account.id as Uuid,
+        quoteTargetId: quotedPostId,
+        visibility: "public",
+        contentHtml,
+        content: "Read the quoted post",
+        published: new Date(),
+      },
+    ]);
+
+    const json = await getObjectJson(quotePostId);
+
+    expect(json).toMatchObject({ content: contentHtml });
+  });
+
+  it("adds a quote-inline fallback when quote-inline appears only as body text", async () => {
+    const account = await createAccount({ username: "quote-author" });
+    const quotedPostId = crypto.randomUUID() as Uuid;
+    const quotePostId = crypto.randomUUID() as Uuid;
+    const quoteTargetUrl = "https://remote.test/@quoted/4";
+    const contentHtml = "<p>The phrase quote-inline is just text.</p>";
+
+    await db.insert(posts).values([
+      {
+        id: quotedPostId,
+        iri: "https://remote.test/objects/4",
+        type: "Note",
+        accountId: account.id as Uuid,
+        visibility: "public",
+        contentHtml: "<p>Quoted post</p>",
+        content: "Quoted post",
+        url: quoteTargetUrl,
+        published: new Date(),
+      },
+      {
+        id: quotePostId,
+        iri: `https://hollo.test/@quote-author/${quotePostId}`,
+        type: "Note",
+        accountId: account.id as Uuid,
+        quoteTargetId: quotedPostId,
+        visibility: "public",
+        contentHtml,
+        content: "The phrase quote-inline is just text.",
+        published: new Date(),
+      },
+    ]);
+
+    const json = await getObjectJson(quotePostId);
+
+    expect(json).toMatchObject({
+      content:
+        `${contentHtml}<p class="quote-inline">RE: ` +
+        `<a href="${quoteTargetUrl}">${quoteTargetUrl}</a></p>`,
+    });
+  });
+
+  it("does not duplicate quote-inline fallback for an escaped query string target link", async () => {
+    const account = await createAccount({ username: "quote-author" });
+    const quotedPostId = crypto.randomUUID() as Uuid;
+    const quotePostId = crypto.randomUUID() as Uuid;
+    const quoteTargetUrl = "https://remote.test/@quoted/5?first=1&second=2";
+    const contentHtml =
+      '<p>Read <a href="https://remote.test/@quoted/5?first=1&#38;second=2">' +
+      "the quoted post</a></p>";
+
+    await db.insert(posts).values([
+      {
+        id: quotedPostId,
+        iri: "https://remote.test/objects/5",
+        type: "Note",
+        accountId: account.id as Uuid,
+        visibility: "public",
+        contentHtml: "<p>Quoted post</p>",
+        content: "Quoted post",
+        url: quoteTargetUrl,
+        published: new Date(),
+      },
+      {
+        id: quotePostId,
+        iri: `https://hollo.test/@quote-author/${quotePostId}`,
+        type: "Note",
+        accountId: account.id as Uuid,
+        quoteTargetId: quotedPostId,
+        visibility: "public",
+        contentHtml,
+        content: "Read the quoted post",
+        published: new Date(),
+      },
+    ]);
+
+    const json = await getObjectJson(quotePostId);
+
+    expect(json).toMatchObject({ content: contentHtml });
   });
 
   it("emits FEP-044f quote and quote policy fields", async () => {
@@ -712,7 +1024,7 @@ describe("persistPost quotes", () => {
     expect(persisted?.contentHtml).toBe("<p>Updated quote</p>");
   });
 
-  it("defaults quote approval to public when no interaction policy exists", async () => {
+  it("stores no quote approval policy when no interaction policy exists", async () => {
     const author = await seedRemoteAccount("quote-author");
 
     const persisted = await persistPost(
@@ -726,7 +1038,7 @@ describe("persistPost quotes", () => {
       "https://hollo.test",
     );
 
-    expect(persisted?.quoteApprovalPolicy).toBe("public");
+    expect(persisted?.quoteApprovalPolicy).toBeNull();
   });
 
   it("does not treat manual-only quote approval as public", async () => {

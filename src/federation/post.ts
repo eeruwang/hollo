@@ -19,7 +19,6 @@ import {
   lookupObject,
   Note,
   OrderedCollection,
-  PUBLIC_COLLECTION,
   Question,
   QuoteAuthorization,
   type Recipient,
@@ -28,71 +27,66 @@ import {
   Update,
   Video,
 } from "@fedify/vocab";
-
 import { getLogger } from "@logtape/logtape";
-import {
-  and,
-  count,
-  type ExtractTablesWithRelations,
-  eq,
-  gte,
-  inArray,
-  isNotNull,
-  isNull,
-  or,
-  sql,
-} from "drizzle-orm";
-import type { PgDatabase } from "drizzle-orm/pg-core";
-import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
+import { and, count, eq, gte, inArray, isNull, or, sql } from "drizzle-orm";
+import { escape } from "es-toolkit";
 import mime from "mime";
-import sharp from "sharp";
 // @ts-expect-error: No type definitions available
 import { isSSRFSafeURL } from "ssrfcheck";
+
+import type { DatabaseLike } from "../db";
+import { extractPreviewLink } from "../html";
 import { makeVideoScreenshot, type Thumbnail, uploadThumbnail } from "../media";
 import { REMOTE_MEDIA_THUMBNAILS } from "../media-proxy";
 import { fetchPreviewCard } from "../previewcard";
-import type * as schema from "../schema";
 import {
   type Account,
   type AccountOwner,
   accountOwners,
   likes,
+  media,
   type Medium,
   type Mention,
-  media,
   mentions,
   type NewMedium,
   type NewPost,
   type Poll,
   type PollOption,
-  type PollVote,
-  type Post,
-  type QuoteApprovalPolicy,
   pollOptions,
   polls,
+  type PollVote,
   pollVotes,
+  type Post,
   posts,
+  type QuoteApprovalPolicy,
 } from "../schema";
-import { extractPreviewLink } from "../text";
 import { type Uuid, uuidv7 } from "../uuid";
 import {
-  type PersistAccountOptions,
   persistAccount,
   persistAccountByIri,
+  type PersistAccountOptions,
 } from "./account";
-import { iterateCollection } from "./collection";
 import { toDate, toTemporalInstant } from "./date";
 import { toEmoji } from "./emoji";
+import { enqueueRemoteReplyScrape } from "./replies";
 import { appendPostToTimelines } from "./timeline";
 
 const logger = getLogger(["hollo", "federation", "post"]);
+
+export type ASPost = Article | Note | Question | ChatMessage;
 
 const HREF_ATTRIBUTE_REGEXP =
   /<a\b[^>]*\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/giu;
 const CLASS_ATTRIBUTE_REGEXP =
   /\bclass\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/giu;
 
-export type ASPost = Article | Note | Question | ChatMessage;
+export type PersistedSharingPost = Post & {
+  account: Account & { owner: AccountOwner | null };
+  sharing:
+    | (Post & { account: Account & { owner: AccountOwner | null } })
+    | null;
+  isNew: boolean;
+};
 
 export function isPost(object?: vocab.Object | Link | null): object is ASPost {
   return (
@@ -106,9 +100,9 @@ export function isPost(object?: vocab.Object | Link | null): object is ASPost {
 function getQuoteApprovalPolicy(
   object: ASPost,
   account: Account,
-): QuoteApprovalPolicy {
+): QuoteApprovalPolicy | null {
   const canQuote = object.interactionPolicy?.canQuote;
-  if (canQuote == null) return "public";
+  if (canQuote == null) return null;
   const automaticApprovals = canQuote.automaticApprovals;
   if (automaticApprovals.length < 1) return "nobody";
   if (
@@ -154,15 +148,12 @@ async function getVerifiedQuoteAuthorizationIri(
 }
 
 export async function persistPost(
-  db: PgDatabase<
-    PostgresJsQueryResultHKT,
-    typeof schema,
-    ExtractTablesWithRelations<typeof schema>
-  >,
+  db: DatabaseLike,
   object: ASPost,
   baseUrl: URL | string,
   options: PersistAccountOptions & {
     account?: Account & { owner: AccountOwner | null };
+    enqueueRemoteReplies?: boolean;
     replyTarget?: Post;
   } = {},
 ): Promise<
@@ -175,11 +166,26 @@ export async function persistPost(
   if (object.id == null) return null;
   const existingPost = await db.query.posts.findFirst({
     with: { account: { with: { owner: true } }, mentions: true },
-    where: eq(posts.iri, object.id.href),
+    where: { iri: { eq: object.id.href } },
   });
   if (options.skipUpdate && existingPost != null) return existingPost;
   if (existingPost != null && existingPost.account.owner != null) {
     return existingPost;
+  }
+  const publishedRaw = toDate(object.published);
+  const updatedRaw = toDate(object.updated);
+  const now = Date.now();
+  const twelveHoursMs = 12 * 60 * 60 * 1000;
+  if (
+    (publishedRaw != null && +publishedRaw > now + twelveHoursMs) ||
+    (updatedRaw != null && +updatedRaw > now + twelveHoursMs)
+  ) {
+    logger.debug(
+      "Ignoring post {iri} with a timestamp too far in the future: " +
+        "published={published}, updated={updated}",
+      { iri: object.id.href, published: publishedRaw, updated: updatedRaw },
+    );
+    return null;
   }
   const actor = await object.getAttribution(options);
   logger.debug("Fetched actor: {actor}", { actor });
@@ -268,7 +274,7 @@ export async function persistPost(
   if (objectLink != null) {
     quoteTargetIri = objectLink.href;
     const found = await db.query.posts.findFirst({
-      where: eq(posts.iri, objectLink.href),
+      where: { iri: { eq: objectLink.href } },
       with: { account: true },
     });
     if (found != null) {
@@ -297,13 +303,13 @@ export async function persistPost(
   }
   const to = new Set(object.toIds.map((url) => url.href));
   const cc = new Set(object.ccIds.map((url) => url.href));
-  const replies = await object.getReplies(options);
+  const repliesIri = object.repliesId;
   const shares = await object.getShares(options);
   const likes = await object.getLikes(options);
   const previewLink =
     object.content == null
       ? null
-      : extractPreviewLink(object.content.toString());
+      : await extractPreviewLink(object.content.toString());
   const previewCard =
     previewLink == null ? null : await fetchPreviewCard(previewLink);
   const quoteAuthorizationIri = await getVerifiedQuoteAuthorizationIri(
@@ -319,8 +325,8 @@ export async function persistPost(
   const preservedQuoteAuthorizationIri =
     quoteAuthorizationIri ??
     (preserveAcceptedQuote ? existingPost.quoteAuthorizationIri : null);
-  const published = toDate(object.published);
-  const updated = toDate(object.updated) ?? published ?? new Date();
+  const published = publishedRaw;
+  const updated = updatedRaw ?? published ?? new Date();
   const values = {
     type:
       object instanceof Question
@@ -343,9 +349,9 @@ export async function persistPost(
           ? "accepted"
           : "unauthorized",
     quoteAuthorizationIri: preservedQuoteAuthorizationIri,
-    visibility: to.has(PUBLIC_COLLECTION.href)
+    visibility: to.has(vocab.PUBLIC_COLLECTION.href)
       ? "public"
-      : cc.has(PUBLIC_COLLECTION.href)
+      : cc.has(vocab.PUBLIC_COLLECTION.href)
         ? "unlisted"
         : account.followersUrl != null && to.has(account.followersUrl)
           ? "private"
@@ -364,7 +370,6 @@ export async function persistPost(
     sensitive: object.sensitive ?? false,
     quoteApprovalPolicy: getQuoteApprovalPolicy(object, account),
     url: object.url instanceof Link ? object.url.href?.href : object.url?.href,
-    repliesCount: replies?.totalItems ?? 0,
     sharesCount: shares?.totalItems ?? 0,
     likesCount: likes?.totalItems ?? 0,
     published,
@@ -374,7 +379,8 @@ export async function persistPost(
     .insert(posts)
     .values({
       ...values,
-      id: uuidv7(+(published ?? updated)),
+      repliesCount: existingPost?.repliesCount ?? 0,
+      id: uuidv7(Math.max(0, +(published ?? updated))),
       iri: object.id.href,
     })
     .onConflictDoUpdate({
@@ -383,7 +389,7 @@ export async function persistPost(
       setWhere: eq(posts.iri, object.id.href),
     });
   let post = await db.query.posts.findFirst({
-    where: eq(posts.iri, object.id.href),
+    where: { iri: { eq: object.id.href } },
   });
   if (post == null) return null;
   if (object instanceof Question) {
@@ -405,9 +411,6 @@ export async function persistPost(
       }
     }
     if (options.length > 0 && object.endTime != null) {
-      const expires = toDate(
-        object.endTime as Parameters<typeof toDate>[0],
-      ) as Date;
       if (post.pollId == null) {
         const [poll] = await db
           .insert(polls)
@@ -415,7 +418,7 @@ export async function persistPost(
             id: uuidv7(),
             multiple,
             votersCount: object.voters ?? 0,
-            expires,
+            expires: toDate(object.endTime),
           })
           .returning();
         await db.insert(pollOptions).values(
@@ -436,7 +439,7 @@ export async function persistPost(
           .set({
             multiple,
             votersCount: object.voters ?? 0,
-            expires,
+            expires: toDate(object.endTime),
           })
           .where(eq(polls.id, post.pollId))
           .returning();
@@ -519,6 +522,7 @@ export async function persistPost(
         if (mediaType.startsWith("video/")) {
           imageBytes = await makeVideoScreenshot(imageData);
         }
+        const { default: sharp } = await import("sharp");
         const image = sharp(imageBytes);
         metadata = await image.metadata();
         thumbnail = await uploadThumbnail(id, image);
@@ -600,22 +604,20 @@ export async function persistPost(
     } satisfies NewMedium);
   }
   post = await db.query.posts.findFirst({
-    where: eq(posts.iri, object.id.href),
+    where: { iri: { eq: object.id.href } },
     with: { account: true, media: true },
   });
   if (post == null) return null;
-  if (replies != null) {
-    for await (const item of iterateCollection(replies, {
-      ...options,
-      suppressError: true,
-    })) {
-      if (!isPost(item)) continue;
-      await persistPost(db, item, baseUrl, {
-        ...options,
-        skipUpdate: true,
-        replyTarget: post,
-      });
-    }
+  if (
+    options.enqueueRemoteReplies !== false &&
+    account.owner == null &&
+    repliesIri != null
+  ) {
+    await enqueueRemoteReplyScrape(db, {
+      baseUrl,
+      post,
+      repliesIri,
+    });
   }
   await appendPostToTimelines(db, {
     ...post,
@@ -627,69 +629,25 @@ export async function persistPost(
 }
 
 export async function persistSharingPost(
-  db: PgDatabase<
-    PostgresJsQueryResultHKT,
-    typeof schema,
-    ExtractTablesWithRelations<typeof schema>
-  >,
+  db: DatabaseLike,
   announce: Announce,
   object: ASPost,
   baseUrl: URL | string,
   options: PersistAccountOptions & {
     account?: Account & { owner: AccountOwner | null };
   } = {},
-): Promise<
-  | (Post & {
-      account: Account & { owner: AccountOwner | null };
-      sharing:
-        | (Post & { account: Account & { owner: AccountOwner | null } })
-        | null;
-    })
-  | null
-> {
+): Promise<PersistedSharingPost | null> {
   if (announce.id == null) return null;
   const existingPost = await db.query.posts.findFirst({
     with: {
       account: { with: { owner: true } },
       sharing: { with: { account: { with: { owner: true } } } },
     },
-    where: eq(posts.iri, announce.id.href),
+    where: { iri: { eq: announce.id.href } },
   });
-  if (existingPost != null) return existingPost;
+  if (existingPost != null) return { ...existingPost, isNew: false };
   const actor = await announce.getActor(options);
   if (actor == null) return null;
-  // The embedded object inside an Announce is attacker-controlled. To
-  // avoid first-materializing a forged post under another actor's
-  // authority we trust the embedded body only when the row is already
-  // known locally (persistPost's `skipUpdate` keeps the canonical
-  // version) or when the to-be-inserted object satisfies both:
-  //
-  //   - if the announcer and the object's origin differ, the object
-  //     must be fetched from its canonical URL, and
-  //   - the object's `id` must share an origin with its
-  //     `attributedTo`, so the post cannot masquerade as content by an
-  //     actor on a different instance.
-  let canonicalObject: ASPost = object;
-  if (object.id == null || announce.actorId == null) return null;
-  const known = await db.query.posts.findFirst({
-    where: eq(posts.iri, object.id.href),
-  });
-  if (known == null) {
-    if (object.id.origin !== announce.actorId.origin) {
-      const fetched = await lookupObject(object.id, options);
-      if (!isPost(fetched)) return null;
-      canonicalObject = fetched;
-    }
-    const canonId = canonicalObject.id;
-    const canonAttrId = canonicalObject.attributionId;
-    if (
-      canonId == null ||
-      canonAttrId == null ||
-      canonId.origin !== canonAttrId.origin
-    ) {
-      return null;
-    }
-  }
   const account =
     options.account?.iri != null && options.account.iri === actor.id?.href
       ? options.account
@@ -698,11 +656,27 @@ export async function persistSharingPost(
           skipUpdate: true,
         });
   if (account == null) return null;
-  const originalPost = await persistPost(db, canonicalObject, baseUrl, {
+  const originalPost = await persistPost(db, object, baseUrl, {
     ...options,
     skipUpdate: true,
   });
   if (originalPost == null) return null;
+  const existingSharingPost = await db.query.posts.findFirst({
+    with: {
+      account: { with: { owner: true } },
+      sharing: { with: { account: { with: { owner: true } } } },
+    },
+    where: {
+      RAW: (posts, { and, eq }) =>
+        and(
+          eq(posts.accountId, account.id),
+          eq(posts.sharingId, originalPost.id),
+        )!,
+    },
+  });
+  if (existingSharingPost != null) {
+    return { ...existingSharingPost, isNew: false };
+  }
   const id = uuidv7();
   const updated = new Date();
   const result = await db
@@ -718,16 +692,37 @@ export async function persistSharingPost(
       quoteTargetId: null,
       visibility: announce.toIds
         .map((iri) => iri.href)
-        .includes(PUBLIC_COLLECTION.href)
+        .includes(vocab.PUBLIC_COLLECTION.href)
         ? "public"
-        : announce.ccIds.map((iri) => iri.href).includes(PUBLIC_COLLECTION.href)
+        : announce.ccIds
+              .map((iri) => iri.href)
+              .includes(vocab.PUBLIC_COLLECTION.href)
           ? "unlisted"
           : "private",
       url: originalPost.url,
       published: toDate(announce.published) ?? updated,
       updated,
     } satisfies NewPost)
+    .onConflictDoNothing({
+      target: [posts.accountId, posts.sharingId],
+    })
     .returning();
+  if (result[0] == null) {
+    const conflictedPost = await db.query.posts.findFirst({
+      with: {
+        account: { with: { owner: true } },
+        sharing: { with: { account: { with: { owner: true } } } },
+      },
+      where: {
+        RAW: (posts, { and, eq }) =>
+          and(
+            eq(posts.accountId, account.id),
+            eq(posts.sharingId, originalPost.id),
+          )!,
+      },
+    });
+    return conflictedPost == null ? null : { ...conflictedPost, isNew: false };
+  }
   await db
     .update(posts)
     .set({ sharesCount: sql`coalesce(${posts.sharesCount}, 0) + 1` })
@@ -738,17 +733,11 @@ export async function persistSharingPost(
     mentions: [],
     replyTarget: null,
   });
-  return result[0] == null
-    ? null
-    : { ...result[0], account, sharing: originalPost };
+  return { ...result[0], account, sharing: originalPost, isNew: true };
 }
 
 export async function persistPollVote(
-  db: PgDatabase<
-    PostgresJsQueryResultHKT,
-    typeof schema,
-    ExtractTablesWithRelations<typeof schema>
-  >,
+  db: DatabaseLike,
   object: Note,
   baseUrl: URL | string,
   options: PersistAccountOptions & {
@@ -762,15 +751,19 @@ export async function persistPollVote(
   ) {
     return null;
   }
+  const replyTargetId = object.replyTargetId;
   const post = await db.query.posts.findFirst({
     with: {
-      poll: { with: { options: { orderBy: pollOptions.index } } },
+      poll: { with: { options: { orderBy: { index: "asc" } } } },
     },
-    where: and(
-      eq(posts.iri, object.replyTargetId.href),
-      eq(posts.type, "Question"),
-      isNotNull(posts.pollId),
-    ),
+    where: {
+      RAW: (posts, { and, eq, isNotNull }) =>
+        and(
+          eq(posts.iri, replyTargetId.href),
+          eq(posts.type, "Question"),
+          isNotNull(posts.pollId),
+        )!,
+    },
   });
   if (post == null) return null;
   const poll = post.poll;
@@ -843,11 +836,7 @@ export async function persistPollVote(
 }
 
 export async function updatePostStats(
-  db: PgDatabase<
-    PostgresJsQueryResultHKT,
-    typeof schema,
-    ExtractTablesWithRelations<typeof schema>
-  >,
+  db: DatabaseLike,
   { id }: { id: Uuid },
 ): Promise<void> {
   const repliesCount = db
@@ -898,7 +887,7 @@ export function toObject(
     media: Medium[];
     poll: (Poll & { options: PollOption[] }) | null;
     mentions: (Mention & { account: Account })[];
-    replies: Post[];
+    replies?: Post[];
   },
   ctx: Context<unknown>,
   opts: { includeInactiveQuoteTarget?: boolean } = {},
@@ -938,7 +927,7 @@ export function toObject(
       // For private posts, include followers collection
       // For direct messages, don't include any collections
       ...(post.visibility === "public"
-        ? [PUBLIC_COLLECTION]
+        ? [vocab.PUBLIC_COLLECTION]
         : post.visibility === "private" && post.account.owner != null
           ? [ctx.getFollowersUri(post.account.owner.handle)]
           : []),
@@ -947,7 +936,7 @@ export function toObject(
     ],
     // For unlisted posts, include PUBLIC_COLLECTION in cc
     // For all other visibilities, cc is null
-    cc: post.visibility === "unlisted" ? PUBLIC_COLLECTION : null,
+    cc: post.visibility === "unlisted" ? vocab.PUBLIC_COLLECTION : null,
     summaries:
       post.summary == null
         ? []
@@ -959,10 +948,7 @@ export function toObject(
         ? []
         : post.language == null
           ? [contentHtml]
-          : [
-              contentHtml,
-              new LanguageString(contentHtml, post.language),
-            ],
+          : [contentHtml, new LanguageString(contentHtml, post.language)],
     source:
       post.content == null
         ? null
@@ -1008,8 +994,10 @@ export function toObject(
       post.replyTarget == null ? null : new URL(post.replyTarget.iri),
     replies: new OrderedCollection({
       id: new URL("#replies", post.iri),
-      totalItems: post.replies.length,
-      items: post.replies.map((r) => new URL(r.iri)),
+      totalItems: post.repliesCount ?? 0,
+      ...(post.replies != null && post.replies.length > 0
+        ? { items: post.replies.map((r) => new URL(r.iri)) }
+        : {}),
     }),
     shares:
       post.sharesCount == null
@@ -1080,7 +1068,7 @@ function getCanQuoteRule(
   const policy =
     post.visibility === "direct" || post.visibility === "private"
       ? "nobody"
-      : post.quoteApprovalPolicy;
+      : (post.quoteApprovalPolicy ?? "public");
   if (policy === "public") {
     return new InteractionRule({
       automaticApproval: vocab.PUBLIC_COLLECTION,
@@ -1185,7 +1173,7 @@ export function toCreate(
     media: Medium[];
     poll: (Poll & { options: PollOption[] }) | null;
     mentions: (Mention & { account: Account })[];
-    replies: Post[];
+    replies?: Post[];
   },
   ctx: Context<unknown>,
 ): Create {
@@ -1208,7 +1196,7 @@ export function toUpdate(
     media: Medium[];
     poll: (Poll & { options: PollOption[] }) | null;
     mentions: (Mention & { account: Account })[];
-    replies: Post[];
+    replies?: Post[];
   },
   ctx: Context<unknown>,
   updated?: Date,
@@ -1235,7 +1223,7 @@ export function toDelete(
     media: Medium[];
     poll: (Poll & { options: PollOption[] }) | null;
     mentions: (Mention & { account: Account })[];
-    replies: Post[];
+    replies?: Post[];
   },
   ctx: Context<unknown>,
   deleted: Date = new Date(),

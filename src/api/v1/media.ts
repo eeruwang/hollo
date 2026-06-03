@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { type Context, Hono } from "hono";
+import { Hono, type Context } from "hono";
 import mime from "mime";
 import sharp from "sharp";
 import { db } from "../../db";
@@ -18,7 +18,7 @@ const app = new Hono<{ Variables: Variables }>();
 
 export async function postMedia(c: Context<{ Variables: Variables }>) {
   const disk = drive.use();
-  const owner = c.get("token").accountOwner;
+  const owner = c.get("accountOwner");
   if (owner == null) {
     return c.json({ error: "This method requires an authenticated user" }, 422);
   }
@@ -82,7 +82,7 @@ app.get("/:id", async (c) => {
   const mediumId = c.req.param("id");
   if (!isUuid(mediumId)) return c.json({ error: "Not found" }, 404);
   const medium = await db.query.media.findFirst({
-    where: eq(media.id, mediumId),
+    where: { id: { eq: mediumId } },
   });
   if (medium == null) return c.json({ error: "Not found" }, 404);
   return c.json(serializeMedium(medium, c.req.url));
