@@ -136,6 +136,25 @@ export const postVisibilityEnum = pgEnum("post_visibility", [
 
 export type PostVisibility = (typeof postVisibilityEnum.enumValues)[number];
 
+export const quoteStateEnum = pgEnum("quote_state", [
+  "pending",
+  "accepted",
+  "rejected",
+  "revoked",
+  "unauthorized",
+]);
+
+export type QuoteState = (typeof quoteStateEnum.enumValues)[number];
+
+export const quoteApprovalPolicyEnum = pgEnum("quote_approval_policy", [
+  "public",
+  "followers",
+  "nobody",
+]);
+
+export type QuoteApprovalPolicy =
+  (typeof quoteApprovalPolicyEnum.enumValues)[number];
+
 export const themeColorEnum = pgEnum("theme_color", [
   "amber",
   "azure",
@@ -433,6 +452,12 @@ export const posts = pgTable(
     quoteTargetId: uuid("quote_target_id")
       .$type<Uuid>()
       .references((): AnyPgColumn => posts.id, { onDelete: "set null" }),
+    quoteTargetIri: text("quote_target_iri"),
+    quoteState: quoteStateEnum("quote_state"),
+    quoteAuthorizationIri: text("quote_authorization_iri"),
+    quoteApprovalPolicy: quoteApprovalPolicyEnum("quote_approval_policy")
+      .notNull()
+      .default("public"),
     visibility: postVisibilityEnum("visibility").notNull(),
     summary: text("summary"),
     contentHtml: text("content_html"),
