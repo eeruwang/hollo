@@ -8,9 +8,10 @@ import { getPostRelations, serializePost } from "../../entities/status";
 import { serializeTag } from "../../entities/tag";
 import { proxyUrl } from "../../media-proxy";
 import {
+  type AccountOwnerVariables,
   scopeRequired,
   tokenRequired,
-  type Variables,
+  withAccountOwner,
 } from "../../oauth/middleware";
 import { uuid } from "../../uuid";
 import accounts from "./accounts";
@@ -28,7 +29,7 @@ import statuses from "./statuses";
 import tags from "./tags";
 import timelines from "./timelines";
 
-const app = new Hono<{ Variables: Variables }>();
+const app = new Hono<{ Variables: AccountOwnerVariables }>();
 
 app.route("/apps", apps);
 app.route("/accounts", accounts);
@@ -48,6 +49,7 @@ app.route("/reports", reports);
 app.get(
   "/preferences",
   tokenRequired,
+  withAccountOwner,
   scopeRequired(["read:accounts"]),
   (c) => {
     const owner = c.get("accountOwner");
@@ -94,6 +96,7 @@ app.get("/announcements", (c) => {
 app.get(
   "/favourites",
   tokenRequired,
+  withAccountOwner,
   scopeRequired(["read:favourites"]),
   zValidator(
     "query",
@@ -152,6 +155,7 @@ app.get(
 app.get(
   "/bookmarks",
   tokenRequired,
+  withAccountOwner,
   scopeRequired(["read:bookmarks"]),
   zValidator(
     "query",
@@ -210,6 +214,7 @@ app.get(
 app.get(
   "/followed_tags",
   tokenRequired,
+  withAccountOwner,
   scopeRequired(["read:follows"]),
   (c) => {
     const owner = c.get("accountOwner");
@@ -228,6 +233,7 @@ app.get(
 app.get(
   "/mutes",
   tokenRequired,
+  withAccountOwner,
   scopeRequired(["read:mutes"]),
   zValidator(
     "query",
@@ -288,6 +294,7 @@ app.get(
 app.get(
   "/blocks",
   tokenRequired,
+  withAccountOwner,
   scopeRequired(["read:blocks"]),
   zValidator(
     "query",

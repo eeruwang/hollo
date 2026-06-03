@@ -23,7 +23,7 @@ import {
   reactions,
   type Medium,
 } from "../schema";
-import { STORAGE_URL_BASE } from "../storage-config";
+import { STORAGE_URL_BASE } from "../storage";
 
 function normalizeAttachmentType(type: string): string {
   if (["image", "video", "audio", "gifv", "unknown"].includes(type)) {

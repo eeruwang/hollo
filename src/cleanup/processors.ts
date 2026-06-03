@@ -4,7 +4,7 @@ import { eq, sql } from "drizzle-orm";
 import db from "../db";
 import * as schema from "../schema";
 import { drive } from "../storage";
-import { STORAGE_URL_BASE } from "../storage-config";
+import { STORAGE_URL_BASE } from "../storage";
 import { type Uuid, uuidv7 } from "../uuid";
 
 const logger = getLogger(["hollo", "cleanup"]);

@@ -1,6 +1,6 @@
 import type { InboxContext } from "@fedify/fedify";
 import { Delete } from "@fedify/vocab";
-import { eq } from "drizzle-orm";
+
 import { beforeEach, describe, expect, it } from "vitest";
 import { cleanDatabase } from "../../tests/helpers";
 import db from "../db";
@@ -38,7 +38,7 @@ async function seedRemoteAccount(host: string, username: string) {
     published: new Date(),
   });
   const account = await db.query.accounts.findFirst({
-    where: eq(accounts.id, id),
+    where: { id: { eq: id } },
   });
   if (account == null) throw new Error("Failed to seed remote account");
   return account;
@@ -82,7 +82,7 @@ describe("onPostDeleted", () => {
     await onPostDeleted(ctx, del);
 
     const remaining = await db.query.posts.findFirst({
-      where: eq(posts.iri, post.iri),
+      where: { iri: { eq: post.iri } },
     });
     expect(remaining).toBeUndefined();
   });
@@ -101,7 +101,7 @@ describe("onPostDeleted", () => {
     await onPostDeleted(ctx, del);
 
     const remaining = await db.query.posts.findFirst({
-      where: eq(posts.iri, post.iri),
+      where: { iri: { eq: post.iri } },
     });
     expect(remaining).not.toBeUndefined();
     expect(remaining?.iri).toBe(post.iri);
@@ -121,7 +121,7 @@ describe("onPostDeleted", () => {
     await onPostDeleted(ctx, del);
 
     const remaining = await db.query.posts.findFirst({
-      where: eq(posts.iri, post.iri),
+      where: { iri: { eq: post.iri } },
     });
     expect(remaining).not.toBeUndefined();
   });

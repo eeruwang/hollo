@@ -12,7 +12,9 @@ import { proxyUrl } from "../../media-proxy";
 import {
   scopeRequired,
   tokenRequired,
-  type Variables,
+  withAccountOwner,
+  type AccountOwnerVariables,
+  withAccountOwner,
 } from "../../oauth/middleware";
 import {
   notificationTypeEnum,
@@ -64,7 +66,7 @@ function parseNotificationId(compositeId: string): ParsedNotificationId {
   return { uuid: compositeId as Uuid, timestamp: null };
 }
 
-const app = new Hono<{ Variables: Variables }>();
+const app = new Hono<{ Variables: AccountOwnerVariables }>();
 
 // set for O(1) access to all possible types
 const notificationTypeSet = new Set(notificationTypeEnum.enumValues);
@@ -75,6 +77,7 @@ function isNotificationType(value: string) {
 app.get(
   "/",
   tokenRequired,
+  withAccountOwner,
   scopeRequired(["read:notifications"]),
   async (c) => {
     const owner = c.get("accountOwner");

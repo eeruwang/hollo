@@ -264,7 +264,12 @@ export async function createReblogNotification(
  * Creates a status notification when someone posts a reply to a user's post.
  * This is different from mention - it specifically means "someone replied to your post".
  */
-export async function createStatusNotification(
+/**
+ * Creates a mention notification when someone replies to a user's post.
+ * Mastodon clients render reply notifications from mention notifications
+ * whose status points back to the current account via in_reply_to_account_id.
+ */
+export async function createReplyMentionNotification(
   replier: Account,
   replyPost: Post,
   originalPost: Post & { account: Account & { owner: AccountOwner | null } },
@@ -281,7 +286,7 @@ export async function createStatusNotification(
 
   return await createNotification({
     accountOwnerId: originalPost.account.owner.id,
-    type: "status",
+    type: "mention",
     actorAccountId: replier.id,
     targetPostId: replyPost.id,
   });

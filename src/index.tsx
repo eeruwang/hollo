@@ -15,7 +15,7 @@ import oauth from "./oauth";
 import oauthMetadataEndpoint from "./oauth/endpoints/metadata";
 import pages from "./pages";
 import proxy from "./proxy";
-import { DRIVE_DISK, FS_STORAGE_PATH } from "./storage-config";
+import { DRIVE_DISK, FS_STORAGE_PATH } from "./storage";
 
 const app = new Hono();
 

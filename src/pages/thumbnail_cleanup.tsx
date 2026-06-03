@@ -15,7 +15,7 @@ import {
   media,
   posts,
 } from "../schema";
-import { STORAGE_URL_BASE } from "../storage-config";
+import { STORAGE_URL_BASE } from "../storage";
 import { isUuid, uuidv7 } from "../uuid";
 
 const logger = getLogger(["hollo", "pages", "thumbnail_cleanup"]);

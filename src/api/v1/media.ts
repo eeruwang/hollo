@@ -8,15 +8,17 @@ import { makeVideoScreenshot, uploadThumbnail } from "../../media";
 import {
   scopeRequired,
   tokenRequired,
-  type Variables,
+  withAccountOwner,
+  type AccountOwnerVariables,
+  withAccountOwner,
 } from "../../oauth/middleware";
 import { media } from "../../schema";
 import { drive } from "../../storage";
 import { isUuid, uuidv7 } from "../../uuid";
 
-const app = new Hono<{ Variables: Variables }>();
+const app = new Hono<{ Variables: AccountOwnerVariables }>();
 
-export async function postMedia(c: Context<{ Variables: Variables }>) {
+export async function postMedia(c: Context<{ Variables: AccountOwnerVariables }>) {
   const disk = drive.use();
   const owner = c.get("accountOwner");
   if (owner == null) {

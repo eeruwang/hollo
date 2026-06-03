@@ -489,6 +489,7 @@ export const media = pgTable(
     created: timestamp("created", { withTimezone: true })
       .notNull()
       .default(currentTimestamp),
+    thumbnailCleaned: boolean("thumbnail_cleaned").notNull().default(false),
   },
   (table) => [index().on(table.postId)],
 );
@@ -1160,6 +1161,23 @@ export const filters = pgTable("filters", {
 export type Filter = typeof filters.$inferSelect;
 export type NewFilter = typeof filters.$inferInsert;
 
+export const cleanupJobStatusEnum = pgEnum("cleanup_job_status", [
+  "pending",
+  "processing",
+  "completed",
+  "failed",
+  "cancelled",
+]);
+
+export type CleanupJobStatus = (typeof cleanupJobStatusEnum.enumValues)[number];
+
+export const cleanupJobCategoryEnum = pgEnum("cleanup_job_category", [
+  "cleanup_thumbnails",
+]);
+
+export type CleanupJobCategory =
+  (typeof cleanupJobCategoryEnum.enumValues)[number];
+
 // Cleanup Jobs Table
 export const cleanupJobs = pgTable(
   "cleanup_jobs",
@@ -1229,6 +1247,14 @@ export type FilterKeyword = typeof filterKeywords.$inferSelect;
 export type NewFilterKeyword = typeof filterKeywords.$inferInsert;
 
 
+
+export const remoteReplyScrapeJobStatusEnum = pgEnum(
+  "remote_reply_scrape_job_status",
+  ["pending", "processing", "completed", "failed"],
+);
+
+export type RemoteReplyScrapeJobStatus =
+  (typeof remoteReplyScrapeJobStatusEnum.enumValues)[number];
 
 export const remoteReplyScrapeJobs = pgTable(
   "remote_reply_scrape_jobs",
