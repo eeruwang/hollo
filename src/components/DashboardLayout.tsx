@@ -125,7 +125,7 @@ export async function DashboardLayout(
               />
               <div class="div" />
               <a
-                href="/social"
+                href="/compose"
                 class={`cta${props.selectedMenu === "compose" ? " on" : ""}`}
               >
                 <span class="kb">c</span>
