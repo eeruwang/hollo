@@ -5,7 +5,7 @@ import { Hono } from "hono";
 import mime from "mime";
 import sharp from "sharp";
 import { DashboardLayout } from "../components/DashboardLayout.tsx";
-import { Post as PostView } from "../components/Post.tsx";
+import { TimelineEntry } from "../components/TimelineEntry.tsx";
 import db from "../db.ts";
 import fedi from "../federation";
 import { loginRequired } from "../login.ts";
@@ -84,108 +84,107 @@ social.get("/", async (c) => {
 
   return c.html(
     <DashboardLayout
-      title="Social — Hollo"
-      selectedMenu="social"
+      title="~/timeline · Hollo"
+      selectedMenu="home"
+      shellPath="timeline"
+      shellStatus={`home · ${timeline.length} posts`}
+      shellHints={[
+        { key: "j/k", label: "move" },
+        { key: "f", label: "fav" },
+        { key: "b", label: "boost" },
+        { key: "Enter", label: "open" },
+        { key: "c", label: "compose" },
+      ]}
       themeColor={owner.themeColor}
     >
-      <hgroup>
-        <h1>Social</h1>
-        <p>Compose and view your posts.</p>
-      </hgroup>
+      <div class="cmdline">
+        <span class="u">{owner.handle}@hollo</span>:~${" "}
+        <span class="cmd">timeline</span>{" "}
+        <span class="arg">--home</span>
+      </div>
 
-      <form
-        method="post"
-        action="/social/compose"
-        enctype="multipart/form-data"
-        class="social-composer"
+      <details
+        style="border:1px solid var(--bd); padding:9px 12px; margin-bottom:14px;"
       >
-        <div class="social-composer-card">
+        <summary style="cursor:pointer; color:var(--ac);">
+          ＋ quick compose
+        </summary>
+        <form
+          method="post"
+          action="/social/compose"
+          enctype="multipart/form-data"
+          style="margin-top:11px;"
+        >
           <textarea
             name="content"
-            placeholder="What's on your mind?"
+            placeholder="$ post --message ..."
             required
-            rows={4}
-            class="social-composer-text"
+            rows={3}
+            style="width:100%; background:transparent; border:1px solid var(--bd); padding:8px; color:var(--fgs); font-family:var(--mono); font-size:13.5px; line-height:1.65; resize:vertical; outline:none;"
           />
-          <div class="social-composer-divider" />
-          <div class="social-composer-row">
-            <input
-              type="text"
-              name="spoiler_text"
-              placeholder="Content warning (optional)"
-              class="social-composer-field"
-            />
-            <label class="social-composer-chip">
-              <input type="checkbox" name="sensitive" value="true" />
-              <span>Sensitive</span>
+          <input
+            type="text"
+            name="spoiler_text"
+            placeholder="content warning (optional)"
+            style="width:100%; margin-top:7px; background:transparent; border:1px solid var(--bd); padding:6px 8px; color:var(--fg); font-family:var(--mono); font-size:12.5px; outline:none;"
+          />
+          <div
+            style="display:flex; align-items:center; gap:10px; margin-top:9px; flex-wrap:wrap;"
+          >
+            <label class="muted" style="font-size:12px;">
+              <input type="checkbox" name="sensitive" value="true" /> sensitive
             </label>
-          </div>
-          <div class="social-composer-row">
-            <label class="social-composer-attach">
+            <label class="muted" style="font-size:12px;">
               <input
                 type="file"
                 name="media"
                 multiple
                 accept="image/png,image/jpeg,image/gif,image/webp,video/mp4,video/webm"
               />
-              <span class="social-composer-attach-label">&#43; Attach</span>
-              <span class="social-composer-attach-count" />
             </label>
-            <input
-              type="text"
-              name="media_description"
-              placeholder="Alt text for attachments"
-              class="social-composer-field"
-            />
-          </div>
-          <div class="social-composer-divider" />
-          <div class="social-composer-bottom">
-            <div class="social-composer-selects">
-              <select name="visibility" class="social-composer-select">
-                <option value="public">Public</option>
-                <option value="unlisted">Unlisted</option>
-                <option value="private">Followers only</option>
-                <option value="direct">Direct</option>
-              </select>
-              <select name="language" class="social-composer-select">
-                <option value="">Default ({owner.language})</option>
-                {LANGUAGE_OPTIONS.map((opt) => (
-                  <option value={opt.code}>
-                    {opt.label} ({opt.code})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <button type="submit" class="social-composer-submit">
-              Post
+            <select
+              name="visibility"
+              style="background:var(--bg2); border:1px solid var(--bd); color:var(--fg); font-family:var(--mono); font-size:12px; padding:5px 8px;"
+            >
+              <option value="public">public</option>
+              <option value="unlisted">unlisted</option>
+              <option value="private">followers</option>
+              <option value="direct">direct</option>
+            </select>
+            <select
+              name="language"
+              style="background:var(--bg2); border:1px solid var(--bd); color:var(--fg); font-family:var(--mono); font-size:12px; padding:5px 8px;"
+            >
+              <option value="">{owner.language}</option>
+              {LANGUAGE_OPTIONS.map((opt) => (
+                <option value={opt.code}>{opt.code}</option>
+              ))}
+            </select>
+            <button
+              type="submit"
+              class="btn pri"
+              style="margin-left:auto; padding:5px 14px; font-size:12.5px;"
+            >
+              post ↵
             </button>
           </div>
-        </div>
-      </form>
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `(() => {
-  const attach = document.querySelector('.social-composer-attach');
-  if (!attach) return;
-  const input = attach.querySelector('input[type="file"]');
-  const count = attach.querySelector('.social-composer-attach-count');
-  if (!input || !count) return;
-  input.addEventListener('change', () => {
-    const n = input.files ? input.files.length : 0;
-    if (n === 0) { count.textContent = ''; attach.classList.remove('has-files'); return; }
-    count.textContent = n + ' file' + (n > 1 ? 's' : '');
-    attach.classList.add('has-files');
-  });
-})();`,
-        }}
-      />
+        </form>
+      </details>
 
-      <h2>Recent Posts</h2>
       {timeline.length === 0 ? (
-        <p>No posts yet. Write your first post above!</p>
+        <p class="muted">
+          — empty timeline · use <span class="gn">[c]</span> to compose —
+        </p>
       ) : (
-        timeline.map((post) => <PostView post={post} />)
+        timeline.map((post) => (
+          <TimelineEntry post={post} mine={true} openHref={`/@${owner.handle}/${post.id}`} />
+        ))
       )}
+
+      <div class="endcap">
+        — end of recent · <span class="gn">[r]</span> refresh · federated via
+        ActivityPub —
+      </div>
     </DashboardLayout>,
   );
 });

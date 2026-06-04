@@ -551,17 +551,50 @@ function ProfilePage({
       ]}
       themeColor={accountOwner.themeColor}
     >
-      <Profile accountOwner={accountOwner} />
-      <section class="profile-timeline">
-        <h2>{tag != null ? `Posts tagged #${tag}` : "Posts"}</h2>
-        {featuredTags.length > 0 && (
-          <p>
-            Featured tags:{" "}
-            {featuredTags.map((tag) => (
-              <>
-                <a
-                  href={`/@${accountOwner.handle}/tagged/${encodeURIComponent(tag.name)}`}
-                >
+      <div class="win">
+        <div class="titlebar">
+          <div class="dots">
+            <i />
+            <i />
+            <i />
+          </div>
+          <div class="path">
+            <b>{accountOwner.handle}@hollo</b>
+            <span>: </span>
+            <span class="ac">
+              ~/profile{tag != null ? `/#${tag}` : ""}
+            </span>
+          </div>
+          <div class="tright">
+            <span>● federated</span>
+            <span class="led" />
+            <span data-clock>00:00</span>
+          </div>
+        </div>
+        <div class="mid" style="grid-template-columns: 1fr;">
+          <main class="page">
+            <div class="wrap">
+              <Profile accountOwner={accountOwner} />
+              <div class="tabs">
+                <a class={tag == null ? "on" : ""} href={`/@${accountOwner.handle}`}>
+                  posts
+                </a>
+                <a href={`/@${accountOwner.handle}/with_replies`}>
+                  replies
+                </a>
+                {atomUrl != null && (
+                  <a href={atomUrl}>atom</a>
+                )}
+              </div>
+              {featuredTags.length > 0 && (
+                <p style="margin-top:10px;">
+                  <span class="dimc">featured: </span>
+                  {featuredTags.map((tag) => (
+                    <>
+                      <a
+                        class="tag"
+                        href={`/@${accountOwner.handle}/tagged/${encodeURIComponent(tag.name)}`}
+                      >
                   #{tag.name}
                 </a>{" "}
               </>
@@ -638,7 +671,6 @@ function ProfilePage({
             })}
           </>
         ))}
-      </section>
       {(newerUrl || olderUrl) && (
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <div>{newerUrl && <a href={newerUrl}>&larr; Newer</a>}</div>
@@ -688,6 +720,23 @@ function ProfilePage({
             </>
           )}
       </footer>
+            </div>
+          </main>
+        </div>
+        <div class="statusbar">
+          <span class="mode">NORMAL</span>
+          <span class="k">
+            [<b>j/k</b>] move
+          </span>
+          <span class="k">
+            [<b>Enter</b>] open
+          </span>
+          <span class="sp" />
+          <span>
+            profile · @{accountOwner.handle}
+          </span>
+        </div>
+      </div>
     </Layout>
   );
 }

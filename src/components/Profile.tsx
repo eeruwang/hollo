@@ -4,6 +4,7 @@ import { renderCustomEmojis } from "../text";
 
 export interface ProfileProps {
   accountOwner: AccountOwner & { account: Account };
+  baseUrl?: URL | string;
 }
 
 export function Profile({ accountOwner }: ProfileProps) {
@@ -11,64 +12,62 @@ export function Profile({ accountOwner }: ProfileProps) {
   const nameHtml = renderCustomEmojis(escape(account.name), account.emojis);
   const bioHtml = renderCustomEmojis(account.bioHtml ?? "", account.emojis);
   const url = account.url ?? account.iri;
+  const avatarLetter =
+    account.name.trim().charAt(0).toUpperCase() ||
+    account.handle.replace(/^@/, "").charAt(0).toUpperCase();
   return (
-    <div class="profile-header">
-      {account.coverUrl && (
-        <img
-          src={account.coverUrl}
-          alt=""
-          style="margin-bottom: 1em; width: 100%;"
+    <div>
+      <div class="pname">
+        <span class="ava">{avatarLetter}</span>
+        <a
+          dangerouslySetInnerHTML={{ __html: nameHtml }}
+          href={url}
+          style="color:inherit;"
         />
-      )}
-      <hgroup>
-        {account.avatarUrl && (
-          <img
-            src={account.avatarUrl}
-            alt={`${account.name}'s avatar`}
-            width={72}
-            height={72}
-            style="float: left; margin-right: 1em;"
-          />
-        )}
-        <h1>
-          <a dangerouslySetInnerHTML={{ __html: nameHtml }} href={url} />
-        </h1>
-        <p>
-          <span
-            style="user-select: all;"
-            data-tooltip="Use this handle to reach out to this account on your fediverse server!"
-            data-placement="bottom"
-          >
-            {account.handle}
-          </span>{" "}
-          &middot; {`${account.followingCount} following `}
-          &middot;{" "}
+      </div>
+      <div class="kv">
+        <span class="k">handle</span>
+        <span class="v" style="user-select: all;">
+          {account.handle}
+        </span>
+        <span class="k">following</span>
+        <span class="v">{account.followingCount}</span>
+        <span class="k">followers</span>
+        <span class="v">
           {account.followersCount === 1
             ? "1 follower"
             : `${account.followersCount} followers`}
-        </p>
-      </hgroup>
-      <div dangerouslySetInnerHTML={{ __html: bioHtml }} />
-      {account.fieldHtmls && (
-        <div class="overflow-auto">
-          <table>
-            <thead>
-              <tr>
-                {Object.keys(account.fieldHtmls).map((key) => (
-                  <th>{key}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                {Object.values(account.fieldHtmls).map((value) => (
-                  <td dangerouslySetInnerHTML={{ __html: value }} />
-                ))}
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        </span>
+      </div>
+      {account.bioHtml != null && account.bioHtml !== "" && (
+        <div
+          class="txt"
+          style="margin-top:14px; color:var(--fg); max-width:60ch;"
+          dangerouslySetInnerHTML={{ __html: bioHtml }}
+        />
       )}
+      {account.fieldHtmls &&
+        Object.keys(account.fieldHtmls).length > 0 && (
+          <div class="kv" style="margin-top:13px;">
+            {Object.entries(account.fieldHtmls).map(([key, value]) => (
+              <>
+                <span class="k">{key}</span>
+                <span
+                  class="v"
+                  dangerouslySetInnerHTML={{ __html: value }}
+                />
+              </>
+            ))}
+          </div>
+        )}
+      <div class="btnrow">
+        <a class="btn pri" href={url}>
+          follow
+        </a>
+        <a class="btn" href={`/@${accountOwner.handle}.atom`}>
+          atom
+        </a>
+      </div>
     </div>
   );
 }
