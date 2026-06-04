@@ -565,71 +565,29 @@
     {
       "idx": 80,
       "version": "7",
-      "when": 1776805400028,
-      "tag": "0080_add_thumbnail_cleaned_flag",
+      "when": 1776278400000,
+      "tag": "0080_add_eeruwang_theme",
       "breakpoints": true
     },
     {
       "idx": 81,
       "version": "7",
-      "when": 1776805957287,
-      "tag": "0081_add_cleanup_jobs",
+      "when": 1776364800000,
+      "tag": "0081_add_webhooks",
       "breakpoints": true
     },
     {
       "idx": 82,
       "version": "7",
-      "when": 1777083591598,
-      "tag": "0082_remote_reply_scrape_jobs",
+      "when": 1776451200000,
+      "tag": "0082_add_filters",
       "breakpoints": true
     },
     {
       "idx": 83,
       "version": "7",
-      "when": 1777129670102,
-      "tag": "0083_remote_reply_scrape_claim_indexes",
-      "breakpoints": true
-    },
-    {
-      "idx": 84,
-      "version": "7",
-      "when": 1777177569926,
-      "tag": "0084_remote_reply_scrape_stale_index",
-      "breakpoints": true
-    },
-    {
-      "idx": 85,
-      "version": "7",
-      "when": 1777191395619,
-      "tag": "0085_optimize_follower_visibility",
-      "breakpoints": true
-    },
-    {
-      "idx": 86,
-      "version": "7",
-      "when": 1777358526000,
-      "tag": "0086_quote_controls",
-      "breakpoints": true
-    },
-    {
-      "idx": 87,
-      "version": "7",
-      "when": 1777428000000,
-      "tag": "0087_quote_authorization_requirement",
-      "breakpoints": true
-    },
-    {
-      "idx": 88,
-      "version": "7",
-      "when": 1778782509038,
-      "tag": "0088_passkeys",
-      "breakpoints": true
-    },
-    {
-      "idx": 89,
-      "version": "7",
-      "when": 1778802075419,
-      "tag": "0089_passkey_login_challenges",
+      "when": 1776455531886,
+      "tag": "0083_add_custom_emoji_aliases",
       "breakpoints": true
     }
   ]
