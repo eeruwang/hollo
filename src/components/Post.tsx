@@ -46,8 +46,6 @@ export interface PostProps {
   readonly shared?: Date;
   readonly pinned?: boolean;
   readonly quoted?: boolean;
-  readonly featured?: boolean;
-  readonly baseUrl?: URL | string;
 }
 
 export function Post({ post, shared, pinned, quoted }: PostProps) {

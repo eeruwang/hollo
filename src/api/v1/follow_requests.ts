@@ -1,7 +1,6 @@
 import { Accept, Follow, Reject } from "@fedify/vocab";
 import { and, eq, isNull } from "drizzle-orm";
 import { Hono } from "hono";
-
 import db from "../../db";
 import {
   serializeAccount,
@@ -16,52 +15,50 @@ import {
 import {
   scopeRequired,
   tokenRequired,
-  withAccountOwner,
-  type AccountOwnerVariables,
+  type Variables,
 } from "../../oauth/middleware";
-import { follows } from "../../schema";
+import { accounts, blocks, follows, mutes } from "../../schema";
 import { isUuid } from "../../uuid";
 
-const app = new Hono<{ Variables: AccountOwnerVariables }>();
+const app = new Hono<{ Variables: Variables }>();
 
-app.get(
-  "/",
-  tokenRequired,
-  scopeRequired(["read:follows"]),
-  withAccountOwner,
-  async (c) => {
-    const owner = c.get("accountOwner");
-    const followers = await db.query.follows.findMany({
-      where: {
-        RAW: (follows, { and, eq, isNull }) =>
-          and(eq(follows.followingId, owner.id), isNull(follows.approved))!,
-      },
-      with: { follower: { with: { owner: true, successor: true } } },
-    });
-    return c.json(
-      followers.map((f) =>
-        f.follower.owner == null
-          ? serializeAccount(f.follower, c.req.url)
-          : serializeAccountOwner(
-              { ...f.follower.owner, account: f.follower },
-              c.req.url,
-            ),
-      ),
-    );
-  },
-);
+app.get("/", tokenRequired, scopeRequired(["read:follows"]), async (c) => {
+  const owner = c.get("token").accountOwner;
+  if (owner == null) {
+    return c.json({ error: "This method requires an authenticated user" }, 422);
+  }
+  const followers = await db.query.follows.findMany({
+    where: and(eq(follows.followingId, owner.id), isNull(follows.approved)),
+    with: { follower: { with: { owner: true, successor: true } } },
+  });
+  return c.json(
+    followers.map((f) =>
+      f.follower.owner == null
+        ? serializeAccount(f.follower, c.req.url)
+        : serializeAccountOwner(
+            { ...f.follower.owner, account: f.follower },
+            c.req.url,
+          ),
+    ),
+  );
+});
 
 app.post(
   "/:account_id/authorize",
   tokenRequired,
   scopeRequired(["write:follows"]),
-  withAccountOwner,
   async (c) => {
     const followerId = c.req.param("account_id");
     if (!isUuid(followerId)) return c.json({ error: "Record not found" }, 404);
-    const owner = c.get("accountOwner");
+    const owner = c.get("token").accountOwner;
+    if (owner == null) {
+      return c.json(
+        { error: "This method requires an authenticated user" },
+        422,
+      );
+    }
     const follower = await db.query.accounts.findFirst({
-      where: { id: { eq: followerId } },
+      where: eq(accounts.id, followerId),
       with: { owner: true },
     });
     if (follower == null) return c.json({ error: "Record not found" }, 404);
@@ -100,22 +97,22 @@ app.post(
     }
     await updateAccountStats(db, { id: owner.id });
     const follower2 = await db.query.accounts.findFirst({
-      where: { id: { eq: followerId } },
+      where: eq(accounts.id, followerId),
       with: {
         followers: {
-          where: { followerId: { eq: owner.id } },
+          where: eq(follows.followerId, owner.id),
         },
         following: {
-          where: { followingId: { eq: owner.id } },
+          where: eq(follows.followingId, owner.id),
         },
         mutedBy: {
-          where: { accountId: { eq: owner.id } },
+          where: eq(mutes.accountId, owner.id),
         },
         blocks: {
-          where: { blockedAccountId: { eq: owner.id } },
+          where: eq(blocks.blockedAccountId, owner.id),
         },
         blockedBy: {
-          where: { accountId: { eq: owner.id } },
+          where: eq(blocks.accountId, owner.id),
         },
       },
     });
@@ -128,13 +125,18 @@ app.post(
   "/:account_id/reject",
   tokenRequired,
   scopeRequired(["write:follows"]),
-  withAccountOwner,
   async (c) => {
     const followerId = c.req.param("account_id");
     if (!isUuid(followerId)) return c.json({ error: "Record not found" }, 404);
-    const owner = c.get("accountOwner");
+    const owner = c.get("token").accountOwner;
+    if (owner == null) {
+      return c.json(
+        { error: "This method requires an authenticated user" },
+        422,
+      );
+    }
     const follower = await db.query.accounts.findFirst({
-      where: { id: { eq: followerId } },
+      where: eq(accounts.id, followerId),
       with: { owner: true },
     });
     if (follower == null) return c.json({ error: "Record not found" }, 404);
@@ -171,22 +173,22 @@ app.post(
       );
     }
     const follower2 = await db.query.accounts.findFirst({
-      where: { id: { eq: followerId } },
+      where: eq(accounts.id, followerId),
       with: {
         followers: {
-          where: { followerId: { eq: owner.id } },
+          where: eq(follows.followerId, owner.id),
         },
         following: {
-          where: { followingId: { eq: owner.id } },
+          where: eq(follows.followingId, owner.id),
         },
         mutedBy: {
-          where: { accountId: { eq: owner.id } },
+          where: eq(mutes.accountId, owner.id),
         },
         blocks: {
-          where: { blockedAccountId: { eq: owner.id } },
+          where: eq(blocks.blockedAccountId, owner.id),
         },
         blockedBy: {
-          where: { accountId: { eq: owner.id } },
+          where: eq(blocks.accountId, owner.id),
         },
       },
     });

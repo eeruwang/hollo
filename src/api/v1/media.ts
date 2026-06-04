@@ -1,25 +1,24 @@
 import { eq } from "drizzle-orm";
-import { Hono, type Context } from "hono";
+import { type Context, Hono } from "hono";
 import mime from "mime";
 import sharp from "sharp";
 import { db } from "../../db";
 import { serializeMedium } from "../../entities/medium";
 import { makeVideoScreenshot, uploadThumbnail } from "../../media";
 import {
-  type AccountOwnerVariables,
   scopeRequired,
   tokenRequired,
-  withAccountOwner,
+  type Variables,
 } from "../../oauth/middleware";
 import { media } from "../../schema";
 import { drive } from "../../storage";
 import { isUuid, uuidv7 } from "../../uuid";
 
-const app = new Hono<{ Variables: AccountOwnerVariables }>();
+const app = new Hono<{ Variables: Variables }>();
 
-export async function postMedia(c: Context<{ Variables: AccountOwnerVariables }>) {
+export async function postMedia(c: Context<{ Variables: Variables }>) {
   const disk = drive.use();
-  const owner = c.get("accountOwner");
+  const owner = c.get("token").accountOwner;
   if (owner == null) {
     return c.json({ error: "This method requires an authenticated user" }, 422);
   }
@@ -77,19 +76,19 @@ export async function postMedia(c: Context<{ Variables: AccountOwnerVariables }>
   return c.json(serializeMedium(result[0], c.req.url));
 }
 
-app.post("/", tokenRequired, withAccountOwner, scopeRequired(["write:media"]), postMedia);
+app.post("/", tokenRequired, scopeRequired(["write:media"]), postMedia);
 
 app.get("/:id", async (c) => {
   const mediumId = c.req.param("id");
   if (!isUuid(mediumId)) return c.json({ error: "Not found" }, 404);
   const medium = await db.query.media.findFirst({
-    where: { id: { eq: mediumId } },
+    where: eq(media.id, mediumId),
   });
   if (medium == null) return c.json({ error: "Not found" }, 404);
   return c.json(serializeMedium(medium, c.req.url));
 });
 
-app.put("/:id", tokenRequired, withAccountOwner, scopeRequired(["write:media"]), async (c) => {
+app.put("/:id", tokenRequired, scopeRequired(["write:media"]), async (c) => {
   const mediumId = c.req.param("id");
   if (!isUuid(mediumId)) return c.json({ error: "Not found" }, 404);
   let description: string | undefined;

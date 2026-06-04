@@ -9,10 +9,18 @@ import {
   PropertyValue,
 } from "@fedify/vocab";
 import { getLogger } from "@logtape/logtape";
-import { and, count, eq, inArray } from "drizzle-orm";
+import { and, count, desc, eq, ilike, inArray, isNotNull } from "drizzle-orm";
 import { uniq } from "es-toolkit";
 import { db } from "../db";
-import { follows, likes, posts } from "../schema";
+import {
+  accountOwners,
+  accounts,
+  follows,
+  likes,
+  pinnedPosts,
+  pollOptions,
+  posts,
+} from "../schema";
 import { toTemporalInstant } from "./date";
 import { federation } from "./federation";
 import { toAnnounce, toCreate, toObject } from "./post";
@@ -20,7 +28,7 @@ import { toAnnounce, toCreate, toObject } from "./post";
 federation
   .setActorDispatcher("/@{identifier}", async (ctx, identifier) => {
     const owner = await db.query.accountOwners.findFirst({
-      where: { handle: { eq: identifier } },
+      where: eq(accountOwners.handle, identifier),
       with: { account: { with: { successor: true } } },
     });
     if (owner == null) return null;
@@ -80,7 +88,7 @@ federation
   .mapHandle((_, handle) => handle)
   .setKeyPairsDispatcher(async (_ctx, identifier) => {
     const owner = await db.query.accountOwners.findFirst({
-      where: { handle: { eq: identifier } },
+      where: eq(accountOwners.handle, identifier),
     });
     if (owner == null) return [];
     return [
@@ -102,7 +110,7 @@ federation
     "/@{identifier}/followers",
     async (_ctx, identifier, cursor, filter) => {
       const owner = await db.query.accountOwners.findFirst({
-        where: { handle: { eq: identifier } },
+        where: eq(accountOwners.handle, identifier),
       });
       if (owner == null) return null;
       followersLogger.debug(
@@ -112,28 +120,25 @@ federation
       const offset = cursor == null ? undefined : Number.parseInt(cursor, 10);
       if (offset != null && !Number.isInteger(offset)) return null;
       const followers = await db.query.accounts.findMany({
-        where: {
-          RAW: (accounts, { and, eq, ilike, inArray, isNotNull }) =>
-            and(
-              inArray(
-                accounts.id,
-                db
-                  .select({ id: follows.followerId })
-                  .from(follows)
-                  .where(
-                    and(
-                      eq(follows.followingId, owner.id),
-                      isNotNull(follows.approved),
-                    ),
-                  ),
+        where: and(
+          inArray(
+            accounts.id,
+            db
+              .select({ id: follows.followerId })
+              .from(follows)
+              .where(
+                and(
+                  eq(follows.followingId, owner.id),
+                  isNotNull(follows.approved),
+                ),
               ),
-              filter == null
-                ? undefined
-                : ilike(accounts.iri, `${filter.origin}/%`),
-            )!,
-        },
+          ),
+          filter == null
+            ? undefined
+            : ilike(accounts.iri, `${filter.origin}/%`),
+        ),
         offset,
-        orderBy: (accounts) => [accounts.id],
+        orderBy: accounts.id,
         limit: offset == null ? undefined : 41,
       });
       const items = offset == null ? followers : followers.slice(0, 40);
@@ -158,7 +163,7 @@ federation
   .setFirstCursor(async (_ctx, _identifier) => "0")
   .setCounter(async (_ctx, identifier) => {
     const owner = await db.query.accountOwners.findFirst({
-      where: { handle: { eq: identifier } },
+      where: eq(accountOwners.handle, identifier),
       with: { account: true },
     });
     return owner == null ? 0 : owner.account.followersCount;
@@ -169,29 +174,26 @@ federation
     "/@{identifier}/following",
     async (_ctx, identifier, cursor) => {
       const owner = await db.query.accountOwners.findFirst({
-        where: { handle: { eq: identifier } },
+        where: eq(accountOwners.handle, identifier),
       });
       if (owner == null || cursor == null) return null;
       const offset = Number.parseInt(cursor, 10);
       if (!Number.isInteger(offset)) return null;
       const following = await db.query.accounts.findMany({
-        where: {
-          RAW: (accounts, { and, eq, inArray, isNotNull }) =>
-            inArray(
-              accounts.id,
-              db
-                .select({ id: follows.followingId })
-                .from(follows)
-                .where(
-                  and(
-                    eq(follows.followerId, owner.id),
-                    isNotNull(follows.approved),
-                  ),
-                ),
+        where: inArray(
+          accounts.id,
+          db
+            .select({ id: follows.followingId })
+            .from(follows)
+            .where(
+              and(
+                eq(follows.followerId, owner.id),
+                isNotNull(follows.approved),
+              ),
             ),
-        },
+        ),
         offset,
-        orderBy: (accounts) => [accounts.id],
+        orderBy: accounts.id,
         limit: 41,
       });
       return {
@@ -203,7 +205,7 @@ federation
   .setFirstCursor(async (_ctx, _identifier) => "0")
   .setCounter(async (_ctx, identifier) => {
     const owner = await db.query.accountOwners.findFirst({
-      where: { handle: { eq: identifier } },
+      where: eq(accountOwners.handle, identifier),
       with: { account: true },
     });
     return owner == null ? 0 : owner.account.followingCount;
@@ -215,18 +217,15 @@ federation
     async (ctx, identifier, cursor) => {
       if (cursor == null) return null;
       const owner = await db.query.accountOwners.findFirst({
-        where: { handle: { eq: identifier } },
+        where: eq(accountOwners.handle, identifier),
       });
       if (owner == null) return null;
       const items = await db.query.posts.findMany({
-        where: {
-          RAW: (posts, { and, eq, inArray }) =>
-            and(
-              eq(posts.accountId, owner.id),
-              inArray(posts.visibility, ["public", "unlisted"]),
-            )!,
-        },
-        orderBy: (posts, { desc }) => [desc(posts.published)],
+        where: and(
+          eq(posts.accountId, owner.id),
+          inArray(posts.visibility, ["public", "unlisted"]),
+        ),
+        orderBy: desc(posts.published),
         offset: Number.parseInt(cursor, 10),
         limit: 41,
         with: {
@@ -254,7 +253,7 @@ federation
   .setFirstCursor(async (_ctx, _identifier) => "0")
   .setCounter(async (_ctx, identifier) => {
     const owner = await db.query.accountOwners.findFirst({
-      where: { handle: { eq: identifier } },
+      where: eq(accountOwners.handle, identifier),
     });
     if (owner == null) return null;
     const result = await db
@@ -276,13 +275,13 @@ federation
     async (_ctx, identifier, cursor) => {
       if (cursor == null) return null;
       const owner = await db.query.accountOwners.findFirst({
-        where: { handle: { eq: identifier } },
+        where: eq(accountOwners.handle, identifier),
         with: { account: true },
       });
       if (owner == null) return null;
       const items = await db.query.likes.findMany({
-        where: { accountId: { eq: owner.id } },
-        orderBy: (likes, { desc }) => [desc(likes.created)],
+        where: eq(likes.accountId, owner.id),
+        orderBy: desc(likes.created),
         offset: Number.parseInt(cursor, 10),
         limit: 41,
         with: { post: true },
@@ -307,7 +306,7 @@ federation
   .setFirstCursor(async (_ctx, _identifier) => "0")
   .setCounter(async (_ctx, identifier) => {
     const owner = await db.query.accountOwners.findFirst({
-      where: { handle: { eq: identifier } },
+      where: eq(accountOwners.handle, identifier),
     });
     if (owner == null) return null;
     const result = await db
@@ -322,13 +321,13 @@ federation.setFeaturedDispatcher(
   "/@{identifier}/pinned",
   async (ctx, identifier) => {
     const owner = await db.query.accountOwners.findFirst({
-      where: { handle: { eq: identifier } },
+      where: eq(accountOwners.handle, identifier),
       with: { account: true },
     });
     if (owner == null) return null;
     const items = await db.query.pinnedPosts.findMany({
-      where: { accountId: { eq: owner.id } },
-      orderBy: (pinnedPosts, { desc }) => [desc(pinnedPosts.index)],
+      where: eq(pinnedPosts.accountId, owner.id),
+      orderBy: desc(pinnedPosts.index),
       with: {
         post: {
           with: {
@@ -336,7 +335,7 @@ federation.setFeaturedDispatcher(
             replyTarget: true,
             quoteTarget: true,
             media: true,
-            poll: { with: { options: { orderBy: { index: "asc" } } } },
+            poll: { with: { options: { orderBy: pollOptions.index } } },
             mentions: { with: { account: true } },
             replies: true,
           },
@@ -356,7 +355,7 @@ federation.setFeaturedTagsDispatcher(
   "/@{identifier}/tags",
   async (ctx, identifier) => {
     const owner = await db.query.accountOwners.findFirst({
-      where: { handle: { eq: identifier } },
+      where: eq(accountOwners.handle, identifier),
       with: { account: true, featuredTags: true },
     });
     if (owner == null) return null;

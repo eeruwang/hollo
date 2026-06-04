@@ -1,1 +1,0 @@
-CREATE INDEX "posts_updated_index" ON "posts" USING btree ("updated");

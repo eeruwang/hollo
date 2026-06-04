@@ -8,7 +8,7 @@ import {
   Person,
   PUBLIC_COLLECTION,
 } from "@fedify/vocab";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanDatabase } from "../../tests/helpers";
 import { createAccount } from "../../tests/helpers/oauth";
@@ -16,6 +16,7 @@ import db from "../db";
 import {
   accounts,
   blocks,
+  follows,
   instances,
   likes,
   posts,
@@ -74,7 +75,7 @@ async function seedRemoteAccount(host: string, username: string) {
     published: new Date(),
   });
   const account = await db.query.accounts.findFirst({
-    where: { id: { eq: id } },
+    where: eq(accounts.id, id),
   });
   if (account == null) throw new Error("Failed to seed remote account");
   return account;
@@ -109,7 +110,7 @@ describe("inbox block enforcement", () => {
     expect.assertions(1);
     const owner = await createAccount({ username: "hollo" });
     const ownerAccount = await db.query.accounts.findFirst({
-      where: { id: { eq: owner.id as Uuid } },
+      where: eq(accounts.id, owner.id as Uuid),
     });
     if (ownerAccount == null) throw new Error("Failed to load local account");
     await db
@@ -139,10 +140,10 @@ describe("inbox block enforcement", () => {
     await onFollowed(createCtx(), follow);
 
     const recorded = await db.query.follows.findFirst({
-      where: {
-        followingId: { eq: owner.id as Uuid },
-        followerId: { eq: followerAccount.id },
-      },
+      where: and(
+        eq(follows.followingId, owner.id as Uuid),
+        eq(follows.followerId, followerAccount.id),
+      ),
     });
     expect(recorded).toBeUndefined();
   });
@@ -166,7 +167,7 @@ describe("inbox block enforcement", () => {
     // Control: same Like without the block must be recorded.
     await onLiked(createCtx(), like);
     const beforeBlock = await db.query.likes.findFirst({
-      where: { postId: { eq: post.id }, accountId: { eq: liker.id } },
+      where: and(eq(likes.postId, post.id), eq(likes.accountId, liker.id)),
     });
     expect(beforeBlock).not.toBeUndefined();
 
@@ -179,7 +180,7 @@ describe("inbox block enforcement", () => {
     });
     await onLiked(createCtx(), like);
     const afterBlock = await db.query.likes.findFirst({
-      where: { postId: { eq: post.id }, accountId: { eq: liker.id } },
+      where: and(eq(likes.postId, post.id), eq(likes.accountId, liker.id)),
     });
     expect(afterBlock).toBeUndefined();
   });
@@ -203,10 +204,10 @@ describe("inbox block enforcement", () => {
 
     await onEmojiReactionAdded(createCtx(), react);
     const beforeBlock = await db.query.reactions.findFirst({
-      where: {
-        postId: { eq: post.id },
-        accountId: { eq: reactor.id },
-      },
+      where: and(
+        eq(reactions.postId, post.id),
+        eq(reactions.accountId, reactor.id),
+      ),
     });
     expect(beforeBlock).not.toBeUndefined();
 
@@ -217,10 +218,10 @@ describe("inbox block enforcement", () => {
     });
     await onEmojiReactionAdded(createCtx(), react);
     const afterBlock = await db.query.reactions.findFirst({
-      where: {
-        postId: { eq: post.id },
-        accountId: { eq: reactor.id },
-      },
+      where: and(
+        eq(reactions.postId, post.id),
+        eq(reactions.accountId, reactor.id),
+      ),
     });
     expect(afterBlock).toBeUndefined();
   });
@@ -244,7 +245,7 @@ describe("inbox block enforcement", () => {
 
     await onPostShared(createCtx(), announce);
     const beforeBlock = await db.query.posts.findFirst({
-      where: { accountId: { eq: sharer.id }, sharingId: { eq: post.id } },
+      where: and(eq(posts.accountId, sharer.id), eq(posts.sharingId, post.id)),
     });
     expect(beforeBlock).not.toBeUndefined();
 
@@ -268,7 +269,7 @@ describe("inbox block enforcement", () => {
     });
     await onPostShared(createCtx(), blockedAnnounce);
     const afterBlock = await db.query.posts.findFirst({
-      where: { accountId: { eq: sharer.id }, sharingId: { eq: post.id } },
+      where: and(eq(posts.accountId, sharer.id), eq(posts.sharingId, post.id)),
     });
     expect(afterBlock).toBeUndefined();
   });

@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { beforeEach, describe, expect, it } from "vitest";
 import { cleanDatabase } from "../../tests/helpers";
@@ -61,7 +62,7 @@ describe("OAuth Helpers", () => {
       });
       const { token } = await oauthHelpers.getAccessToken(client, account);
       accessToken = await db.query.accessTokens.findFirst({
-        where: { code: { eq: token } },
+        where: eq(schema.accessTokens.code, token),
         with: {
           accountOwner: { with: { account: { with: { successor: true } } } },
           application: true,

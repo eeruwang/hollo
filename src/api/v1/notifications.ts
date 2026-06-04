@@ -1,5 +1,5 @@
 import { getLogger } from "@logtape/logtape";
-import { and, desc, eq, gt, lt, lte, or, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, lt, lte, or, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { db } from "../../db";
 import {
@@ -10,17 +10,18 @@ import { serializeReaction } from "../../entities/emoji";
 import { getPostRelations, serializePost } from "../../entities/status";
 import { proxyUrl } from "../../media-proxy";
 import {
-  type AccountOwnerVariables,
   scopeRequired,
   tokenRequired,
-  withAccountOwner,
+  type Variables,
 } from "../../oauth/middleware";
 import {
+  type NotificationType,
+  notifications,
   notificationTypeEnum,
   polls,
   pollVotes,
   posts,
-  type NotificationType,
+  reactions,
 } from "../../schema";
 import type { Uuid } from "../../uuid";
 
@@ -65,7 +66,7 @@ function parseNotificationId(compositeId: string): ParsedNotificationId {
   return { uuid: compositeId as Uuid, timestamp: null };
 }
 
-const app = new Hono<{ Variables: AccountOwnerVariables }>();
+const app = new Hono<{ Variables: Variables }>();
 
 // set for O(1) access to all possible types
 const notificationTypeSet = new Set(notificationTypeEnum.enumValues);
@@ -76,10 +77,9 @@ function isNotificationType(value: string) {
 app.get(
   "/",
   tokenRequired,
-  withAccountOwner,
   scopeRequired(["read:notifications"]),
   async (c) => {
-    const owner = c.get("accountOwner");
+    const owner = c.get("token").accountOwner;
     if (owner == null) {
       return c.json(
         { error: "This method requires an authenticated user" },
@@ -128,31 +128,39 @@ app.get(
 
     const startTime = performance.now();
 
+    // Build pagination conditions using timestamps for reliable ordering
+    // UUIDv7 comparison may not work correctly across all PostgreSQL versions
+    const paginationConditions = [];
+    if (olderThan != null) {
+      paginationConditions.push(lt(notifications.created, olderThan));
+    }
+    // max_id: Return results older than this ID (exclusive)
+    if (maxIdParsed?.timestamp != null) {
+      paginationConditions.push(
+        lt(notifications.created, maxIdParsed.timestamp),
+      );
+    }
+    // since_id: Return results newer than this ID (exclusive)
+    if (sinceIdParsed?.timestamp != null) {
+      paginationConditions.push(
+        gt(notifications.created, sinceIdParsed.timestamp),
+      );
+    }
+    // min_id: Return results immediately newer than this ID (exclusive)
+    if (minIdParsed?.timestamp != null) {
+      paginationConditions.push(
+        gt(notifications.created, minIdParsed.timestamp),
+      );
+    }
+
     // Use new notifications table for much better performance
     const notificationsData = await db.query.notifications.findMany({
-      where: {
-        RAW: (notifications, { and, eq, gt, inArray, lt }) =>
-          and(
-            eq(notifications.accountOwnerId, owner.id),
-            inArray(notifications.type, types),
-            // Build pagination conditions using timestamps for reliable
-            // ordering; UUIDv7 comparison may not work correctly across all
-            // PostgreSQL versions.
-            olderThan == null
-              ? undefined
-              : lt(notifications.created, olderThan),
-            maxIdParsed?.timestamp == null
-              ? undefined
-              : lt(notifications.created, maxIdParsed.timestamp),
-            sinceIdParsed?.timestamp == null
-              ? undefined
-              : gt(notifications.created, sinceIdParsed.timestamp),
-            minIdParsed?.timestamp == null
-              ? undefined
-              : gt(notifications.created, minIdParsed.timestamp),
-          )!,
-      },
-      orderBy: (notifications, { desc }) => [desc(notifications.created)],
+      where: and(
+        eq(notifications.accountOwnerId, owner.id),
+        inArray(notifications.type, types),
+        ...paginationConditions,
+      ),
+      orderBy: desc(notifications.created),
       limit,
       with: {
         actorAccount: { with: { owner: true, successor: true } },
@@ -179,17 +187,14 @@ app.get(
     const reactionsData =
       emojiReactionNotifications.length > 0
         ? await db.query.reactions.findMany({
-            where: {
-              RAW: (reactions, { and, eq, or }) =>
-                or(
-                  ...emojiReactionNotifications.map((n) =>
-                    and(
-                      eq(reactions.postId, n.targetPostId!),
-                      eq(reactions.accountId, n.actorAccount!.id),
-                    ),
-                  ),
-                )!,
-            },
+            where: or(
+              ...emojiReactionNotifications.map((n) =>
+                and(
+                  eq(reactions.postId, n.targetPostId!),
+                  eq(reactions.accountId, n.actorAccount!.id),
+                ),
+              ),
+            ),
             with: {
               account: { with: { owner: true, successor: true } },
             },
@@ -276,13 +281,10 @@ app.get(
       if (expiredPollIds.length > 0) {
         // Load all posts with relations in one query
         const expiredPosts = await db.query.posts.findMany({
-          where: {
-            RAW: (posts, { inArray }) =>
-              inArray(
-                posts.pollId,
-                expiredPollIds.map((p) => p.pollId),
-              ),
-          },
+          where: inArray(
+            posts.pollId,
+            expiredPollIds.map((p) => p.pollId),
+          ),
           with: getPostRelations(owner.id),
         });
 

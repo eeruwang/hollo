@@ -4,7 +4,6 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { maxBy } from "es-toolkit";
 import { Hono } from "hono";
 import { z } from "zod";
-
 import { db } from "../../db";
 import { serializePoll } from "../../entities/poll";
 import { federation } from "../../federation";
@@ -12,40 +11,33 @@ import { toUpdate } from "../../federation/post";
 import {
   scopeRequired,
   tokenRequired,
-  withAccountOwner,
-  type AccountOwnerVariables,
+  type Variables,
 } from "../../oauth/middleware";
 import { pollOptions, polls, pollVotes } from "../../schema";
 import { isUuid } from "../../uuid";
 
-const app = new Hono<{ Variables: AccountOwnerVariables }>();
+const app = new Hono<{ Variables: Variables }>();
 
-app.get(
-  "/:id",
-  tokenRequired,
-  scopeRequired(["read:statuses"]),
-  withAccountOwner,
-  async (c) => {
-    const pollId = c.req.param("id");
-    if (!isUuid(pollId)) return c.json({ error: "Record not found" }, 404);
-    const owner = c.get("accountOwner");
-    const poll = await db.query.polls.findFirst({
-      with: {
-        options: { orderBy: { index: "asc" } },
-        votes: { where: { accountId: { eq: owner.id } } },
-      },
-      where: { id: { eq: pollId } },
-    });
-    if (poll == null) return c.json({ error: "Record not found" }, 404);
-    return c.json(serializePoll(poll, owner));
-  },
-);
+app.get("/:id", tokenRequired, scopeRequired(["read:statuses"]), async (c) => {
+  const pollId = c.req.param("id");
+  if (!isUuid(pollId)) return c.json({ error: "Record not found" }, 404);
+  const owner = c.get("token").accountOwner;
+  if (owner == null) return c.json({ error: "Unauthorized" }, 401);
+  const poll = await db.query.polls.findFirst({
+    with: {
+      options: { orderBy: pollOptions.index },
+      votes: { where: eq(pollVotes.accountId, owner.id) },
+    },
+    where: eq(polls.id, pollId),
+  });
+  if (poll == null) return c.json({ error: "Record not found" }, 404);
+  return c.json(serializePoll(poll, owner));
+});
 
 app.post(
   "/:id/votes",
   tokenRequired,
   scopeRequired(["write:statuses"]),
-  withAccountOwner,
   zValidator(
     "json",
     z.object({
@@ -63,14 +55,17 @@ app.post(
   async (c) => {
     const pollId = c.req.param("id");
     if (!isUuid(pollId)) return c.json({ error: "Record not found" }, 404);
-    const owner = c.get("accountOwner");
+    const owner = c.get("token").accountOwner;
+    if (owner == null) {
+      return c.json({ error: "The access token is invalid" }, 401);
+    }
     const choices = c.req.valid("json").choices;
     let poll = await db.query.polls.findFirst({
       with: {
         options: true,
         votes: {
           with: { account: true },
-          where: { accountId: { eq: owner.id } },
+          where: eq(pollVotes.accountId, owner.id),
         },
         posts: {
           with: {
@@ -79,10 +74,11 @@ app.post(
             quoteTarget: true,
             media: true,
             mentions: { with: { account: true } },
+            replies: true,
           },
         },
       },
-      where: { id: { eq: pollId } },
+      where: eq(polls.id, pollId),
     });
     if (poll == null) return c.json({ error: "Record not found" }, 404);
     if (poll.expires <= new Date()) {
@@ -140,7 +136,7 @@ app.post(
         options: true,
         votes: {
           with: { account: true },
-          where: { accountId: { eq: owner.id } },
+          where: eq(pollVotes.accountId, owner.id),
         },
         posts: {
           with: {
@@ -149,10 +145,11 @@ app.post(
             quoteTarget: true,
             media: true,
             mentions: { with: { account: true } },
+            replies: true,
           },
         },
       },
-      where: { id: { eq: pollId } },
+      where: eq(polls.id, pollId),
     });
     if (poll == null) throw new Error("Record not found");
     const fedCtx = federation.createContext(c.req.raw, undefined);

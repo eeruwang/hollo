@@ -1,5 +1,5 @@
 import { getLogger } from "@logtape/logtape";
-import { lt } from "drizzle-orm";
+import { eq, lt } from "drizzle-orm";
 import type { Context, Env, HonoRequest } from "hono";
 import db, { type Transaction } from "../db";
 import { base64Url, randomBytes } from "../helpers";
@@ -202,7 +202,7 @@ export async function getAccessToken<T extends Env>(
   if (match == null) return undefined;
   const token = match[1];
   const accessToken = await db.query.accessTokens.findFirst({
-    where: { code: { eq: token } },
+    where: eq(schema.accessTokens.code, token),
     with: {
       accountOwner: { with: { account: { with: { successor: true } } } },
       application: true,

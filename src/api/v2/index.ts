@@ -7,10 +7,19 @@ import {
 } from "@fedify/vocab";
 import { zValidator } from "@hono/zod-validator";
 import { getLogger } from "@logtape/logtape";
-import { eq } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  ilike,
+  inArray,
+  isNull,
+  lte,
+  or,
+  sql,
+} from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
-
 import { db } from "../../db";
 import { serializeAccount } from "../../entities/account";
 import { getPostRelations, serializePost } from "../../entities/status";
@@ -20,44 +29,29 @@ import { persistPost } from "../../federation/post";
 import {
   scopeRequired,
   tokenRequired,
-  withAccountOwner,
-  type AccountOwnerVariables,
+  type Variables,
 } from "../../oauth/middleware";
 import { HANDLE_PATTERN } from "../../patterns";
-import { type Account } from "../../schema";
+import { type Account, accounts, posts } from "../../schema";
 import { buildSearchFilter, parseSearchQuery } from "../../search";
 import { uuid } from "../../uuid";
 import { postMedia } from "../v1/media";
+import filtersApi from "./filters";
 import instance from "./instance";
 import notificationsRoutes from "./notifications";
 
-const app = new Hono<{ Variables: AccountOwnerVariables }>();
+const app = new Hono<{ Variables: Variables }>();
 
+app.route("/filters", filtersApi);
 app.route("/instance", instance);
 app.route("/notifications", notificationsRoutes);
 
-app.post(
-  "/media",
-  tokenRequired,
-  scopeRequired(["write:media"]),
-  withAccountOwner,
-  postMedia,
-);
-
-app.get(
-  "/suggestions",
-  tokenRequired,
-  scopeRequired(["read:accounts"]),
-  (c) => {
-    return c.json([]);
-  },
-);
+app.post("/media", tokenRequired, scopeRequired(["write:media"]), postMedia);
 
 app.get(
   "/search",
   tokenRequired,
   scopeRequired(["read:search"]),
-  withAccountOwner,
   zValidator(
     "query",
     z.object({
@@ -80,7 +74,8 @@ app.get(
   ),
   async (c) => {
     const logger = getLogger(["hollo", "api", "v2", "search"]);
-    const owner = c.get("accountOwner");
+    const owner = c.get("token").accountOwner;
+    if (owner == null) return c.json({ error: "invalid_token" }, 401);
     const query = c.req.valid("query");
     const q = query.q.trim();
     // Check if query is a URL (for post search optimization)
@@ -93,28 +88,22 @@ app.get(
       query.offset < 1
         ? await db.query.accounts.findMany({
             with: { successor: true },
-            where: {
-              RAW: (accounts, { eq, or }) =>
-                or(
-                  eq(accounts.iri, q),
-                  eq(accounts.url, q),
-                  eq(accounts.handle, q),
-                  eq(accounts.handle, `@${q}`),
-                )!,
-            },
+            where: or(
+              eq(accounts.iri, q),
+              eq(accounts.url, q),
+              eq(accounts.handle, q),
+              eq(accounts.handle, `@${q}`),
+            ),
           })
         : [];
     const statuses =
       query.offset < 1
         ? await db.query.posts.findMany({
-            where: {
-              RAW: (posts, { and, eq, isNull, lte, or, sql }) =>
-                and(
-                  or(eq(posts.iri, q), eq(posts.url, q)),
-                  isNull(posts.sharingId),
-                  lte(posts.published, sql`NOW() + INTERVAL '5 minutes'`),
-                )!,
-            },
+            where: and(
+              or(eq(posts.iri, q), eq(posts.url, q)),
+              isNull(posts.sharingId),
+              lte(posts.published, sql`NOW() + INTERVAL '5 minutes'`),
+            ),
             with: getPostRelations(owner.id),
           })
         : [];
@@ -142,7 +131,7 @@ app.get(
     }
     if (query.type == null || query.type === "accounts") {
       const hits = await db.query.accounts.findMany({
-        where: { handle: { ilike: `%${q}%` } },
+        where: ilike(accounts.handle, `%${q}%`),
         limit: query.limit,
         offset: query.offset,
       });
@@ -164,7 +153,7 @@ app.get(
             a.successorId == null
               ? null
               : ((await db.query.accounts.findFirst({
-                  where: { id: { eq: a.successorId } },
+                  where: eq(accounts.id, a.successorId),
                 })) ?? null),
         });
       }
@@ -175,19 +164,16 @@ app.get(
       if (!isUrlQuery) {
         // Parse search query with advanced operators
         const searchAst = parseSearchQuery(q);
+        const searchFilter = searchAst
+          ? buildSearchFilter(searchAst)
+          : sql`TRUE`;
+
+        let filter = and(searchFilter, isNull(posts.sharingId))!;
+        if (query.account_id != null) {
+          filter = and(filter, eq(posts.accountId, query.account_id))!;
+        }
         const hits = await db.query.posts.findMany({
-          where: {
-            RAW: (posts, { and, eq, isNull, sql }) => {
-              const searchFilter = searchAst
-                ? buildSearchFilter(searchAst, posts)
-                : sql`TRUE`;
-              let filter = and(searchFilter, isNull(posts.sharingId))!;
-              if (query.account_id != null) {
-                filter = and(filter, eq(posts.accountId, query.account_id))!;
-              }
-              return filter;
-            },
-          },
+          where: filter,
           limit: query.limit,
           offset: query.offset,
         });
@@ -195,12 +181,13 @@ app.get(
           hits == null || hits.length < 1
             ? []
             : await db.query.posts.findMany({
-                where: {
-                  // oxlint-disable-next-line typescript/dot-notation
-                  id: { in: hits.map((hit) => hit["id"]) },
-                },
+                where: inArray(
+                  posts.id,
+                  // biome-ignore lint/complexity/useLiteralKeys: tsc rants about this (TS4111)
+                  hits.map((hit) => hit["id"]),
+                ),
                 with: getPostRelations(owner.id),
-                orderBy: (posts, { desc }) => [
+                orderBy: [
                   desc(eq(posts.iri, q)),
                   desc(eq(posts.url, q)),
                   desc(posts.published),
@@ -225,7 +212,7 @@ app.get(
           if (!statuses.some((s) => s.id === resolvedPost.id)) {
             // Fetch with relations
             const fullPost = await db.query.posts.findFirst({
-              where: { id: { eq: resolvedPost.id } },
+              where: eq(posts.id, resolvedPost.id),
               with: getPostRelations(owner.id),
             });
             if (fullPost != null) statuses.push(fullPost);

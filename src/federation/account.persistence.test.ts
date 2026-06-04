@@ -1,4 +1,5 @@
 import { Person } from "@fedify/vocab";
+import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanDatabase } from "../../tests/helpers";
 import { createAccount } from "../../tests/helpers/oauth";
@@ -212,16 +213,16 @@ describe.sequential("persistAccount canonical handle reassignment", () => {
     );
 
     const localAfter = await db.query.accounts.findFirst({
-      where: { id: { eq: localOwner.id as Uuid } },
+      where: eq(Schema.accounts.id, localOwner.id as Uuid),
     });
     const staleAfter = await db.query.accounts.findFirst({
-      where: { id: { eq: staleAccount.id } },
+      where: eq(Schema.accounts.id, staleAccount.id),
     });
     const stalePosts = await db.query.posts.findMany({
-      where: { accountId: { eq: staleAccount.id } },
+      where: eq(Schema.posts.accountId, staleAccount.id),
     });
     const mentions = await db.query.mentions.findMany({
-      where: { accountId: { eq: staleAccount.id } },
+      where: eq(Schema.mentions.accountId, staleAccount.id),
     });
 
     expect(account?.id).toBe(currentAccount.id);
@@ -259,7 +260,7 @@ describe.sequential("persistAccount canonical handle reassignment", () => {
     );
 
     const staleAfter = await db.query.accounts.findFirst({
-      where: { id: { eq: staleAccount.id } },
+      where: eq(Schema.accounts.id, staleAccount.id),
     });
 
     expect(account?.iri).toBe("https://backend.newsmast.org/users/michael");

@@ -23,7 +23,7 @@ import {
 import { getLogger } from "@logtape/logtape";
 import { eq } from "drizzle-orm";
 import { db } from "../db";
-import { accounts, follows } from "../schema";
+import { accounts, follows, posts } from "../schema";
 import { updateAccountStats } from "./account";
 import "./actor";
 import { federation } from "./federation";
@@ -50,8 +50,8 @@ import {
   onPostUpdated,
   onQuoteAuthorizationDeleted,
   onQuoteRequestAccepted,
-  onQuoteRequested,
   onQuoteRequestRejected,
+  onQuoteRequested,
   onUnblocked,
   onUnfollowed,
   onUnliked,
@@ -84,7 +84,7 @@ export async function onDeleted(
     await onAccountDeleted(ctx, del);
   } else if (
     (await db.query.posts.findFirst({
-      where: { quoteAuthorizationIri: { eq: objectId.href } },
+      where: eq(posts.quoteAuthorizationIri, objectId.href),
     })) != null
   ) {
     await onQuoteAuthorizationDeleted(ctx, del);
@@ -230,7 +230,7 @@ export async function onOutboxPermanentFailure(
       // 404 etc.: only the inbox is gone — remove incoming follower
       // relationships to stop future delivery attempts.
       const account = await db.query.accounts.findFirst({
-        where: { iri: { eq: actorId.href } },
+        where: eq(accounts.iri, actorId.href),
       });
       if (account == null) continue;
       const deleted = await db

@@ -1,9 +1,26 @@
 import { Buffer } from "node:buffer";
 import { getLogger } from "@logtape/logtape";
+import { desc, eq } from "drizzle-orm";
 import { Hono } from "hono";
+import { stream } from "hono/streaming";
 import { DashboardLayout } from "../components/DashboardLayout.tsx";
 import db from "../db.ts";
 import { loginRequired } from "../login.ts";
+import {
+  accountOwners,
+  follows,
+  likes,
+  media,
+  posts,
+  reactions,
+  bookmarks,
+  blocks,
+  mutes,
+  customEmojis,
+  filters,
+  filterKeywords,
+  webhooks,
+} from "../schema.ts";
 import { drive } from "../storage.ts";
 
 const logger = getLogger(["hollo", "backup"]);
@@ -19,7 +36,7 @@ backup.get("/", async (c) => {
   if (owner == null) return c.redirect("/accounts");
 
   const postCount = await db.query.posts.findMany({
-    where: { accountId: { eq: owner.id } },
+    where: eq(posts.accountId, owner.id),
     columns: { id: true },
   });
 
@@ -107,14 +124,14 @@ backup.get("/archive/json", async (c) => {
   if (owner == null) return c.json({ error: "No account" }, 404);
 
   const allPosts = await db.query.posts.findMany({
-    where: { accountId: { eq: owner.id } },
+    where: eq(posts.accountId, owner.id),
     with: {
       media: true,
       poll: { with: { options: true } },
       reactions: true,
       replyTarget: { with: { account: true } },
     },
-    orderBy: (posts, { desc }) => [desc(posts.published)],
+    orderBy: [desc(posts.published)],
   });
 
   // Read all media files
@@ -202,12 +219,12 @@ backup.get("/archive/markdown", async (c) => {
   if (owner == null) return c.text("No account", 404);
 
   const allPosts = await db.query.posts.findMany({
-    where: { accountId: { eq: owner.id } },
+    where: eq(posts.accountId, owner.id),
     with: {
       media: true,
       replyTarget: { with: { account: true } },
     },
-    orderBy: (posts, { desc }) => [desc(posts.published)],
+    orderBy: [desc(posts.published)],
   });
 
   // Pre-load all media
@@ -284,17 +301,17 @@ backup.get("/full", async (c) => {
     allWebhooks,
   ] = await Promise.all([
     db.query.posts.findMany({
-      where: { accountId: { eq: owner.id } },
+      where: eq(posts.accountId, owner.id),
       with: {
         media: true,
         poll: { with: { options: true } },
         reactions: true,
         mentions: true,
       },
-      orderBy: (posts, { desc }) => [desc(posts.published)],
+      orderBy: [desc(posts.published)],
     }),
     db.query.follows.findMany({
-      where: { followingId: { eq: owner.id } },
+      where: eq(follows.followingId, owner.id),
       with: { follower: true },
     }),
     db.query.likes.findMany({
@@ -302,21 +319,21 @@ backup.get("/full", async (c) => {
     }),
     db.query.reactions.findMany(),
     db.query.bookmarks.findMany({
-      where: { accountOwnerId: { eq: owner.id } },
+      where: eq(bookmarks.accountOwnerId, owner.id),
     }),
     db.query.blocks.findMany({
-      where: { accountId: { eq: owner.id } },
+      where: eq(blocks.accountId, owner.id),
     }),
     db.query.mutes.findMany({
-      where: { accountId: { eq: owner.id } },
+      where: eq(mutes.accountId, owner.id),
     }),
     db.query.customEmojis.findMany(),
     db.query.filters.findMany({
-      where: { accountOwnerId: { eq: owner.id } },
+      where: eq(filters.accountOwnerId, owner.id),
       with: { keywords: true },
     }),
     db.query.webhooks.findMany({
-      where: { accountOwnerId: { eq: owner.id } },
+      where: eq(webhooks.accountOwnerId, owner.id),
     }),
   ]);
 
@@ -329,7 +346,7 @@ backup.get("/full", async (c) => {
       handle: owner.account.handle,
       name: owner.account.name,
       bio: owner.account.bioHtml,
-      language: owner.language,
+      language: owner.account.language,
       visibility: owner.visibility,
       themeColor: owner.themeColor,
       avatarUrl: owner.account.avatarUrl,
@@ -382,14 +399,14 @@ backup.get("/full-with-media", async (c) => {
   if (owner == null) return c.json({ error: "No account" }, 404);
 
   const allPosts = await db.query.posts.findMany({
-    where: { accountId: { eq: owner.id } },
+    where: eq(posts.accountId, owner.id),
     with: {
       media: true,
       poll: { with: { options: true } },
       reactions: true,
       mentions: true,
     },
-    orderBy: (posts, { desc }) => [desc(posts.published)],
+    orderBy: [desc(posts.published)],
   });
 
   // Collect all media from posts
@@ -468,7 +485,7 @@ backup.get("/full-with-media", async (c) => {
       handle: owner.account.handle,
       name: owner.account.name,
       bio: owner.account.bioHtml,
-      language: owner.language,
+      language: owner.account.language,
       visibility: owner.visibility,
       themeColor: owner.themeColor,
       avatarUrl: owner.account.avatarUrl,

@@ -146,7 +146,7 @@ async function processJobItems(
 
   // Get account owner for this job
   const accountOwner = await tx.query.accountOwners.findFirst({
-    where: { id: { eq: job.accountOwnerId } },
+    where: eq(schema.accountOwners.id, job.accountOwnerId),
     with: { account: true },
   });
 

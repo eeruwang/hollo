@@ -1,5 +1,5 @@
 import { getLogger } from "@logtape/logtape";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
 
 import { db } from "./db";
 import type { Account, AccountOwner, Poll, Post } from "./schema";
@@ -7,6 +7,7 @@ import {
   type NotificationType,
   notificationGroups,
   notifications,
+  posts,
 } from "./schema";
 import type { Uuid } from "./uuid";
 import { uuidv7 } from "./uuid";
@@ -67,22 +68,19 @@ export async function createNotification(
     // Check for existing duplicate notification to prevent duplicates from
     // federation activities that may be processed multiple times
     const existingNotification = await tx.query.notifications.findFirst({
-      where: {
-        RAW: (notifications, { and, eq, sql }) =>
-          and(
-            eq(notifications.accountOwnerId, context.accountOwnerId),
-            eq(notifications.type, context.type),
-            context.actorAccountId != null
-              ? eq(notifications.actorAccountId, context.actorAccountId)
-              : sql`${notifications.actorAccountId} IS NULL`,
-            context.targetPostId != null
-              ? eq(notifications.targetPostId, context.targetPostId)
-              : sql`${notifications.targetPostId} IS NULL`,
-            context.targetAccountId != null
-              ? eq(notifications.targetAccountId, context.targetAccountId)
-              : sql`${notifications.targetAccountId} IS NULL`,
-          )!,
-      },
+      where: and(
+        eq(notifications.accountOwnerId, context.accountOwnerId),
+        eq(notifications.type, context.type),
+        context.actorAccountId != null
+          ? eq(notifications.actorAccountId, context.actorAccountId)
+          : sql`${notifications.actorAccountId} IS NULL`,
+        context.targetPostId != null
+          ? eq(notifications.targetPostId, context.targetPostId)
+          : sql`${notifications.targetPostId} IS NULL`,
+        context.targetAccountId != null
+          ? eq(notifications.targetAccountId, context.targetAccountId)
+          : sql`${notifications.targetAccountId} IS NULL`,
+      ),
     });
 
     if (existingNotification != null) {
@@ -112,7 +110,7 @@ export async function createNotification(
 
     // Update or create notification group
     const existingGroup = await tx.query.notificationGroups.findFirst({
-      where: { groupKey: { eq: groupKey } },
+      where: eq(notificationGroups.groupKey, groupKey),
     });
 
     if (existingGroup) {
@@ -264,12 +262,7 @@ export async function createReblogNotification(
  * Creates a status notification when someone posts a reply to a user's post.
  * This is different from mention - it specifically means "someone replied to your post".
  */
-/**
- * Creates a mention notification when someone replies to a user's post.
- * Mastodon clients render reply notifications from mention notifications
- * whose status points back to the current account via in_reply_to_account_id.
- */
-export async function createReplyMentionNotification(
+export async function createStatusNotification(
   replier: Account,
   replyPost: Post,
   originalPost: Post & { account: Account & { owner: AccountOwner | null } },
@@ -286,7 +279,7 @@ export async function createReplyMentionNotification(
 
   return await createNotification({
     accountOwnerId: originalPost.account.owner.id,
-    type: "mention",
+    type: "status",
     actorAccountId: replier.id,
     targetPostId: replyPost.id,
   });
@@ -561,14 +554,11 @@ export async function createQuotedUpdateNotifications(
 
     // Find this user's quote post
     const quotePost = await db.query.posts.findFirst({
-      where: {
-        RAW: (posts, { and, eq, isNull, or }) =>
-          and(
-            eq(posts.accountId, author.id),
-            eq(posts.quoteTargetId, editedPost.id),
-            or(eq(posts.quoteState, "accepted"), isNull(posts.quoteState)),
-          )!,
-      },
+      where: and(
+        eq(posts.accountId, author.id),
+        eq(posts.quoteTargetId, editedPost.id),
+        or(eq(posts.quoteState, "accepted"), isNull(posts.quoteState)),
+      ),
     });
 
     if (quotePost == null) {

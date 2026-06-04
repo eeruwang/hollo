@@ -1,39 +1,33 @@
 import { zValidator } from "@hono/zod-validator";
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
-
 import { db } from "../../db";
 import { serializeMarkers } from "../../entities/marker";
 import {
   scopeRequired,
   tokenRequired,
-  withAccountOwner,
-  type AccountOwnerVariables,
+  type Variables,
 } from "../../oauth/middleware";
-import { markers, type MarkerType, type NewMarker } from "../../schema";
+import { type MarkerType, markers, type NewMarker } from "../../schema";
 
-const app = new Hono<{ Variables: AccountOwnerVariables }>();
+const app = new Hono<{ Variables: Variables }>();
 
-app.get(
-  "/",
-  tokenRequired,
-  scopeRequired(["read:statuses"]),
-  withAccountOwner,
-  async (c) => {
-    const owner = c.get("accountOwner");
-    const markerList = await db.query.markers.findMany({
-      where: { accountOwnerId: { eq: owner.id } },
-    });
-    return c.json(serializeMarkers(markerList));
-  },
-);
+app.get("/", tokenRequired, scopeRequired(["read:statuses"]), async (c) => {
+  const owner = c.get("token").accountOwner;
+  if (owner == null) {
+    return c.json({ error: "This method requires an authenticated user" }, 422);
+  }
+  const markerList = await db.query.markers.findMany({
+    where: eq(markers.accountOwnerId, owner.id),
+  });
+  return c.json(serializeMarkers(markerList));
+});
 
 app.post(
   "/",
   tokenRequired,
   scopeRequired(["write:statuses"]),
-  withAccountOwner,
   zValidator(
     "json",
     z.partialRecord(
@@ -44,7 +38,13 @@ app.post(
     ),
   ),
   async (c) => {
-    const owner = c.get("accountOwner");
+    const owner = c.get("token").accountOwner;
+    if (owner == null) {
+      return c.json(
+        { error: "This method requires an authenticated user" },
+        422,
+      );
+    }
     const payload = c.req.valid("json");
     await db.transaction(async (tx) => {
       for (const key in payload) {
@@ -69,7 +69,7 @@ app.post(
       }
     });
     const markerList = await db.query.markers.findMany({
-      where: { accountOwnerId: { eq: owner.id } },
+      where: eq(markers.accountOwnerId, owner.id),
     });
     return c.json(serializeMarkers(markerList));
   },

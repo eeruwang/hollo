@@ -1,5 +1,6 @@
 import { zValidator } from "@hono/zod-validator";
 import { Temporal } from "@js-temporal/polyfill";
+import { and, desc, eq, gte, inArray, lt, lte } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 import { db } from "../../db";
@@ -8,11 +9,17 @@ import { getPostRelations, serializePost } from "../../entities/status";
 import { serializeTag } from "../../entities/tag";
 import { proxyUrl } from "../../media-proxy";
 import {
-  type AccountOwnerVariables,
   scopeRequired,
   tokenRequired,
-  withAccountOwner,
+  type Variables,
 } from "../../oauth/middleware";
+import {
+  accounts as accountsTable,
+  blocks,
+  bookmarks,
+  likes,
+  mutes,
+} from "../../schema";
 import { uuid } from "../../uuid";
 import accounts from "./accounts";
 import apps from "./apps";
@@ -29,7 +36,7 @@ import statuses from "./statuses";
 import tags from "./tags";
 import timelines from "./timelines";
 
-const app = new Hono<{ Variables: AccountOwnerVariables }>();
+const app = new Hono<{ Variables: Variables }>();
 
 app.route("/apps", apps);
 app.route("/accounts", accounts);
@@ -49,10 +56,9 @@ app.route("/reports", reports);
 app.get(
   "/preferences",
   tokenRequired,
-  withAccountOwner,
   scopeRequired(["read:accounts"]),
   (c) => {
-    const owner = c.get("accountOwner");
+    const owner = c.get("token").accountOwner;
     if (owner == null) {
       return c.json(
         { error: "This method requires an authenticated user" },
@@ -96,7 +102,6 @@ app.get("/announcements", (c) => {
 app.get(
   "/favourites",
   tokenRequired,
-  withAccountOwner,
   scopeRequired(["read:favourites"]),
   zValidator(
     "query",
@@ -109,7 +114,7 @@ app.get(
     }),
   ),
   async (c) => {
-    const owner = c.get("accountOwner");
+    const owner = c.get("token").accountOwner;
     if (owner == null) {
       return c.json(
         { error: "This method requires an authenticated user" },
@@ -118,19 +123,16 @@ app.get(
     }
     const query = c.req.valid("query");
     const favourites = await db.query.likes.findMany({
-      where: {
-        RAW: (likes, { and, eq, lt }) =>
-          and(
-            eq(likes.accountId, owner.id),
-            query.before == null
-              ? undefined
-              : lt(likes.created, new Date(query.before)),
-          )!,
-      },
+      where: and(
+        eq(likes.accountId, owner.id),
+        query.before == null
+          ? undefined
+          : lt(likes.created, new Date(query.before)),
+      ),
       with: {
         post: { with: getPostRelations(owner.id) },
       },
-      orderBy: (likes, { desc }) => [desc(likes.created)],
+      orderBy: [desc(likes.created)],
       limit: query.limit,
     });
     return c.json(
@@ -155,7 +157,6 @@ app.get(
 app.get(
   "/bookmarks",
   tokenRequired,
-  withAccountOwner,
   scopeRequired(["read:bookmarks"]),
   zValidator(
     "query",
@@ -168,7 +169,7 @@ app.get(
     }),
   ),
   async (c) => {
-    const owner = c.get("accountOwner");
+    const owner = c.get("token").accountOwner;
     if (owner == null) {
       return c.json(
         { error: "This method requires an authenticated user" },
@@ -177,19 +178,16 @@ app.get(
     }
     const query = c.req.valid("query");
     const bookmarkList = await db.query.bookmarks.findMany({
-      where: {
-        RAW: (bookmarks, { and, eq, lt }) =>
-          and(
-            eq(bookmarks.accountOwnerId, owner.id),
-            query.before == null
-              ? undefined
-              : lt(bookmarks.created, new Date(query.before)),
-          )!,
-      },
+      where: and(
+        eq(bookmarks.accountOwnerId, owner.id),
+        query.before == null
+          ? undefined
+          : lt(bookmarks.created, new Date(query.before)),
+      ),
       with: {
         post: { with: getPostRelations(owner.id) },
       },
-      orderBy: (bookmarks, { desc }) => [desc(bookmarks.created)],
+      orderBy: [desc(bookmarks.created)],
       limit: query.limit,
     });
     return c.json(
@@ -214,10 +212,9 @@ app.get(
 app.get(
   "/followed_tags",
   tokenRequired,
-  withAccountOwner,
   scopeRequired(["read:follows"]),
   (c) => {
-    const owner = c.get("accountOwner");
+    const owner = c.get("token").accountOwner;
     if (owner == null) {
       return c.json(
         { error: "This method requires an authenticated user" },
@@ -233,7 +230,6 @@ app.get(
 app.get(
   "/mutes",
   tokenRequired,
-  withAccountOwner,
   scopeRequired(["read:mutes"]),
   zValidator(
     "query",
@@ -250,7 +246,7 @@ app.get(
     }),
   ),
   async (c) => {
-    const owner = c.get("accountOwner");
+    const owner = c.get("token").accountOwner;
     if (owner == null) {
       return c.json(
         { error: "This method requires an authenticated user" },
@@ -259,7 +255,7 @@ app.get(
     }
 
     const muteList = await db.query.mutes.findMany({
-      where: { accountId: { eq: owner.id } },
+      where: eq(mutes.accountId, owner.id),
     });
 
     if (muteList.length < 1) return c.json([]);
@@ -267,23 +263,18 @@ app.get(
     const query = c.req.valid("query");
 
     const mutedAccounts = await db.query.accounts.findMany({
-      where: {
-        RAW: (accountsTable, { and, gte, inArray, lte }) =>
-          and(
-            inArray(
-              accountsTable.id,
-              muteList.map((m) => m.mutedAccountId),
-            ),
-            query.max_id == null
-              ? undefined
-              : lte(accountsTable.id, query.max_id),
-            query.since_id == null
-              ? undefined
-              : gte(accountsTable.id, query.since_id),
-          )!,
-      },
+      where: and(
+        inArray(
+          accountsTable.id,
+          muteList.map((m) => m.mutedAccountId),
+        ),
+        query.max_id == null ? undefined : lte(accountsTable.id, query.max_id),
+        query.since_id == null
+          ? undefined
+          : gte(accountsTable.id, query.since_id),
+      ),
       with: { owner: true, successor: true },
-      orderBy: (accountsTable, { desc }) => [desc(accountsTable.id)],
+      orderBy: [desc(accountsTable.id)],
       limit: query.limit ?? 40,
     });
 
@@ -294,7 +285,6 @@ app.get(
 app.get(
   "/blocks",
   tokenRequired,
-  withAccountOwner,
   scopeRequired(["read:blocks"]),
   zValidator(
     "query",
@@ -310,7 +300,7 @@ app.get(
     }),
   ),
   async (c) => {
-    const owner = c.get("accountOwner");
+    const owner = c.get("token").accountOwner;
     if (owner == null) {
       return c.json(
         { error: "This method requires an authenticated user" },
@@ -320,14 +310,11 @@ app.get(
 
     const query = c.req.valid("query");
     const blockList = await db.query.blocks.findMany({
-      where: {
-        RAW: (blocks, { and, eq, lte }) =>
-          and(
-            eq(blocks.accountId, owner.id),
-            query.until == null ? undefined : lte(blocks.created, query.until),
-          )!,
-      },
-      orderBy: (blocks, { desc }) => [desc(blocks.created)],
+      where: and(
+        eq(blocks.accountId, owner.id),
+        query.until == null ? undefined : lte(blocks.created, query.until),
+      ),
+      orderBy: desc(blocks.created),
       limit: query.limit + 1,
       with: {
         blockedAccount: { with: { owner: true, successor: true } },

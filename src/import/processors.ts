@@ -6,7 +6,7 @@ import {
   type Link,
 } from "@fedify/vocab";
 import { getLogger } from "@logtape/logtape";
-
+import { and, eq } from "drizzle-orm";
 import db from "../db";
 import {
   blockAccount,
@@ -221,13 +221,10 @@ export async function processListItem(
 
   // Find or create the list
   let list = await db.query.lists.findFirst({
-    where: {
-      RAW: (lists, { and, eq }) =>
-        and(
-          eq(lists.accountOwnerId, accountOwner.id),
-          eq(lists.title, data.listName),
-        )!,
-    },
+    where: and(
+      eq(schema.lists.accountOwnerId, accountOwner.id),
+      eq(schema.lists.title, data.listName),
+    ),
   });
 
   if (!list) {
@@ -244,13 +241,10 @@ export async function processListItem(
     if (result.length < 1) {
       // List was created concurrently, try to find it again
       list = await db.query.lists.findFirst({
-        where: {
-          RAW: (lists, { and, eq }) =>
-            and(
-              eq(lists.accountOwnerId, accountOwner.id),
-              eq(lists.title, data.listName),
-            )!,
-        },
+        where: and(
+          eq(schema.lists.accountOwnerId, accountOwner.id),
+          eq(schema.lists.title, data.listName),
+        ),
       });
     } else {
       list = result[0];

@@ -1,4 +1,5 @@
 import { hash } from "argon2";
+import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { cleanDatabase } from "../../tests/helpers";
@@ -348,7 +349,7 @@ describe("auth passkeys", () => {
       );
       expect(finishResponse.status).toBe(204);
       const row = await db.query.passkeys.findFirst({
-        where: { id: { eq: "cred-id-def" } },
+        where: eq(passkeys.id, "cred-id-def"),
       });
       expect(row?.nickname).toBe("macOS device");
     });

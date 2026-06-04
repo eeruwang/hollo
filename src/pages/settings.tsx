@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { DashboardLayout } from "../components/DashboardLayout.tsx";
 import db from "../db.ts";
 import { loginRequired } from "../login.ts";
+import { accountOwners } from "../schema.ts";
 
 const settings = new Hono();
 

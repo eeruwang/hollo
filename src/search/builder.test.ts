@@ -1,3 +1,4 @@
+import { and, isNull } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { cleanDatabase } from "../../tests/helpers";
@@ -118,11 +119,9 @@ async function searchPosts(query: string): Promise<Uuid[]> {
   const ast = parseSearchQuery(query);
   if (!ast) return [];
 
+  const filter = buildSearchFilter(ast);
   const results = await db.query.posts.findMany({
-    where: {
-      RAW: (posts, { and, isNull }) =>
-        and(buildSearchFilter(ast, posts), isNull(posts.sharingId))!,
-    },
+    where: and(filter, isNull(posts.sharingId)),
     orderBy: (posts, { desc }) => [desc(posts.published)],
   });
 

@@ -11,11 +11,9 @@
  * const query = "from:alice has:media -is:sensitive";
  * const ast = parseSearchQuery(query);
  * if (ast) {
+ *   const filter = buildSearchFilter(ast);
  *   const results = await db.query.posts.findMany({
- *     where: {
- *       RAW: (posts, { and, isNull }) =>
- *         and(buildSearchFilter(ast, posts), isNull(posts.sharingId)),
- *     },
+ *     where: and(filter, isNull(posts.sharingId)),
  *   });
  * }
  * ```

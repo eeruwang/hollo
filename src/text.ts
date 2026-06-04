@@ -2,16 +2,15 @@ import { hashtag } from "@fedify/markdown-it-hashtag";
 import { mention } from "@fedify/markdown-it-mention";
 import { type DocumentLoader, isActor, lookupObject } from "@fedify/vocab";
 import { getLogger } from "@logtape/logtape";
-import { inArray } from "drizzle-orm";
+import Shiki from "@shikijs/markdown-it";
+import * as cheerio from "cheerio";
+import { type ExtractTablesWithRelations, inArray } from "drizzle-orm";
+import type { PgDatabase } from "drizzle-orm/pg-core";
+import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
 import { escape } from "es-toolkit";
 import MarkdownIt from "markdown-it";
+import footnote from "markdown-it-footnote";
 import replaceLink from "markdown-it-replace-link";
-
-import { CUSTOM_EMOJI_REGEXP } from "./custom-emoji";
-
-export { renderCustomEmojis } from "./custom-emoji";
-
-import type { DatabaseLike } from "./db";
 import { persistAccount } from "./federation/account";
 import { type ASPost, isPost } from "./federation/post";
 import * as schema from "./schema";
@@ -19,7 +18,7 @@ import type { Uuid } from "./uuid";
 
 const logger = getLogger(["hollo", "text"]);
 
-// oxlint-disable-next-line typescript/dot-notation
+// biome-ignore lint/complexity/useLiteralKeys: tsc claims about this
 const ALLOW_HTML = process.env["ALLOW_HTML"]?.trim()?.toLowerCase() === "true";
 
 export interface FormatResult {
@@ -37,38 +36,22 @@ interface Env {
   links: string[];
 }
 
-type MarkdownItPlugin = Parameters<MarkdownIt["use"]>[0];
+const CUSTOM_EMOJI_REGEXP = /:([a-z0-9_-]+):/gi;
 
-const FENCED_CODE_BLOCK_REGEXP = /(^|\n) {0,3}(?:`{3,}|~{3,})/;
-const INDENTED_CODE_BLOCK_REGEXP = /(^|\n)(?: {4}|\t)\S/;
-
-let shikiPluginPromise: Promise<MarkdownItPlugin> | undefined;
-
-async function getShikiPlugin(): Promise<MarkdownItPlugin> {
-  if (shikiPluginPromise == null) {
-    shikiPluginPromise = (async () => {
-      const { default: Shiki } = await import("@shikijs/markdown-it");
-      return await Shiki({
-        themes: {
-          light: "one-light",
-          dark: "one-dark-pro",
-        },
-        defaultColor: "light-dark()",
-      });
-    })();
-  }
-
-  return await shikiPluginPromise;
-}
-
-function containsCodeBlock(text: string): boolean {
-  return (
-    FENCED_CODE_BLOCK_REGEXP.test(text) || INDENTED_CODE_BLOCK_REGEXP.test(text)
-  );
-}
+const shiki = await Shiki({
+  themes: {
+    light: "one-light",
+    dark: "one-dark-pro",
+  },
+  defaultColor: "light-dark()",
+});
 
 export async function formatText(
-  db: DatabaseLike,
+  db: PgDatabase<
+    PostgresJsQueryResultHKT,
+    typeof schema,
+    ExtractTablesWithRelations<typeof schema>
+  >,
   text: string,
   options: {
     url: URL | string;
@@ -120,7 +103,7 @@ export async function formatText(
   const customEmojis =
     emojis.length > 0
       ? await db.query.customEmojis.findMany({
-          where: { shortcode: { in: emojis } },
+          where: inArray(schema.customEmojis.shortcode, emojis),
         })
       : [];
 
@@ -162,7 +145,7 @@ export async function formatText(
         return `#<span>${escape(tag.substring(1))}</span>`;
       },
     })
-    // oxlint-disable-next-line typescript/no-explicit-any
+    // biome-ignore lint/suspicious/noExplicitAny: untyped
     .use(replaceLink as any, {
       processHTML: false,
       replaceLink(link: string, env: Env) {
@@ -173,10 +156,9 @@ export async function formatText(
         }
         return new URL(link, new URL("/", options.url)).href;
       },
-    });
-  if (containsCodeBlock(text)) {
-    md.use(await getShikiPlugin());
-  }
+    })
+    .use(footnote)
+    .use(shiki);
   const env: Env = {
     hashtags: [],
     previewLink: null,
@@ -211,8 +193,51 @@ export function cleanupRedundantWhitespacesInHtml(html: string): string {
   );
 }
 
+const HTML_ELEMENT_REGEXP = /<\/?[^>]+>/g;
+
+export function renderCustomEmojis(
+  html: string,
+  emojis: Record<string, string>,
+): string;
+export function renderCustomEmojis(
+  html: null,
+  emojis: Record<string, string>,
+): null;
+export function renderCustomEmojis(
+  html: string | null,
+  emojis: Record<string, string>,
+): string | null;
+
+export function renderCustomEmojis(
+  html: string | null,
+  emojis: Record<string, string>,
+): string | null {
+  if (html == null) return null;
+  let result = "";
+  let index = 0;
+  for (const match of html.matchAll(HTML_ELEMENT_REGEXP)) {
+    result += replaceEmojis(html.substring(index, match.index));
+    result += match[0];
+    index = match.index + match[0].length;
+  }
+  result += replaceEmojis(html.substring(index));
+  return result;
+
+  function replaceEmojis(html: string): string {
+    return html.replaceAll(CUSTOM_EMOJI_REGEXP, (match) => {
+      const emoji = emojis[match] ?? emojis[match.replace(/^:|:$/g, "")];
+      if (emoji == null) return match;
+      return `<img src="${emoji}" alt="${match}" style="height: 1em">`;
+    });
+  }
+}
+
 export async function extractCustomEmojis(
-  db: DatabaseLike,
+  db: PgDatabase<
+    PostgresJsQueryResultHKT,
+    typeof schema,
+    ExtractTablesWithRelations<typeof schema>
+  >,
   text: string,
 ): Promise<Record<string, string>> {
   const emojis = new Set<string>();
@@ -220,7 +245,7 @@ export async function extractCustomEmojis(
   const customEmojis =
     emojis.size > 0
       ? await db.query.customEmojis.findMany({
-          where: { shortcode: { in: [...emojis] } },
+          where: inArray(schema.customEmojis.shortcode, [...emojis]),
         })
       : [];
   return Object.fromEntries(
@@ -228,11 +253,26 @@ export async function extractCustomEmojis(
   );
 }
 
-// oxlint-disable-next-line typescript/dot-notation
+export function extractPreviewLink(html: string): string | null {
+  const $ = cheerio.load(html);
+  return $("a[href]:not([rel=tag]):not(.mention):last").attr("href") ?? null;
+}
+
+export function extractText(html: string | null): string | null {
+  if (html == null) return null;
+  const $ = cheerio.load(html);
+  return $(":root").text();
+}
+
+// biome-ignore lint/complexity/useLiteralKeys: tsc claims about this
 const SEONBI_URL = process.env["SEONBI_URL"];
 
 export async function formatPostContent(
-  db: DatabaseLike,
+  db: PgDatabase<
+    PostgresJsQueryResultHKT,
+    typeof schema,
+    ExtractTablesWithRelations<typeof schema>
+  >,
   text: string,
   language: string | null | undefined,
   options: {

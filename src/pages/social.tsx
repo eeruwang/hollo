@@ -1,6 +1,6 @@
 import { Note } from "@fedify/vocab";
 import { getLogger } from "@logtape/logtape";
-import { eq, sql } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import mime from "mime";
 import sharp from "sharp";
@@ -43,7 +43,7 @@ social.get("/", async (c) => {
   if (owner == null) return c.redirect("/accounts");
 
   const timeline = await db.query.posts.findMany({
-    where: { accountId: { eq: owner.id } },
+    where: eq(posts.accountId, owner.id),
     with: {
       account: true,
       media: true,
@@ -78,7 +78,7 @@ social.get("/", async (c) => {
       },
       reactions: true,
     },
-    orderBy: (posts, { desc }) => [desc(posts.published)],
+    orderBy: [desc(posts.published)],
     limit: 30,
   });
 
@@ -227,6 +227,7 @@ social.post("/compose", async (c) => {
 
   const fmtResult = await formatPostContent(db, content ?? "", owner.language, {
     url: fedCtx.getActorUri(owner.id),
+    class: null,
     documentLoader,
   });
 
@@ -314,7 +315,7 @@ async function attachMediumToPost(
 }
 
 social.post("/delete/:id", async (c) => {
-  const postId = c.req.param("id") as Uuid;
+  const postId = c.req.param("id");
   const owner = await db.query.accountOwners.findFirst();
   if (owner == null) return c.redirect("/accounts");
 

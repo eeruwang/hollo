@@ -103,13 +103,13 @@ describe("onOutboxPermanentFailure", () => {
 
       // Account should still exist
       const remainingAccount = await db.query.accounts.findFirst({
-        where: { id: { eq: remoteAccount.id } },
+        where: eq(Schema.accounts.id, remoteAccount.id),
       });
       expect(remainingAccount).toBeDefined();
 
       // Local account follower count should be updated
       const updatedLocal = await db.query.accounts.findFirst({
-        where: { id: { eq: localAccount.id as Uuid } },
+        where: eq(Schema.accounts.id, localAccount.id as Uuid),
       });
       expect(updatedLocal?.followersCount).toBe(0);
     });
@@ -137,14 +137,14 @@ describe("onOutboxPermanentFailure", () => {
 
       // Account should still exist
       const remainingAccount = await db.query.accounts.findFirst({
-        where: { id: { eq: remoteAccount.id } },
+        where: eq(Schema.accounts.id, remoteAccount.id),
       });
       expect(remainingAccount).toBeDefined();
 
       // Both local accounts should have updated stats
       for (const localAccount of [localAccount1, localAccount2]) {
         const updated = await db.query.accounts.findFirst({
-          where: { id: { eq: localAccount.id as Uuid } },
+          where: eq(Schema.accounts.id, localAccount.id as Uuid),
         });
         expect(updated?.followersCount).toBe(0);
       }
@@ -200,7 +200,7 @@ describe("onOutboxPermanentFailure", () => {
 
       // Account should be deleted
       const remainingAccount = await db.query.accounts.findFirst({
-        where: { id: { eq: remoteAccount.id } },
+        where: eq(Schema.accounts.id, remoteAccount.id),
       });
       expect(remainingAccount).toBeUndefined();
 
@@ -213,7 +213,7 @@ describe("onOutboxPermanentFailure", () => {
 
       // Local account follower count should be updated
       const updatedLocal = await db.query.accounts.findFirst({
-        where: { id: { eq: localAccount.id as Uuid } },
+        where: eq(Schema.accounts.id, localAccount.id as Uuid),
       });
       expect(updatedLocal?.followersCount).toBe(0);
     });
@@ -233,7 +233,7 @@ describe("onOutboxPermanentFailure", () => {
 
       // Account should be deleted
       const remainingAccount = await db.query.accounts.findFirst({
-        where: { id: { eq: remoteAccount.id } },
+        where: eq(Schema.accounts.id, remoteAccount.id),
       });
       expect(remainingAccount).toBeUndefined();
 
@@ -261,13 +261,13 @@ describe("onOutboxPermanentFailure", () => {
       );
 
       const remainingAccount = await db.query.accounts.findFirst({
-        where: { id: { eq: remoteAccount.id } },
+        where: eq(Schema.accounts.id, remoteAccount.id),
       });
       expect(remainingAccount).toBeUndefined();
 
       // Local account stats should reflect removal of both relationships
       const updatedLocal = await db.query.accounts.findFirst({
-        where: { id: { eq: localAccount.id as Uuid } },
+        where: eq(Schema.accounts.id, localAccount.id as Uuid),
       });
       expect(updatedLocal?.followersCount).toBe(0);
       expect(updatedLocal?.followingCount).toBe(0);
@@ -289,10 +289,10 @@ describe("onOutboxPermanentFailure", () => {
 
       // Both accounts should be deleted
       const remaining1 = await db.query.accounts.findFirst({
-        where: { id: { eq: remoteAccount1.id } },
+        where: eq(Schema.accounts.id, remoteAccount1.id),
       });
       const remaining2 = await db.query.accounts.findFirst({
-        where: { id: { eq: remoteAccount2.id } },
+        where: eq(Schema.accounts.id, remoteAccount2.id),
       });
       expect(remaining1).toBeUndefined();
       expect(remaining2).toBeUndefined();
@@ -454,10 +454,10 @@ describe("onDeleted", () => {
     );
 
     const quote = await db.query.posts.findFirst({
-      where: { id: { eq: quotePostId } },
+      where: eq(Schema.posts.id, quotePostId),
     });
     const quoted = await db.query.posts.findFirst({
-      where: { id: { eq: quotedPostId } },
+      where: eq(Schema.posts.id, quotedPostId),
     });
     expect(quote?.quoteState).toBe("revoked");
     expect(quote?.quoteAuthorizationIri).toBeNull();

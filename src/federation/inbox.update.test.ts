@@ -1,6 +1,6 @@
 import type { InboxContext } from "@fedify/fedify";
 import { Note, Person, PUBLIC_COLLECTION, Update } from "@fedify/vocab";
-
+import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { cleanDatabase } from "../../tests/helpers";
 import db from "../db";
@@ -38,7 +38,7 @@ async function seedRemoteAccount(host: string, username: string) {
     published: new Date(),
   });
   const account = await db.query.accounts.findFirst({
-    where: { id: { eq: id } },
+    where: eq(accounts.id, id),
   });
   if (account == null) throw new Error("Failed to seed remote account");
   return account;
@@ -93,7 +93,7 @@ describe("onPostUpdated", () => {
     await onPostUpdated(ctx, update);
 
     const after = await db.query.posts.findFirst({
-      where: { iri: { eq: post.iri } },
+      where: eq(posts.iri, post.iri),
     });
     expect(after?.content).toBe("original");
     expect(after?.contentHtml).toBe("<p>original</p>");
@@ -120,7 +120,7 @@ describe("onPostUpdated", () => {
     await onPostUpdated(ctx, update);
 
     const after = await db.query.posts.findFirst({
-      where: { iri: { eq: forgedIri } },
+      where: eq(posts.iri, forgedIri),
     });
     expect(after).toBeUndefined();
   });
@@ -148,7 +148,7 @@ describe("onPostUpdated", () => {
     await onPostUpdated(ctx, update);
 
     const after = await db.query.posts.findFirst({
-      where: { iri: { eq: forgedIri } },
+      where: eq(posts.iri, forgedIri),
     });
     expect(after).toBeUndefined();
   });

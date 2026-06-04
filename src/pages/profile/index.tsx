@@ -1,7 +1,6 @@
-import { and, count, eq, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, or, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import xss from "xss";
-
 import { Layout } from "../../components/Layout.tsx";
 import { Post as PostView } from "../../components/Post.tsx";
 import { Profile } from "../../components/Profile.tsx";
@@ -9,11 +8,14 @@ import { db } from "../../db.ts";
 import {
   type Account,
   type AccountOwner,
+  accountOwners,
   type FeaturedTag,
+  featuredTags,
   type Medium,
   type Poll,
   type PollOption,
   type Post,
+  pinnedPosts,
   posts,
   type Reaction,
 } from "../../schema.ts";
@@ -30,7 +32,7 @@ profile.get<"/:handle">(async (c) => {
   let handle = c.req.param("handle");
   if (handle.startsWith("@")) handle = handle.substring(1);
   const owner = await db.query.accountOwners.findFirst({
-    where: { handle: { eq: handle } },
+    where: eq(accountOwners.handle, handle),
     with: { account: true },
   });
   if (owner == null) return c.notFound();
@@ -49,30 +51,13 @@ profile.get<"/:handle">(async (c) => {
     pageStr !== undefined && !Number.isNaN(Number.parseInt(pageStr, 10))
       ? Number.parseInt(pageStr, 10)
       : 1;
-  const [{ totalPosts }] = await db
-    .select({ totalPosts: count() })
-    .from(posts)
-    .where(
-      and(
-        eq(posts.accountId, owner.id),
-        or(eq(posts.visibility, "public"), eq(posts.visibility, "unlisted")),
-      ),
-    );
-  const maxPage = Math.ceil(totalPosts / PAGE_SIZE);
-  if (page > maxPage && !(page <= 1 && totalPosts < 1)) {
-    return c.notFound();
-  }
-  const postList = await db.query.posts.findMany({
-    where: {
-      RAW: (posts, { and, eq, or }) =>
-        and(
-          eq(posts.accountId, owner.id),
-          or(eq(posts.visibility, "public"), eq(posts.visibility, "unlisted")),
-        )!,
-    },
-    orderBy: (posts, { desc }) => [desc(posts.id)],
-    limit: PAGE_SIZE,
-    offset: (page - 1) * PAGE_SIZE,
+  // Fetch ALL user's posts (root + replies at any depth) with full relations
+  const allUserPosts = await db.query.posts.findMany({
+    where: and(
+      eq(posts.accountId, owner.id),
+      or(eq(posts.visibility, "public"), eq(posts.visibility, "unlisted")),
+    ),
+    orderBy: desc(posts.id),
     with: {
       account: true,
       media: true,
@@ -108,11 +93,61 @@ profile.get<"/:handle">(async (c) => {
       reactions: true,
     },
   });
+
+  // Build parent → children map and find root posts (no parent in user's set)
+  const childrenMap = new Map<string, typeof allUserPosts>();
+  const postsById = new Map(allUserPosts.map((p) => [p.id, p]));
+  for (const post of allUserPosts) {
+    if (post.replyTargetId != null) {
+      if (!childrenMap.has(post.replyTargetId)) {
+        childrenMap.set(post.replyTargetId, []);
+      }
+      childrenMap.get(post.replyTargetId)?.push(post);
+    }
+  }
+  // Sort each children list chronologically (id ASC)
+  for (const children of childrenMap.values()) {
+    children.sort((a, b) => a.id.localeCompare(b.id));
+  }
+
+  // Recursively flatten a root post's entire reply tree (DFS, chronological)
+  const flattenDescendants = (root: (typeof allUserPosts)[number]) => {
+    const out: typeof allUserPosts = [];
+    const walk = (node: (typeof allUserPosts)[number]) => {
+      const kids = childrenMap.get(node.id) ?? [];
+      for (const kid of kids) {
+        out.push(kid);
+        walk(kid);
+      }
+    };
+    walk(root);
+    return out;
+  };
+
+  // Root posts: no replyTargetId OR replyTarget is not in user's set
+  const rootPosts = allUserPosts.filter(
+    (p) => p.replyTargetId == null || !postsById.has(p.replyTargetId),
+  );
+
+  // Pagination guard (404 on invalid page)
+  const maxPage = Math.max(1, Math.ceil(rootPosts.length / PAGE_SIZE));
+  if (page > maxPage && !(page <= 1 && rootPosts.length < 1)) {
+    return c.notFound();
+  }
+
+  // Paginate root posts
+  const pagedRoots = rootPosts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // Attach flattened descendants as `replies` for each root
+  const postList = pagedRoots.map((root) => ({
+    ...root,
+    replies: flattenDescendants(root),
+  }));
   const pinnedPostList =
     cont == null
       ? await db.query.pinnedPosts.findMany({
-          where: { accountId: { eq: owner.id } },
-          orderBy: (pinnedPosts, { desc }) => [desc(pinnedPosts.index)],
+          where: and(eq(pinnedPosts.accountId, owner.id)),
+          orderBy: desc(pinnedPosts.index),
           with: {
             post: {
               with: {
@@ -154,7 +189,7 @@ profile.get<"/:handle">(async (c) => {
         })
       : [];
   const featuredTagList = await db.query.featuredTags.findMany({
-    where: { accountOwnerId: { eq: owner.id } },
+    where: eq(featuredTags.accountOwnerId, owner.id),
   });
   const atomUrl = new URL(c.req.url);
   atomUrl.pathname += "/atom.xml";
@@ -175,7 +210,6 @@ profile.get<"/:handle">(async (c) => {
       atomUrl={atomUrl.href}
       olderUrl={olderUrl}
       newerUrl={newerUrl}
-      baseUrl={c.req.url}
     />,
   );
 });
@@ -186,7 +220,7 @@ profile.get("/tagged/:tag", async (c) => {
   if (handle == null || tag == null) return c.notFound();
   if (handle.startsWith("@")) handle = handle.substring(1);
   const owner = await db.query.accountOwners.findFirst({
-    where: { handle: { eq: handle } },
+    where: eq(accountOwners.handle, handle),
     with: { account: true },
   });
   if (owner == null) return c.notFound();
@@ -218,21 +252,59 @@ profile.get("/tagged/:tag", async (c) => {
     return c.notFound();
   }
   const postList = await db.query.posts.findMany({
-    where: {
-      RAW: (posts, { and, eq, or, sql }) =>
-        and(
-          eq(posts.accountId, owner.id),
-          or(eq(posts.visibility, "public"), eq(posts.visibility, "unlisted")),
-          sql`${posts.tags} ? ${hashtag}`,
-        )!,
-    },
-    orderBy: (posts, { desc }) => [desc(posts.id)],
+    where: and(
+      eq(posts.accountId, owner.id),
+      or(eq(posts.visibility, "public"), eq(posts.visibility, "unlisted")),
+      sql`${posts.tags} ? ${hashtag}`,
+    ),
+    orderBy: desc(posts.id),
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
     with: {
       account: true,
       media: true,
       poll: { with: { options: true } },
+      replies: {
+        where: or(
+          eq(posts.visibility, "public"),
+          eq(posts.visibility, "unlisted"),
+        ),
+        orderBy: posts.id,
+        with: {
+          account: true,
+          media: true,
+          poll: { with: { options: true } },
+          replyTarget: { with: { account: true } },
+          quoteTarget: {
+            with: {
+              account: true,
+              media: true,
+              poll: { with: { options: true } },
+              replyTarget: { with: { account: true } },
+              reactions: true,
+            },
+          },
+          reactions: true,
+          sharing: {
+            with: {
+              account: true,
+              media: true,
+              poll: { with: { options: true } },
+              replyTarget: { with: { account: true } },
+              quoteTarget: {
+                with: {
+                  account: true,
+                  media: true,
+                  poll: { with: { options: true } },
+                  replyTarget: { with: { account: true } },
+                  reactions: true,
+                },
+              },
+              reactions: true,
+            },
+          },
+        },
+      },
       sharing: {
         with: {
           account: true,
@@ -265,7 +337,7 @@ profile.get("/tagged/:tag", async (c) => {
     },
   });
   const featuredTagList = await db.query.featuredTags.findMany({
-    where: { accountOwnerId: { eq: owner.id } },
+    where: eq(featuredTags.accountOwnerId, owner.id),
   });
   const newerUrl = page > 1 ? `?page=${page - 1}` : undefined;
   const olderUrl =
@@ -279,47 +351,127 @@ profile.get("/tagged/:tag", async (c) => {
       featuredTags={featuredTagList}
       olderUrl={olderUrl}
       newerUrl={newerUrl}
-      baseUrl={c.req.url}
     />,
   );
 });
 
+type PostWithDetails = Post & {
+  account: Account;
+  media: Medium[];
+  poll: (Poll & { options: PollOption[] }) | null;
+  sharing:
+    | (Post & {
+        account: Account;
+        media: Medium[];
+        poll: (Poll & { options: PollOption[] }) | null;
+        replyTarget: (Post & { account: Account }) | null;
+        quoteTarget:
+          | (Post & {
+              account: Account;
+              media: Medium[];
+              poll: (Poll & { options: PollOption[] }) | null;
+              replyTarget: (Post & { account: Account }) | null;
+              reactions: Reaction[];
+            })
+          | null;
+        reactions: Reaction[];
+      })
+    | null;
+  replyTarget: (Post & { account: Account }) | null;
+  quoteTarget:
+    | (Post & {
+        account: Account;
+        media: Medium[];
+        poll: (Poll & { options: PollOption[] }) | null;
+        replyTarget: (Post & { account: Account }) | null;
+        reactions: Reaction[];
+      })
+    | null;
+  reactions: Reaction[];
+};
+
+function groupByMonth<T extends { published: Date | null; updated: Date }>(
+  items: T[],
+): { label: string; posts: T[] }[] {
+  const groups: { label: string; posts: T[] }[] = [];
+  let currentKey: string | null = null;
+  for (const item of items) {
+    const date = item.published ?? item.updated;
+    const key = `${date.getFullYear()}-${date.getMonth()}`;
+    if (key !== currentKey) {
+      groups.push({
+        label: date.toLocaleDateString("en-US", {
+          month: "long",
+          year: "numeric",
+        }),
+        posts: [],
+      });
+      currentKey = key;
+    }
+    groups[groups.length - 1].posts.push(item);
+  }
+  return groups;
+}
+
+// Posts whose combined (root + flattened descendants) character count
+// exceeds this limit render as a truncated preview card that links to
+// the blog-style full post page. Truncation cuts at the last sentence
+// boundary (., !, ?, 。, ？, ！) within the limit.
+const LONG_POST_THRESHOLD_CHARS = 130;
+
+function stripHtml(html: string | null | undefined): string {
+  if (!html) return "";
+  return html
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function truncateToChars(text: string, maxChars: number): string {
+  const trimmed = text.trim();
+  if (trimmed.length <= maxChars) return trimmed;
+
+  // Hard character-count boundary first
+  const hardCut = trimmed.substring(0, maxChars);
+
+  // Prefer the last sentence-ending punctuation followed by whitespace
+  // or end-of-string (avoids breaking inside decimals like "v2.0")
+  const sentenceEnd = /[.!?。！？]/g;
+  let bestEnd = -1;
+  let match: RegExpExecArray | null = sentenceEnd.exec(hardCut);
+  while (match !== null) {
+    const next = hardCut.charAt(match.index + 1);
+    if (next === "" || /\s/.test(next)) {
+      bestEnd = match.index + 1;
+    }
+    match = sentenceEnd.exec(hardCut);
+  }
+
+  // Require the boundary to land past 30% so the preview isn't a
+  // single teaser sentence when the rest of the content has no breaks.
+  if (bestEnd > hardCut.length * 0.3) {
+    return hardCut.substring(0, bestEnd).trim();
+  }
+
+  // Fallback: word boundary with ellipsis (keeps CJK text whole)
+  const lastSpace = hardCut.lastIndexOf(" ");
+  const sliced =
+    lastSpace > maxChars * 0.6 ? hardCut.substring(0, lastSpace) : hardCut;
+  return `${sliced.trim()}…`;
+}
+
+function makePreview(
+  post: { contentHtml: string | null },
+  maxChars = LONG_POST_THRESHOLD_CHARS,
+): string {
+  return truncateToChars(stripHtml(post.contentHtml), maxChars);
+}
+
 interface ProfilePageProps {
   readonly accountOwner: AccountOwner & { account: Account };
   readonly tag?: string;
-  readonly posts: (Post & {
-    account: Account;
-    media: Medium[];
-    poll: (Poll & { options: PollOption[] }) | null;
-    sharing:
-      | (Post & {
-          account: Account;
-          media: Medium[];
-          poll: (Poll & { options: PollOption[] }) | null;
-          replyTarget: (Post & { account: Account }) | null;
-          quoteTarget:
-            | (Post & {
-                account: Account;
-                media: Medium[];
-                poll: (Poll & { options: PollOption[] }) | null;
-                replyTarget: (Post & { account: Account }) | null;
-                reactions: Reaction[];
-              })
-            | null;
-          reactions: Reaction[];
-        })
-      | null;
-    replyTarget: (Post & { account: Account }) | null;
-    quoteTarget:
-      | (Post & {
-          account: Account;
-          media: Medium[];
-          poll: (Poll & { options: PollOption[] }) | null;
-          replyTarget: (Post & { account: Account }) | null;
-          reactions: Reaction[];
-        })
-      | null;
-    reactions: Reaction[];
+  readonly posts: (PostWithDetails & {
+    replies: PostWithDetails[];
   })[];
   readonly pinnedPosts: (Post & {
     account: Account;
@@ -359,7 +511,6 @@ interface ProfilePageProps {
   readonly atomUrl?: string;
   readonly olderUrl?: string;
   readonly newerUrl?: string;
-  readonly baseUrl: URL | string;
 }
 
 function ProfilePage({
@@ -371,7 +522,6 @@ function ProfilePage({
   atomUrl,
   olderUrl,
   newerUrl,
-  baseUrl,
 }: ProfilePageProps) {
   return (
     <Layout
@@ -401,65 +551,143 @@ function ProfilePage({
       ]}
       themeColor={accountOwner.themeColor}
     >
-      <main class="mx-auto w-full max-w-2xl px-4 py-8 sm:py-10">
-        <Profile accountOwner={accountOwner} baseUrl={baseUrl} />
-        {tag != null && (
-          <h2 class="mt-10 text-lg font-semibold text-neutral-900 dark:text-neutral-100">
-            Posts tagged{" "}
-            <span class="text-brand-700 dark:text-brand-400">#{tag}</span>
-          </h2>
-        )}
+      <Profile accountOwner={accountOwner} />
+      <section class="profile-timeline">
+        <h2>{tag != null ? `Posts tagged #${tag}` : "Posts"}</h2>
         {featuredTags.length > 0 && (
-          <div class="mt-6 flex flex-wrap items-center gap-2 text-sm">
-            <span class="text-neutral-500 dark:text-neutral-400">
-              Featured tags:
-            </span>
+          <p>
+            Featured tags:{" "}
             {featuredTags.map((tag) => (
-              <a
-                href={`/@${accountOwner.handle}/tagged/${encodeURIComponent(tag.name)}`}
-                class="rounded-full border border-brand-200 bg-brand-50 px-3 py-0.5 font-medium text-brand-700 transition-colors hover:bg-brand-100 hover:border-brand-300 dark:border-brand-900 dark:bg-brand-950/40 dark:text-brand-400 dark:hover:bg-brand-900/40 dark:hover:border-brand-800"
-              >
-                #{tag.name}
-              </a>
+              <>
+                <a
+                  href={`/@${accountOwner.handle}/tagged/${encodeURIComponent(tag.name)}`}
+                >
+                  #{tag.name}
+                </a>{" "}
+              </>
             ))}
-          </div>
+          </p>
         )}
-        <div class="mt-6 divide-y divide-neutral-200 dark:divide-neutral-800">
-          {tag == null &&
-            pinnedPosts.map((post) => (
-              <PostView post={post} pinned={true} baseUrl={baseUrl} />
-            ))}
-          {posts.map((post) => (
-            <PostView post={post} baseUrl={baseUrl} />
-          ))}
+        {tag == null &&
+          pinnedPosts.map((post) => <PostView post={post} pinned={true} />)}
+        {groupByMonth(posts).map((group) => (
+          <>
+            <div class="date-group">{group.label}</div>
+            {group.posts.map((post) => {
+              const hasReplies = post.replies.length > 0;
+              const postUrl = `/@${accountOwner.handle}/${post.id}`;
+              const rootText = stripHtml(post.contentHtml);
+              const repliesText = post.replies
+                .map((r) => stripHtml(r.contentHtml))
+                .filter((t) => t !== "")
+                .join(" ");
+              const combinedLen =
+                rootText.length +
+                (repliesText ? 1 + repliesText.length : 0);
+
+              // Threads with replies: root text bold, replies normal.
+              // Whole card is a clickable link to the full post page.
+              if (hasReplies) {
+                if (combinedLen <= LONG_POST_THRESHOLD_CHARS) {
+                  return (
+                    <article class="post-preview">
+                      <a href={postUrl}>
+                        <strong>{rootText}</strong>
+                        {repliesText && ` ${repliesText}`}
+                      </a>
+                    </article>
+                  );
+                }
+                if (rootText.length >= LONG_POST_THRESHOLD_CHARS) {
+                  return (
+                    <article class="post-preview">
+                      <a href={postUrl}>
+                        <strong>
+                          {truncateToChars(rootText, LONG_POST_THRESHOLD_CHARS)}
+                        </strong>
+                      </a>
+                    </article>
+                  );
+                }
+                const remaining =
+                  LONG_POST_THRESHOLD_CHARS - rootText.length - 1;
+                return (
+                  <article class="post-preview">
+                    <a href={postUrl}>
+                      <strong>{rootText}</strong>{" "}
+                      {truncateToChars(repliesText, remaining)}
+                    </a>
+                  </article>
+                );
+              }
+
+              // Standalone post over the limit: clickable preview
+              // card with the (bold) truncated root text.
+              if (rootText.length > LONG_POST_THRESHOLD_CHARS) {
+                return (
+                  <article class="post-preview">
+                    <a href={postUrl}>
+                      <strong>
+                        {makePreview({ contentHtml: post.contentHtml })}
+                      </strong>
+                    </a>
+                  </article>
+                );
+              }
+              return <PostView post={post} />;
+            })}
+          </>
+        ))}
+      </section>
+      {(newerUrl || olderUrl) && (
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <div>{newerUrl && <a href={newerUrl}>&larr; Newer</a>}</div>
+          <div>{olderUrl && <a href={olderUrl}>Older &rarr;</a>}</div>
         </div>
-        {(newerUrl || olderUrl) && (
-          <nav class="mt-8 flex items-center justify-between gap-4">
-            <div>
-              {newerUrl && (
-                <a
-                  href={newerUrl}
-                  class="inline-flex items-center gap-1 text-sm text-neutral-600 hover:text-brand-700 dark:text-neutral-400 dark:hover:text-brand-400"
-                >
-                  <span class="i-lucide-arrow-left" aria-hidden="true" />
-                  Newer
-                </a>
+      )}
+      <footer class="profile-footer">
+        <h3>Contact</h3>
+        <div class="contact-grid">
+          <div class="contact-item">
+            <label>Handle</label>
+            <div class="handle-with-avatar">
+              {accountOwner.account.avatarUrl && (
+                <img
+                  src={accountOwner.account.avatarUrl}
+                  alt=""
+                  width={16}
+                  height={16}
+                />
               )}
+              <span style="user-select: all;">@{accountOwner.handle}</span>
             </div>
-            <div>
-              {olderUrl && (
-                <a
-                  href={olderUrl}
-                  class="inline-flex items-center gap-1 text-sm text-neutral-600 hover:text-brand-700 dark:text-neutral-400 dark:hover:text-brand-400"
-                >
-                  Older
-                  <span class="i-lucide-arrow-right" aria-hidden="true" />
-                </a>
-              )}
-            </div>
-          </nav>
-        )}
-      </main>
+          </div>
+          <div class="contact-item">
+            <label>Following</label>
+            <p>{accountOwner.account.followingCount}</p>
+          </div>
+          <div class="contact-item">
+            <label>Followers</label>
+            <p>{accountOwner.account.followersCount}</p>
+          </div>
+        </div>
+        {accountOwner.account.fieldHtmls != null &&
+          Object.keys(accountOwner.account.fieldHtmls).length > 0 && (
+            <>
+              <h3>Links</h3>
+              <div class="contact-grid">
+                {Object.entries(accountOwner.account.fieldHtmls).map(
+                  ([key, value]) => (
+                    <div class="contact-item">
+                      <label>{key}</label>
+                      <div dangerouslySetInnerHTML={{ __html: value }} />
+                    </div>
+                  ),
+                )}
+              </div>
+            </>
+          )}
+      </footer>
     </Layout>
   );
 }
@@ -469,20 +697,14 @@ profile.get("/atom.xml", async (c) => {
   if (handle == null) return c.notFound();
   if (handle.startsWith("@")) handle = handle.substring(1);
   const owner = await db.query.accountOwners.findFirst({
-    where: { handle: { eq: handle } },
+    where: eq(accountOwners.handle, handle),
     with: { account: true },
   });
   if (owner == null) return c.notFound();
   const postList = await db.query.posts.findMany({
     with: { account: true },
-    where: {
-      RAW: (posts, { and, eq, or }) =>
-        and(
-          eq(posts.accountId, owner.id),
-          or(eq(posts.visibility, "public"), eq(posts.visibility, "unlisted")),
-        )!,
-    },
-    orderBy: (posts, { desc }) => [desc(posts.published)],
+    where: eq(posts.accountId, owner.id),
+    orderBy: desc(posts.published),
     limit: 100,
   });
   const canonicalUrl = new URL(c.req.url);

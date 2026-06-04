@@ -23,8 +23,8 @@ export async function getApprovedFollowingAccountIds(
   return rows.map((row) => row.id);
 }
 
-export function postAccountIdInArray(accountIds: Uuid[], table = posts) {
-  return sql`${table.accountId} = ANY(${postgres.array(accountIds, UUID_ARRAY_OID)})`;
+export function postAccountIdInArray(accountIds: Uuid[]) {
+  return sql`${posts.accountId} = ANY(${postgres.array(accountIds, UUID_ARRAY_OID)})`;
 }
 
 export async function getPostVisibilityScope(
@@ -40,28 +40,25 @@ export async function getPostVisibilityScope(
   };
 }
 
-export function buildPostVisibilityConditions(
-  scope: PostVisibilityScope,
-  table = posts,
-) {
+export function buildPostVisibilityConditions(scope: PostVisibilityScope) {
   const { viewerAccountId } = scope;
 
   if (viewerAccountId == null) {
-    return inArray(table.visibility, ["public", "unlisted"]);
+    return inArray(posts.visibility, ["public", "unlisted"]);
   }
 
   const privateAccountIds = [
     ...new Set([viewerAccountId, ...scope.followingAccountIds]),
   ];
   const recipientCondition = or(
-    eq(table.accountId, viewerAccountId),
+    eq(posts.accountId, viewerAccountId),
     exists(
       db
         .select({ postId: mentions.postId })
         .from(mentions)
         .where(
           and(
-            eq(mentions.postId, table.id),
+            eq(mentions.postId, posts.id),
             eq(mentions.accountId, viewerAccountId),
           ),
         ),
@@ -69,11 +66,11 @@ export function buildPostVisibilityConditions(
   );
 
   return or(
-    inArray(table.visibility, ["public", "unlisted"]),
+    inArray(posts.visibility, ["public", "unlisted"]),
     and(
-      eq(table.visibility, "private"),
-      or(postAccountIdInArray(privateAccountIds, table), recipientCondition),
+      eq(posts.visibility, "private"),
+      or(postAccountIdInArray(privateAccountIds), recipientCondition),
     ),
-    and(eq(table.visibility, "direct"), recipientCondition),
+    and(eq(posts.visibility, "direct"), recipientCondition),
   );
 }

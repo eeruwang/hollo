@@ -1,10 +1,11 @@
 import type { InboxContext } from "@fedify/fedify";
 import { EmojiReact, Like, Person } from "@fedify/fedify/vocab";
+import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanDatabase } from "../../tests/helpers";
 import { createAccount } from "../../tests/helpers/oauth";
 import db from "../db";
-import { accounts, instances, posts } from "../schema";
+import { accounts, instances, likes, posts, reactions } from "../schema";
 import type { Uuid } from "../uuid";
 import { onEmojiReactionAdded, onLiked } from "./inbox";
 
@@ -56,7 +57,7 @@ async function seedRemoteTargetPost(): Promise<{ id: Uuid; iri: string }> {
 async function seedLocalLiker(): Promise<{ iri: string }> {
   const owner = await createAccount({ username: "liker" });
   const account = await db.query.accounts.findFirst({
-    where: { id: { eq: owner.id as Uuid } },
+    where: eq(accounts.id, owner.id as Uuid),
   });
   if (account == null) {
     throw new Error("Failed to seed local liker");
@@ -104,7 +105,7 @@ describe("federation inbox reaction target fallback", () => {
     await onLiked(ctx, activity as unknown as Like);
 
     const foundLikes = await db.query.likes.findMany({
-      where: { postId: { eq: target.id } },
+      where: eq(likes.postId, target.id),
     });
     expect(foundLikes).toHaveLength(1);
     expect(foundLikes[0]?.postId).toBe(target.id);
@@ -127,7 +128,7 @@ describe("federation inbox reaction target fallback", () => {
     await onEmojiReactionAdded(ctx, activity as unknown as EmojiReact);
 
     const foundReactions = await db.query.reactions.findMany({
-      where: { postId: { eq: target.id } },
+      where: eq(reactions.postId, target.id),
     });
     expect(foundReactions).toHaveLength(1);
     expect(foundReactions[0]?.emoji).toBe("👍");

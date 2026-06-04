@@ -1,13 +1,11 @@
+import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
-
 import { cleanDatabase } from "../tests/helpers";
 import { createAccount } from "../tests/helpers/oauth";
 import db from "./db";
 import {
-  createMentionNotifications,
   createQuotedUpdateNotifications,
   createQuoteNotification,
-  createReplyMentionNotification,
 } from "./notification";
 import * as Schema from "./schema";
 import type { Uuid } from "./uuid";
@@ -52,10 +50,7 @@ async function createRemoteAccount(username: string): Promise<Schema.Account> {
 async function createPost(
   accountId: Uuid,
   content: string,
-  options: {
-    quoteTargetId?: Uuid;
-    replyTargetId?: Uuid;
-  } = {},
+  quoteTargetId?: Uuid,
 ): Promise<Schema.Post> {
   const postId = crypto.randomUUID() as Uuid;
   const postIri = `https://test.example/@test/${postId}`;
@@ -69,109 +64,13 @@ async function createPost(
       accountId,
       visibility: "public",
       content,
-      quoteTargetId: options.quoteTargetId,
-      replyTargetId: options.replyTargetId,
+      quoteTargetId,
       published: new Date(),
     })
     .returning();
 
   return post;
 }
-
-describe("Reply mention notifications", () => {
-  let localAccount: Awaited<ReturnType<typeof createAccount>>;
-  let remoteAccount: Schema.Account;
-
-  beforeEach(async () => {
-    await cleanDatabase();
-    localAccount = await createAccount();
-    remoteAccount = await createRemoteAccount("remote_user");
-  });
-
-  it("creates mention notifications for replies to local posts", async () => {
-    expect.assertions(5);
-
-    const originalPost = await createPost(
-      localAccount.id as Uuid,
-      "Original post",
-    );
-    const replyPost = await createPost(remoteAccount.id, "Reply", {
-      replyTargetId: originalPost.id,
-    });
-
-    const originalPostWithAccount = await db.query.posts.findFirst({
-      where: { id: { eq: originalPost.id } },
-      with: {
-        account: { with: { owner: true } },
-      },
-    });
-
-    const notificationId = await createReplyMentionNotification(
-      remoteAccount,
-      replyPost,
-      originalPostWithAccount!,
-    );
-
-    expect(notificationId).not.toBeNull();
-
-    const notification = await db.query.notifications.findFirst({
-      where: { id: { eq: notificationId! } },
-    });
-
-    expect(notification).not.toBeNull();
-    expect(notification?.type).toBe("mention");
-    expect(notification?.actorAccountId).toBe(remoteAccount.id);
-    expect(notification?.targetPostId).toBe(replyPost.id);
-  });
-
-  it("does not duplicate reply mention notifications when the reply also mentions the original author", async () => {
-    expect.assertions(2);
-
-    const originalPost = await createPost(
-      localAccount.id as Uuid,
-      "Original post",
-    );
-    const replyPost = await createPost(remoteAccount.id, "Reply", {
-      replyTargetId: originalPost.id,
-    });
-
-    const originalPostWithAccount = await db.query.posts.findFirst({
-      where: { id: { eq: originalPost.id } },
-      with: {
-        account: { with: { owner: true } },
-      },
-    });
-    const mentionedAccount = await db.query.accounts.findFirst({
-      where: { id: { eq: localAccount.id as Uuid } },
-      with: { owner: true },
-    });
-
-    await createReplyMentionNotification(
-      remoteAccount,
-      replyPost,
-      originalPostWithAccount!,
-    );
-    const mentionNotificationIds = await createMentionNotifications(
-      replyPost,
-      [mentionedAccount!],
-      originalPost.accountId,
-    );
-
-    expect(mentionNotificationIds).toHaveLength(0);
-
-    const notifications = await db.query.notifications.findMany({
-      where: {
-        RAW: (notifications, { and, eq }) =>
-          and(
-            eq(notifications.type, "mention"),
-            eq(notifications.targetPostId, replyPost.id),
-          )!,
-      },
-    });
-
-    expect(notifications).toHaveLength(1);
-  });
-});
 
 describe("Quote notifications", () => {
   let localAccount: Awaited<ReturnType<typeof createAccount>>;
@@ -195,7 +94,7 @@ describe("Quote notifications", () => {
 
       // Get the original post with account and owner info
       const originalPostWithAccount = await db.query.posts.findFirst({
-        where: { id: { eq: originalPost.id } },
+        where: eq(Schema.posts.id, originalPost.id),
         with: {
           account: { with: { owner: true } },
         },
@@ -204,9 +103,11 @@ describe("Quote notifications", () => {
       expect(originalPostWithAccount).not.toBeNull();
 
       // Create quote post by remote user
-      const quotePost = await createPost(remoteAccount.id, "Quoting this!", {
-        quoteTargetId: originalPost.id,
-      });
+      const quotePost = await createPost(
+        remoteAccount.id,
+        "Quoting this!",
+        originalPost.id,
+      );
 
       // Create quote notification
       const notificationId = await createQuoteNotification(
@@ -219,7 +120,7 @@ describe("Quote notifications", () => {
 
       // Verify notification was created
       const notification = await db.query.notifications.findFirst({
-        where: { id: { eq: notificationId! } },
+        where: eq(Schema.notifications.id, notificationId!),
       });
 
       expect(notification).not.toBeNull();
@@ -240,7 +141,7 @@ describe("Quote notifications", () => {
 
       // Get the original post with account and owner info
       const originalPostWithAccount = await db.query.posts.findFirst({
-        where: { id: { eq: originalPost.id } },
+        where: eq(Schema.posts.id, originalPost.id),
         with: {
           account: { with: { owner: true } },
         },
@@ -248,14 +149,14 @@ describe("Quote notifications", () => {
 
       // Get local account as a regular account for quoter
       const quoterAccount = await db.query.accounts.findFirst({
-        where: { id: { eq: localAccount.id as Uuid } },
+        where: eq(Schema.accounts.id, localAccount.id as Uuid),
       });
 
       // Create quote post by same user
       const quotePost = await createPost(
         localAccount.id as Uuid,
         "Quoting my own post",
-        { quoteTargetId: originalPost.id },
+        originalPost.id,
       );
 
       // Create quote notification - should return null for self-quote
@@ -276,7 +177,7 @@ describe("Quote notifications", () => {
 
       // Get the original post with account info (no owner)
       const originalPostWithAccount = await db.query.posts.findFirst({
-        where: { id: { eq: originalPost.id } },
+        where: eq(Schema.posts.id, originalPost.id),
         with: {
           account: { with: { owner: true } },
         },
@@ -286,9 +187,11 @@ describe("Quote notifications", () => {
       const anotherRemote = await createRemoteAccount("another_remote");
 
       // Create quote post
-      const quotePost = await createPost(anotherRemote.id, "Quoting remote", {
-        quoteTargetId: originalPost.id,
-      });
+      const quotePost = await createPost(
+        anotherRemote.id,
+        "Quoting remote",
+        originalPost.id,
+      );
 
       // Create quote notification - should return null (original author not local)
       const notificationId = await createQuoteNotification(
@@ -309,13 +212,15 @@ describe("Quote notifications", () => {
       const originalPost = await createPost(remoteAccount.id, "Original post");
 
       // Local user creates a quote post
-      const quotePost = await createPost(localAccount.id as Uuid, "My quote", {
-        quoteTargetId: originalPost.id,
-      });
+      const quotePost = await createPost(
+        localAccount.id as Uuid,
+        "My quote",
+        originalPost.id,
+      );
 
       // Get local account with owner info
       const quoteAuthor = await db.query.accounts.findFirst({
-        where: { id: { eq: localAccount.id as Uuid } },
+        where: eq(Schema.accounts.id, localAccount.id as Uuid),
         with: { owner: true },
       });
 
@@ -330,7 +235,7 @@ describe("Quote notifications", () => {
 
       // Verify notification was created
       const notification = await db.query.notifications.findFirst({
-        where: { id: { eq: notificationIds[0] } },
+        where: eq(Schema.notifications.id, notificationIds[0]),
       });
 
       expect(notification).not.toBeNull();
@@ -350,7 +255,7 @@ describe("Quote notifications", () => {
 
       // Get remote account without owner
       const quoteAuthor = await db.query.accounts.findFirst({
-        where: { id: { eq: anotherRemote.id } },
+        where: eq(Schema.accounts.id, anotherRemote.id),
         with: { owner: true },
       });
 
@@ -371,7 +276,7 @@ describe("Quote notifications", () => {
 
       // Get local account with owner info (but hasn't quoted the post)
       const quoteAuthor = await db.query.accounts.findFirst({
-        where: { id: { eq: localAccount.id as Uuid } },
+        where: eq(Schema.accounts.id, localAccount.id as Uuid),
         with: { owner: true },
       });
 
@@ -396,16 +301,18 @@ describe("Quote notifications", () => {
       );
 
       const originalPostWithAccount = await db.query.posts.findFirst({
-        where: { id: { eq: originalPost.id } },
+        where: eq(Schema.posts.id, originalPost.id),
         with: {
           account: { with: { owner: true } },
         },
       });
 
       // Create quote post by remote user
-      const quotePost = await createPost(remoteAccount.id, "Quoting this!", {
-        quoteTargetId: originalPost.id,
-      });
+      const quotePost = await createPost(
+        remoteAccount.id,
+        "Quoting this!",
+        originalPost.id,
+      );
 
       // Create quote notification twice
       const notificationId1 = await createQuoteNotification(
@@ -424,13 +331,10 @@ describe("Quote notifications", () => {
 
       // Verify only one notification exists
       const notifications = await db.query.notifications.findMany({
-        where: {
-          RAW: (notifications, { and, eq }) =>
-            and(
-              eq(notifications.type, "quote"),
-              eq(notifications.targetPostId, quotePost.id),
-            )!,
-        },
+        where: and(
+          eq(Schema.notifications.type, "quote"),
+          eq(Schema.notifications.targetPostId, quotePost.id),
+        ),
       });
 
       expect(notifications.length).toBe(1);

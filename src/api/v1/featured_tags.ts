@@ -1,46 +1,53 @@
 import { zValidator } from "@hono/zod-validator";
-import { and, count, eq, max, sql } from "drizzle-orm";
+import {
+  and,
+  count,
+  type ExtractTablesWithRelations,
+  eq,
+  max,
+  sql,
+} from "drizzle-orm";
+import type { PgDatabase } from "drizzle-orm/pg-core";
+import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
 import { Hono } from "hono";
 import { z } from "zod";
-
-import db, { type DatabaseLike } from "../../db";
+import db from "../../db";
 import { serializeFeaturedTag } from "../../entities/tag";
 import {
   scopeRequired,
   tokenRequired,
-  withAccountOwner,
-  type AccountOwnerVariables,
+  type Variables,
 } from "../../oauth/middleware";
+import type * as schema from "../../schema";
 import { featuredTags, posts } from "../../schema";
-import { isUuid, uuidv7, type Uuid } from "../../uuid";
+import { isUuid, type Uuid, uuidv7 } from "../../uuid";
 
-const app = new Hono<{ Variables: AccountOwnerVariables }>();
+const app = new Hono<{ Variables: Variables }>();
 
-app.get(
-  "/",
-  tokenRequired,
-  scopeRequired(["read:accounts"]),
-  withAccountOwner,
-  async (c) => {
-    const owner = c.get("accountOwner");
-    const tags = await db.query.featuredTags.findMany({
-      where: { accountOwnerId: { eq: owner.id } },
-    });
-    const stats = await getFeaturedTagStats(db, owner.id);
-    return c.json(
-      tags.map((tag) => serializeFeaturedTag(tag, stats[tag.name], c.req.url)),
-    );
-  },
-);
+app.get("/", tokenRequired, scopeRequired(["read:accounts"]), async (c) => {
+  const owner = c.get("token").accountOwner;
+  if (owner == null) {
+    return c.json({ error: "The access token is invalid." }, 401);
+  }
+  const tags = await db.query.featuredTags.findMany({
+    where: eq(featuredTags.accountOwnerId, owner.id),
+  });
+  const stats = await getFeaturedTagStats(db, owner.id);
+  return c.json(
+    tags.map((tag) => serializeFeaturedTag(tag, stats[tag.name], c.req.url)),
+  );
+});
 
 app.post(
   "/",
   tokenRequired,
   scopeRequired(["write:accounts"]),
-  withAccountOwner,
   zValidator("json", z.object({ name: z.string().trim().min(1) })),
   async (c) => {
-    const owner = c.get("accountOwner");
+    const owner = c.get("token").accountOwner;
+    if (owner == null) {
+      return c.json({ error: "The access token is invalid." }, 401);
+    }
     let name = c.req.valid("json").name;
     if (name.startsWith("#")) name = name.substring(1);
     const result = await db
@@ -61,13 +68,15 @@ app.delete(
   "/:id",
   tokenRequired,
   scopeRequired(["write:accounts"]),
-  withAccountOwner,
   async (c) => {
     const featuredTagId = c.req.param("id");
     if (!isUuid(featuredTagId)) {
       return c.json({ error: "Record not found" }, 404);
     }
-    const owner = c.get("accountOwner");
+    const owner = c.get("token").accountOwner;
+    if (owner == null) {
+      return c.json({ error: "The access token is invalid." }, 401);
+    }
     const result = await db
       .delete(featuredTags)
       .where(
@@ -83,7 +92,11 @@ app.delete(
 );
 
 async function getFeaturedTagStats(
-  db: DatabaseLike,
+  db: PgDatabase<
+    PostgresJsQueryResultHKT,
+    typeof schema,
+    ExtractTablesWithRelations<typeof schema>
+  >,
   ownerId: Uuid,
 ): Promise<Record<string, { posts: number; lastPublished: Date | null }>> {
   const result = await db
