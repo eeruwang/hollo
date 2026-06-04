@@ -1,4 +1,5 @@
 import type { PropsWithChildren } from "hono/jsx";
+import { getPhosphorColor } from "../phosphor";
 import type { ThemeColor } from "../schema";
 
 export interface LayoutProps {
@@ -11,12 +12,12 @@ export interface LayoutProps {
   themeColor?: ThemeColor;
 }
 
-const ASSET_VERSION = "77";
+const ASSET_VERSION = "100";
 
 export function Layout(props: PropsWithChildren<LayoutProps>) {
-  const themeColor = props.themeColor ?? "azure";
+  const phosphor = getPhosphorColor(props.themeColor);
   return (
-    <html lang="en">
+    <html lang="en" data-phosphor={phosphor}>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -44,21 +45,10 @@ export function Layout(props: PropsWithChildren<LayoutProps>) {
             type={link.type}
           />
         ))}
-        {themeColor === "eeruwang" ? (
-          <link
-            rel="stylesheet"
-            href={`/public/eeruwang-theme.css?v=${ASSET_VERSION}`}
-          />
-        ) : (
-          <>
-            <link
-              rel="stylesheet"
-              href={`/public/pico.${themeColor}.min.css`}
-            />
-            <link rel="stylesheet" href="/public/pico.colors.min.css" />
-            <link rel="stylesheet" href="/public/hollo.css" />
-          </>
-        )}
+        <link
+          rel="stylesheet"
+          href={`/public/terminal.css?v=${ASSET_VERSION}`}
+        />
         <link
           rel="icon"
           type="image/png"
@@ -73,10 +63,9 @@ export function Layout(props: PropsWithChildren<LayoutProps>) {
           href="/public/favicon-white.png"
           media="(prefers-color-scheme: dark)"
         />
+        <script src={`/public/terminal.js?v=${ASSET_VERSION}`} defer />
       </head>
-      <body>
-        <main className="container">{props.children}</main>
-      </body>
+      <body>{props.children}</body>
     </html>
   );
 }

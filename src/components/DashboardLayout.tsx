@@ -1,108 +1,221 @@
 import type { PropsWithChildren } from "hono/jsx";
 import db from "../db";
-import { accountOwners } from "../schema";
 import { Layout, type LayoutProps } from "./Layout";
 
-export type Menu = "social" | "accounts" | "emojis" | "federation" | "settings";
+export type Menu =
+  | "home"
+  | "profile"
+  | "notifications"
+  | "bookmarks"
+  | "threads"
+  | "compose"
+  | "settings"
+  /* legacy menu values kept so existing pages compile; the rail
+   * collapses them into the closest terminal counterpart. */
+  | "social"
+  | "accounts"
+  | "emojis"
+  | "federation"
+  | "auth"
+  | "thumbnail_cleanup";
 
 export interface DashboardLayoutProps extends LayoutProps {
   selectedMenu?: Menu;
+  /** Shown in the title-bar prompt (`eeru@hollo: ~/<path>`). */
+  shellPath?: string;
+  /** Vim-style mode label rendered in the status bar.  Defaults to NORMAL. */
+  shellMode?: string;
+  /** When true, render the mode chip in the amber `alt` color. */
+  shellModeAlt?: boolean;
+  /** Keybind hints rendered after the mode chip. */
+  shellHints?: { key: string; label: string }[];
+  /** Right-aligned status context label. */
+  shellStatus?: string;
 }
+
+const DEFAULT_HINTS: { key: string; label: string }[] = [
+  { key: "j/k", label: "move" },
+  { key: "Enter", label: "open" },
+  { key: "f", label: "fav" },
+  { key: "b", label: "boost" },
+  { key: "c", label: "compose" },
+];
 
 export async function DashboardLayout(
   props: PropsWithChildren<DashboardLayoutProps>,
 ) {
   let themeColor = props.themeColor;
+  let handle: string | undefined;
   if (themeColor == null) {
-    const owner = await db.query.accountOwners.findFirst();
+    const owner = await db.query.accountOwners.findFirst({
+      with: { account: true },
+    });
     themeColor = owner?.themeColor ?? "azure";
+    handle = owner?.handle;
   }
+
+  const promptUser = handle ?? "eeru";
+  const promptPath = props.shellPath ?? menuToPath(props.selectedMenu);
+  const mode = props.shellMode ?? "NORMAL";
+  const hints = props.shellHints ?? DEFAULT_HINTS;
+  const status = props.shellStatus ?? "● federated";
 
   return (
     <Layout {...props} themeColor={themeColor}>
-      <header>
-        <nav>
-          <ul>
-            <li>
-              <picture>
-                <source
-                  srcset="https://cdn.jsdelivr.net/gh/fedify-dev/hollo@main/logo-white.svg"
-                  media="(prefers-color-scheme: dark)"
-                />
-                <img
-                  src="https://cdn.jsdelivr.net/gh/fedify-dev/hollo@main/logo-black.svg"
-                  width={50}
-                  height={50}
-                  alt=""
-                />
-              </picture>
-              Hollo
-            </li>
-          </ul>
-          <ul>
-            <li>
-              {props.selectedMenu === "social" ? (
-                <a href="/social" class="contrast">
-                  <strong>Social</strong>
-                </a>
-              ) : (
-                <a href="/social">Social</a>
-              )}
-            </li>
-            <li>
-              {props.selectedMenu === "accounts" ? (
-                <a href="/accounts" class="contrast">
-                  <strong>Accounts</strong>
-                </a>
-              ) : (
-                <a href="/accounts">Accounts</a>
-              )}
-            </li>
-            <li>
-              {props.selectedMenu === "emojis" ? (
-                <a href="/emojis" class="contrast">
-                  <strong>Emojis</strong>
-                </a>
-              ) : (
-                <a href="/emojis">Emojis</a>
-              )}
-            </li>
-            <li>
-              {props.selectedMenu === "federation" ? (
-                <a href="/federation" class="contrast">
-                  <strong>Federation</strong>
-                </a>
-              ) : (
-                <a href="/federation">Federation</a>
-              )}
-            </li>
-            <li>
-              {props.selectedMenu === "settings" ? (
-                <a href="/settings" class="contrast">
-                  <strong>Settings</strong>
-                </a>
-              ) : (
-                <a href="/settings">Settings</a>
-              )}
-            </li>
-            <li>
-              <form method="post" action="/logout" class="logout-form">
-                <button type="submit" class="secondary logout-btn">
-                  Logout
-                </button>
-              </form>
-            </li>
-          </ul>
-        </nav>
-      </header>
-      {props.children}
-      <footer>
-        <p>
-          <strong>Hollo eeruwang fork</strong>
-          <br />
-          v0.1.0
-        </p>
-      </footer>
+      <div class="win">
+        <div class="titlebar">
+          <div class="dots">
+            <i />
+            <i />
+            <i />
+          </div>
+          <div class="path">
+            <b>{promptUser}@hollo</b>
+            <span>: </span>
+            <span class="ac">~/{promptPath}</span>
+          </div>
+          <div class="tright">
+            <span>{status}</span>
+            <span class="led" />
+            <span data-clock>00:00</span>
+          </div>
+        </div>
+        <div class="mid">
+          <aside class="rail">
+            <div class="node">
+              <div class="mk">▌ HOLLO</div>
+              <div class="sub">eeruwang fork · 0.9.x</div>
+            </div>
+            <nav>
+              <RailLink
+                href="/social"
+                kb="1"
+                label="home"
+                on={
+                  props.selectedMenu === "home" ||
+                  props.selectedMenu === "social"
+                }
+              />
+              <RailLink
+                href="/accounts"
+                kb="2"
+                label="profile"
+                on={
+                  props.selectedMenu === "profile" ||
+                  props.selectedMenu === "accounts"
+                }
+              />
+              <RailLink
+                href="/notifications"
+                kb="3"
+                label="notifications"
+                on={props.selectedMenu === "notifications"}
+              />
+              <RailLink
+                href="/bookmarks"
+                kb="4"
+                label="bookmarks"
+                on={props.selectedMenu === "bookmarks"}
+              />
+              <RailLink
+                href="/threads"
+                kb="5"
+                label="threads"
+                on={props.selectedMenu === "threads"}
+              />
+              <div class="div" />
+              <a
+                href="/social"
+                class={`cta${props.selectedMenu === "compose" ? " on" : ""}`}
+              >
+                <span class="kb">c</span>
+                <span class="lbl">compose</span>
+              </a>
+              <RailLink
+                href="/settings"
+                kb=","
+                label="settings"
+                on={
+                  props.selectedMenu === "settings" ||
+                  props.selectedMenu === "auth" ||
+                  props.selectedMenu === "emojis" ||
+                  props.selectedMenu === "federation" ||
+                  props.selectedMenu === "thumbnail_cleanup"
+                }
+              />
+            </nav>
+            <div class="foot">
+              <span class="ok">●</span> federating
+            </div>
+          </aside>
+          <main class="page">
+            <div class="wrap">{props.children}</div>
+          </main>
+        </div>
+        <div class="statusbar">
+          <span class={`mode${props.shellModeAlt ? " alt" : ""}`}>{mode}</span>
+          {hints.map((h) => (
+            <span class="k">
+              [<b>{h.key}</b>] {h.label}
+            </span>
+          ))}
+          <span class="sp" />
+          <span>{props.title}</span>
+        </div>
+      </div>
     </Layout>
   );
+}
+
+function RailLink({
+  href,
+  kb,
+  label,
+  on,
+  count,
+}: {
+  href: string;
+  kb: string;
+  label: string;
+  on?: boolean;
+  count?: string;
+}) {
+  return (
+    <a href={href} class={on ? "on" : undefined}>
+      <span class="kb">{kb}</span>
+      <span class="lbl">{label}</span>
+      {count != null && <span class="ct">{count}</span>}
+    </a>
+  );
+}
+
+function menuToPath(menu?: Menu): string {
+  switch (menu) {
+    case "home":
+    case "social":
+      return "timeline";
+    case "profile":
+    case "accounts":
+      return "profile";
+    case "notifications":
+      return "notifications";
+    case "bookmarks":
+      return "bookmarks";
+    case "threads":
+      return "threads";
+    case "compose":
+      return "compose";
+    case "settings":
+      return "settings";
+    case "auth":
+      return "settings/auth";
+    case "emojis":
+      return "emojis";
+    case "federation":
+      return "federation";
+    case "thumbnail_cleanup":
+      return "settings/cleanup";
+    default:
+      return "";
+  }
 }
