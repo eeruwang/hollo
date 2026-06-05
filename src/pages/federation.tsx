@@ -38,117 +38,117 @@ data.get("/", async (c) => {
     queueMessages = [];
   }
 
-  return c.html(
-    <DashboardLayout title="Hollo: Federation" selectedMenu="federation">
-      <hgroup>
-        <h1>Federation</h1>
-        <p>
-          This control panel allows you to manage remote objects or interactions
-          with the fediverse.
-        </p>
-      </hgroup>
+  const totalQueue = queueMessages.reduce((sum, m) => sum + m.number, 0);
 
-      <article>
-        <header>
-          <hgroup>
-            <h2>Force refresh account/post</h2>
-            {done === "refresh:account" ? (
-              <p>Account has been refreshed.</p>
-            ) : done === "refresh:post" ? (
-              <p>Post has been refreshed.</p>
-            ) : error === "refresh:account-conflict" ? (
-              <p>Account refresh was blocked by a canonical handle conflict.</p>
-            ) : (
-              <p>Use this when you see outdated remote account/post data.</p>
-            )}
-          </hgroup>
-        </header>
-        <form
-          method="post"
-          action="/federation/refresh"
-          onsubmit="this.submit.ariaBusy = 'true'"
-        >
-          <fieldset role="group">
+  return c.html(
+    <DashboardLayout
+      title="~/federation · Hollo"
+      selectedMenu="federation"
+      shellPath="federation"
+      shellHints={[
+        { key: "Tab", label: "field" },
+        { key: "Enter", label: "refresh" },
+      ]}
+      shellStatus={`federation · ${totalQueue} queued`}
+    >
+      <div class="cmdline">
+        <span class="u">root@hollo</span>:~${" "}
+        <span class="cmd">federation</span>{" "}
+        <span class="arg">--moderate</span>
+      </div>
+
+      <div class="setblock">
+        <div class="sb-h">[ force-refresh remote actor / post ]</div>
+        {done === "refresh:account" && (
+          <div class="field">
+            <span class="desc gn">✓ account refreshed.</span>
+          </div>
+        )}
+        {done === "refresh:post" && (
+          <div class="field">
+            <span class="desc gn">✓ post refreshed.</span>
+          </div>
+        )}
+        {error === "refresh:account-conflict" && (
+          <div class="field">
+            <span class="desc" style="color:var(--red);">
+              ⚠ refresh blocked by a canonical handle conflict — the cached
+              row still owns that handle.
+            </span>
+          </div>
+        )}
+        <form method="post" action="/federation/refresh" class="ac-b">
+          <div class="field">
+            <label htmlFor="fed-uri">handle or object URI</label>
             <input
+              id="fed-uri"
               type="text"
               name="uri"
               placeholder="@hollo@hollo.social"
               required
+              spellcheck={false}
               aria-invalid={
                 error === "refresh" || error === "refresh:account-conflict"
                   ? "true"
                   : undefined
               }
             />
-            <button name="submit" type="submit">
-              Refresh
+            <span
+              class="desc"
+              style={error === "refresh" ? "color:var(--red);" : undefined}
+            >
+              {error === "refresh"
+                ? "the given handle or URI is invalid or not found."
+                : "fediverse handle (@user@host) or post/actor URI."}
+            </span>
+          </div>
+          <div class="formfoot">
+            <span class="sp" />
+            <button class="btn-pri" type="submit">
+              refresh →
             </button>
-          </fieldset>
-          {error === "refresh" ? (
-            <small>
-              The given handle or URI is invalid or not found. Please try again.
-            </small>
-          ) : error === "refresh:account-conflict" ? (
-            <small>
-              Hollo could not verify that this actor canonically owns the handle
-              already cached in the database, so the stale account was not
-              deleted automatically.
-            </small>
-          ) : (
-            <small>
-              A fediverse handle (e.g., <tt>@hollo@hollo.social</tt>) or a
-              post/actor URI (e.g.,{" "}
-              <tt>
-                https://hollo.social/@hollo/01904586-7b75-7ef6-ad31-bec40b8b1e66
-              </tt>
-              ) is allowed.
-            </small>
-          )}
+          </div>
         </form>
-      </article>
+      </div>
 
-      <article>
-        <header>
-          <hgroup>
-            <h2>Task queue messages</h2>
-            <p>The number of messages in the task queue.</p>
-          </hgroup>
-        </header>
-        <table>
-          <thead>
-            <tr>
-              <th>Type</th>
-              <th style="text-align: right">Number of messages</th>
-            </tr>
-          </thead>
-          <tbody>
-            {queueMessages.map((queueMessage) => (
-              <tr>
-                <td>{queueMessage.type}</td>
-                <td style="text-align: right">
-                  {queueMessage.number.toLocaleString("en")}
-                </td>
-              </tr>
+      <div class="setblock">
+        <div class="sb-h">[ task queue ]</div>
+        {queueMessages.length === 0 ? (
+          <div class="field">
+            <span class="desc">queue empty.</span>
+          </div>
+        ) : (
+          <div class="ttable" style="grid-template-columns: 1fr auto;">
+            <div class="tr th">
+              <span>type</span>
+              <span style="text-align:right;">messages</span>
+            </div>
+            {queueMessages.map((q) => (
+              <div class="tr">
+                <span>{q.type}</span>
+                <span style="text-align:right;">
+                  {q.number.toLocaleString("en")}
+                </span>
+              </div>
             ))}
-          </tbody>
-        </table>
-      </article>
+          </div>
+        )}
+      </div>
 
-      <article>
-        <header>
-          <hgroup>
-            <h2>How to shut down your instance</h2>
-            <p>
-              So-called <q>self-destruct</q> your instance.
-            </p>
-          </hgroup>
-        </header>
-        <p>
-          Hollo does not provide so-called <q>self-destruct</q> feature.
-          However, you can achieve the same effect by deleting all{" "}
-          <a href="/accounts">your accounts</a>.
-        </p>
-      </article>
+      <div class="setblock">
+        <div class="sb-h">[ instance shutdown ]</div>
+        <div class="field">
+          <label>self-destruct</label>
+          <span class="desc">
+            Hollo doesn't ship a one-button shutdown. To wind the instance
+            down, delete every account from{" "}
+            <a class="gn" href="/accounts">
+              /accounts
+            </a>{" "}
+            — federation peers will see the deletes and stop delivering.
+          </span>
+        </div>
+      </div>
     </DashboardLayout>,
   );
 });

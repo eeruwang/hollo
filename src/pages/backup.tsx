@@ -2,23 +2,16 @@ import { Buffer } from "node:buffer";
 import { getLogger } from "@logtape/logtape";
 import { desc, eq } from "drizzle-orm";
 import { Hono } from "hono";
-import { stream } from "hono/streaming";
 import { DashboardLayout } from "../components/DashboardLayout.tsx";
 import db from "../db.ts";
 import { loginRequired } from "../login.ts";
 import {
-  accountOwners,
-  follows,
-  likes,
-  media,
-  posts,
-  reactions,
-  bookmarks,
   blocks,
-  mutes,
-  customEmojis,
+  bookmarks,
   filters,
-  filterKeywords,
+  follows,
+  mutes,
+  posts,
   webhooks,
 } from "../schema.ts";
 import { drive } from "../storage.ts";

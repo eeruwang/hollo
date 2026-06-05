@@ -258,137 +258,171 @@ interface AuthPageProps {
 
 async function AuthPage({ totp, tfa, passkeys }: AuthPageProps) {
   return (
-    <DashboardLayout title="Hollo: Auth" selectedMenu="auth">
-      <hgroup>
-        <h1>Auth</h1>
-        <p>Authentication settings.</p>
-      </hgroup>
+    <DashboardLayout
+      title="~/auth · Hollo"
+      selectedMenu="auth"
+      shellPath="settings/auth"
+      shellMode="CONFIG"
+      shellStatus="auth · security"
+      shellHints={[
+        { key: "j/k", label: "row" },
+        { key: "Enter", label: "edit" },
+        { key: "q", label: "back" },
+      ]}
+    >
+      <div class="cmdline">
+        <span class="u">root@hollo</span>:~${" "}
+        <span class="cmd">auth</span> <span class="arg">--security</span>
+      </div>
 
-      <article>
-        <header>
-          <hgroup>
-            <h2>Two-factor authentication (OTP)</h2>
-            <p>
-              Configure two-factor authentication to secure your account. You
-              need an authenticator app like Google Authenticator or Authy to
-              use this feature.
-            </p>
-          </hgroup>
-        </header>
+      <div class="setblock">
+        <div class="sb-h">[ two-factor authentication ]</div>
         {totp == null ? (
           tfa == null ? (
-            <>
-              <p>Two-factor authentication is not enabled.</p>
-              <a role="button" href="?open=2fa">
-                Enable
-              </a>
-            </>
+            <div class="setrow">
+              <div class="lab">
+                TOTP
+                <div class="d">authenticator app · 6-digit code</div>
+              </div>
+              <div class="val">
+                <a class="btn-pri" href="?open=2fa">
+                  enable →
+                </a>
+              </div>
+            </div>
           ) : (
-            <>
-              <p>Scan the QR code below with your authenticator app:</p>
-              <p style="text-align: center">
-                <img src={await qrCode(tfa.totp.toString())} alt="" />
-              </p>
-              <details>
-                <summary>
-                  Can't scan the QR code? Click here to copy the URL to your
-                  authenticator app.
-                </summary>
-                <input type="text" value={tfa.totp.toString()} readonly />
-              </details>
-              <form method="post" action="/auth/2fa">
-                <p>Enter the code from your authenticator app to verify:</p>
-                <fieldset role="group">
-                  <input
-                    type="hidden"
-                    name="totp"
-                    value={tfa.totp.toString()}
+            <form method="post" action="/auth/2fa" class="ac-b">
+              <div class="field">
+                <label>scan QR with your authenticator app</label>
+                <div style="display:flex; justify-content:center; padding:14px 0;">
+                  <img
+                    src={await qrCode(tfa.totp.toString())}
+                    alt=""
+                    style="background:var(--bg2); padding:9px; border:1px solid var(--bd);"
                   />
-                  <input
-                    type="text"
-                    name="token"
-                    inputmode="numeric"
-                    pattern="^[0-9]+$"
-                    required
-                    placeholder="123456"
-                    aria-invalid={tfa.error == null ? undefined : "true"}
-                  />
-                  <button type="submit">Verify</button>
-                </fieldset>
-                {tfa.error && <small>{tfa.error}</small>}
-              </form>
-            </>
+                </div>
+                <span class="desc">
+                  or copy this URL into the app:
+                </span>
+                <input
+                  type="text"
+                  value={tfa.totp.toString()}
+                  readonly
+                  style="user-select:all; margin-top:4px;"
+                />
+              </div>
+              <div class="field">
+                <label htmlFor="auth-totp-token">
+                  verification code <span class="req">*</span>
+                </label>
+                <input
+                  type="hidden"
+                  name="totp"
+                  value={tfa.totp.toString()}
+                />
+                <input
+                  id="auth-totp-token"
+                  type="text"
+                  name="token"
+                  inputmode="numeric"
+                  pattern="^[0-9]+$"
+                  required
+                  placeholder="123456"
+                  autocomplete="one-time-code"
+                  style="letter-spacing:.15em; text-align:center;"
+                  aria-invalid={tfa.error == null ? undefined : "true"}
+                />
+                {tfa.error && (
+                  <span class="desc" style="color:var(--red);">
+                    {tfa.error}
+                  </span>
+                )}
+              </div>
+              <div class="formfoot">
+                <a class="btn-line" href="/auth">
+                  ← cancel
+                </a>
+                <span class="sp" />
+                <button class="btn-pri" type="submit">
+                  verify →
+                </button>
+              </div>
+            </form>
           )
         ) : (
-          <>
-            <p>Two-factor authentication is enabled.</p>
-            <form
-              method="post"
-              action="/auth/2fa/disable"
-              onsubmit="return window.confirm('Are you sure you want to disable two-factor authentication? This will remove the two-factor authentication from your account.');"
-            >
-              <button type="submit" class="secondary">
-                Disable
-              </button>
-            </form>
-          </>
+          <div class="setrow">
+            <div class="lab">
+              TOTP
+              <div class="d gn">✓ enabled · second factor required at sign-in</div>
+            </div>
+            <div class="val">
+              <form
+                method="post"
+                action="/auth/2fa/disable"
+                onsubmit="return window.confirm('Disable two-factor authentication?');"
+                style="display:inline; margin:0;"
+              >
+                <button class="btn-line" type="submit" style="color:var(--red); border-color:var(--bd);">
+                  disable
+                </button>
+              </form>
+            </div>
+          </div>
         )}
-      </article>
+      </div>
 
-      <article>
-        <hgroup>
-          <h2>Passkeys</h2>
-          <p>
-            Sign in without a password using a device-bound key plus a
-            biometric or PIN. A passkey on its own counts as multi-factor
-            authentication, so the TOTP step is skipped.
-          </p>
-        </hgroup>
-
+      <div class="setblock">
+        <div class="sb-h">[ passkeys ]</div>
         {passkeys.length === 0 ? (
-          <p>
-            No passkeys are enrolled yet. Enrolling one lets you sign in from
-            this browser without typing your password.
-          </p>
+          <div class="field">
+            <span class="desc">
+              No passkeys are enrolled yet. Enrolling one lets you sign in
+              from this browser without typing your password — and counts
+              as multi-factor on its own.
+            </span>
+          </div>
         ) : (
-          <ul>
+          <div class="ttable" style="grid-template-columns: 1fr auto auto;">
+            <div class="tr th">
+              <span>nickname</span>
+              <span>added · last used</span>
+              <span />
+            </div>
             {passkeys.map((p) => (
-              <li>
-                <strong>{p.nickname}</strong>
-                <br />
-                <small>
-                  Added{" "}
-                  <time dateTime={p.created.toISOString()}>
-                    {formatDate(p.created)}
-                  </time>
-                  {p.lastUsed != null ? (
-                    <>
-                      {" · last used "}
-                      <time dateTime={p.lastUsed.toISOString()}>
-                        {formatDate(p.lastUsed)}
-                      </time>
-                    </>
-                  ) : (
-                    " · never used"
-                  )}
-                </small>
-                <form
-                  method="post"
-                  action={`/auth/passkeys/${encodeURIComponent(p.id)}/delete`}
-                  onsubmit="return window.confirm('Remove this passkey?  You will not be able to sign in with it after this.');"
-                >
-                  <button type="submit" class="secondary">
-                    Remove
-                  </button>
-                </form>
-              </li>
+              <div class="tr">
+                <span>
+                  <strong>{p.nickname}</strong>
+                </span>
+                <span class="desc">
+                  {formatDate(p.created)}
+                  {p.lastUsed != null
+                    ? ` · ${formatDate(p.lastUsed)}`
+                    : " · never used"}
+                </span>
+                <span>
+                  <form
+                    method="post"
+                    action={`/auth/passkeys/${encodeURIComponent(p.id)}/delete`}
+                    onsubmit="return window.confirm('Remove this passkey? You will not be able to sign in with it after this.');"
+                    style="display:inline; margin:0;"
+                  >
+                    <button
+                      type="submit"
+                      class="btn-line"
+                      style="color:var(--red); border-color:var(--bd); padding:5px 11px; font-size:12px;"
+                    >
+                      remove
+                    </button>
+                  </form>
+                </span>
+              </div>
             ))}
-          </ul>
+          </div>
         )}
 
-        <form id="passkey-enroll-form">
-          <label for="passkey-nickname">
-            Nickname (optional)
+        <form id="passkey-enroll-form" class="ac-b">
+          <div class="field">
+            <label htmlFor="passkey-nickname">nickname (optional)</label>
             <input
               id="passkey-nickname"
               name="nickname"
@@ -396,11 +430,16 @@ async function AuthPage({ totp, tfa, passkeys }: AuthPageProps) {
               maxLength={80}
               placeholder="e.g. iPhone, work laptop, YubiKey"
             />
-          </label>
-          <button type="submit">Add passkey</button>
-          <p id="passkey-enroll-status" aria-live="polite" />
+            <p id="passkey-enroll-status" class="desc" aria-live="polite" />
+          </div>
+          <div class="formfoot">
+            <span class="sp" />
+            <button type="submit" class="btn-pri">
+              ＋ add passkey
+            </button>
+          </div>
         </form>
-      </article>
+      </div>
 
       <script src="/public/simplewebauthn-browser.umd.js" defer />
       <script src="/public/passkey.js" defer />
