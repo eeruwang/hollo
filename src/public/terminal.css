@@ -1027,6 +1027,216 @@ em { font-style: italic; }
 }
 .swatches i.on { outline: 2px solid var(--fgs); outline-offset: 1px; }
 
+/* ---------- legacy-markup fallbacks ---------- */
+/* Style raw Pico-style markup that hasn't been ported to terminal
+   classes yet so legacy pages don't look unstyled inside the .win
+   shell.  These selectors are scoped to `.page` so they cannot
+   accidentally leak into terminal components above. */
+.page article {
+  border: 1px solid var(--bd);
+  padding: 13px 15px;
+  margin-bottom: 14px;
+  background: color-mix(in oklab, var(--bg2) 55%, var(--bg));
+  border-radius: 4px;
+}
+.page article header,
+.page article footer {
+  margin: 0 0 9px;
+}
+.page article footer { margin: 9px 0 0; }
+.page article > header > h1,
+.page article > header > h2,
+.page article > header > h3,
+.page article > header > h4 {
+  margin: 0;
+  color: var(--fgs);
+  font-family: var(--mono);
+  font-weight: 600;
+  font-size: 16px;
+}
+.page hgroup { margin-bottom: 18px; }
+.page hgroup h1, .page > h1, .page main > h1 {
+  margin: 0;
+  color: var(--ac);
+  font-family: var(--mono);
+  font-weight: 600;
+  font-size: 22px;
+  letter-spacing: 0.02em;
+}
+.page hgroup h2, .page > h2, .page main > h2 {
+  color: var(--fgs);
+  font-family: var(--mono);
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: 0.03em;
+  margin: 20px 0 8px;
+}
+.page hgroup h3, .page > h3, .page main > h3 {
+  color: var(--fgs);
+  font-family: var(--mono);
+  font-weight: 600;
+  font-size: 14px;
+  margin: 16px 0 6px;
+}
+.page hgroup p { margin: 4px 0 0; color: var(--faint); font-size: 12.5px; }
+.page p { color: var(--fg); margin: 0 0 11px; }
+.page p a, .page article a, .page td a, .page label a {
+  color: var(--lnk);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.page small { color: var(--faint); font-size: 12px; }
+.page strong { color: var(--fgs); font-weight: 600; }
+.page code,
+.page pre {
+  font-family: var(--mono);
+  background: var(--bg2);
+  color: var(--ac);
+  padding: 1px 6px;
+  border: 1px solid var(--bds);
+  border-radius: 3px;
+  font-size: 12.5px;
+}
+.page pre {
+  padding: 11px 13px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: var(--fgs);
+}
+.page pre code { padding: 0; border: none; background: transparent; }
+.page table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 11px 0;
+  font-size: 13px;
+}
+.page table th,
+.page table td {
+  text-align: left;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--bds);
+}
+.page table th {
+  color: var(--dim);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  border-bottom-color: var(--bd);
+}
+.page table td { color: var(--fg); }
+.page form { margin-bottom: 16px; }
+.page label {
+  display: block;
+  color: var(--dim);
+  font-size: 12.5px;
+  margin-bottom: 12px;
+}
+.page label > input[type="text"],
+.page label > input[type="email"],
+.page label > input[type="password"],
+.page label > input[type="url"],
+.page label > input[type="number"],
+.page label > input[type="search"],
+.page label > textarea,
+.page label > select,
+.page > input[type="text"],
+.page > input[type="email"],
+.page > input[type="password"],
+.page > input[type="url"],
+.page > input[type="number"],
+.page > input[type="search"],
+.page > textarea,
+.page > select,
+.page form input[type="text"]:not(.btn),
+.page form input[type="email"]:not(.btn),
+.page form input[type="password"]:not(.btn),
+.page form input[type="url"]:not(.btn),
+.page form input[type="number"]:not(.btn),
+.page form input[type="search"]:not(.btn),
+.page form textarea:not(.btn),
+.page form select:not(.btn) {
+  display: block;
+  width: 100%;
+  margin-top: 5px;
+  background: transparent;
+  border: 1px solid var(--bd);
+  padding: 7px 10px;
+  color: var(--fgs);
+  font-family: var(--mono);
+  font-size: 13px;
+  outline: none;
+  border-radius: 0;
+}
+.page textarea { min-height: 96px; resize: vertical; line-height: 1.6; }
+.page label > input[type="checkbox"],
+.page label > input[type="radio"] {
+  margin-right: 6px;
+  accent-color: var(--ac);
+}
+.page fieldset {
+  border: 1px solid var(--bd);
+  padding: 11px 13px;
+  margin: 0 0 14px;
+}
+.page fieldset > legend {
+  padding: 0 7px;
+  color: var(--ac);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+.page button:not(.btn):not(.send):not(.tool):not(.toggle),
+.page input[type="submit"]:not(.btn),
+.page [role="button"]:not(.btn) {
+  font-family: var(--mono);
+  font-size: 13px;
+  border: 1px solid var(--bd);
+  color: var(--fg);
+  background: var(--bg2);
+  padding: 7px 16px;
+  cursor: pointer;
+  border-radius: 0;
+  text-decoration: none;
+  display: inline-block;
+}
+.page button:not(.btn):not(.send):not(.tool):not(.toggle):hover,
+.page input[type="submit"]:not(.btn):hover,
+.page [role="button"]:not(.btn):hover {
+  border-color: var(--ac);
+  color: var(--fgs);
+}
+.page button.secondary,
+.page [role="button"].secondary {
+  background: transparent;
+  color: var(--dim);
+}
+.page button.contrast,
+.page [role="button"].contrast {
+  background: var(--ac);
+  color: var(--bg);
+  border-color: var(--ac);
+  font-weight: 600;
+}
+.page div[role="group"] {
+  display: inline-flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.page ul, .page ol { padding-left: 1.4em; color: var(--fg); }
+.page li { margin: 3px 0; }
+.page details {
+  border: 1px solid var(--bd);
+  padding: 9px 12px;
+  margin-bottom: 11px;
+}
+.page details > summary { cursor: pointer; color: var(--ac); }
+.page header > nav { display: flex; gap: 9px; flex-wrap: wrap; }
+.page input[type="file"] {
+  background: transparent;
+  color: var(--fg);
+  font-family: var(--mono);
+  font-size: 12.5px;
+}
+
 /* ---------- empty / util ---------- */
 .muted { color: var(--faint); }
 .endcap { color: var(--faint); font-size: 12px; margin-top: 20px; }

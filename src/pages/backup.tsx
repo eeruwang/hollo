@@ -42,48 +42,67 @@ backup.get("/", async (c) => {
 
   return c.html(
     <DashboardLayout
-      title="Backup — Hollo"
+      title="~/backup · Hollo"
       selectedMenu="settings"
+      shellPath="settings/backup"
+      shellMode="CONFIG"
+      shellStatus={`${postCount.length} posts`}
+      shellHints={[{ key: "Enter", label: "download" }]}
       themeColor={owner.themeColor}
     >
-      <hgroup>
-        <h1>Backup</h1>
-        <p>Export your data for archival or migration.</p>
-      </hgroup>
-
-      <h2>Archive Backup</h2>
-      <p>
-        Download your posts as human-readable JSON. Includes post content,
-        timestamps, media URLs, and metadata.
-        Currently {postCount.length} posts.
-      </p>
-      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-        <a role="button" href="/backup/archive/json">
-          Download as JSON
-        </a>
-        <a role="button" href="/backup/archive/markdown" class="secondary">
-          Download as Markdown
-        </a>
+      <div class="cmdline">
+        <span class="u">{owner.handle}@hollo</span>:~${" "}
+        <span class="cmd">backup</span>{" "}
+        <span class="arg">--export</span>
       </div>
 
-      <h2>Hollo Backup</h2>
-      <p>
-        Full database export for migrating to another Hollo instance.
-        Includes posts, followers, likes, reactions, filters, webhooks,
-        and account settings.
-      </p>
-      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-        <a role="button" href="/backup/full">
-          Download Full Backup (JSON)
-        </a>
-        <a role="button" href="/backup/full-with-media" class="secondary">
-          Download with Media (large file)
-        </a>
+      <div class="setblock">
+        <div class="sb-h">[ archive backup ]</div>
+        <div class="setrow">
+          <div class="lab">
+            human-readable export
+            <div class="d">
+              {postCount.length} post{postCount.length === 1 ? "" : "s"} ·
+              post content, timestamps, media URLs, metadata
+            </div>
+          </div>
+          <div class="val" style="display:flex; gap:8px;">
+            <a class="btn pri" href="/backup/archive/json">
+              JSON
+            </a>
+            <a class="btn" href="/backup/archive/markdown">
+              Markdown
+            </a>
+          </div>
+        </div>
       </div>
-      <small>
-        Media backup includes all images as base64 data.
-        This may take a while and produce a large file.
-      </small>
+
+      <div class="setblock">
+        <div class="sb-h">[ full database backup ]</div>
+        <div class="setrow">
+          <div class="lab">
+            for migrating to another Hollo instance
+            <div class="d">
+              posts · followers · likes · reactions · filters · webhooks ·
+              account settings
+            </div>
+          </div>
+          <div class="val" style="display:flex; gap:8px;">
+            <a class="btn pri" href="/backup/full">
+              JSON
+            </a>
+            <a class="btn" href="/backup/full-with-media">
+              + media
+            </a>
+          </div>
+        </div>
+        <div class="setrow">
+          <div class="lab muted" style="font-size:12px;">
+            media backup includes all images as base64. expect a large file
+            and a slow download.
+          </div>
+        </div>
+      </div>
     </DashboardLayout>,
   );
 });
