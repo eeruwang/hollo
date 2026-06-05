@@ -1,7 +1,21 @@
+import type { Context } from "hono";
 import { getSignedCookie } from "hono/cookie";
 import { createMiddleware } from "hono/factory";
 import { db } from "./db";
 import { SECRET_KEY } from "./env";
+
+export async function isLoggedIn(c: Context): Promise<boolean> {
+  const login = await getSignedCookie(c, SECRET_KEY, "login");
+  if (login == null || login === false) return false;
+  const totp = await db.query.totps.findFirst();
+  if (totp == null) return true;
+  const otp = await getSignedCookie(c, SECRET_KEY, "otp");
+  const passkey = await getSignedCookie(c, SECRET_KEY, "passkey");
+  const otpOk = otp != null && otp !== false && otp === `${login} totp`;
+  const passkeyOk =
+    passkey != null && passkey !== false && passkey === `${login} passkey`;
+  return otpOk || passkeyOk;
+}
 
 export const loginRequired = createMiddleware(async (c, next) => {
   const login = await getSignedCookie(c, SECRET_KEY, "login");

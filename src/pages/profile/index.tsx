@@ -3,7 +3,9 @@ import { Hono } from "hono";
 import xss from "xss";
 import { DashboardLayout } from "../../components/DashboardLayout.tsx";
 import { Profile } from "../../components/Profile.tsx";
+import { PublicProfile } from "../../components/PublicProfile.tsx";
 import { db } from "../../db.ts";
+import { isLoggedIn } from "../../login.ts";
 import {
   type Account,
   type AccountOwner,
@@ -196,15 +198,57 @@ profile.get<"/:handle">(async (c) => {
   const newerUrl = page > 1 ? `?page=${page - 1}` : undefined;
   const olderUrl =
     postList.length === PAGE_SIZE ? `?page=${page + 1}` : undefined;
+
+  const loggedIn = await isLoggedIn(c);
+  const pinnedVisible = pinnedPostList
+    .map((p) => p.post)
+    .filter((p) => p.visibility === "public" || p.visibility === "unlisted");
+
+  if (!loggedIn) {
+    const instanceHost = new URL(c.req.url).host;
+    return c.html(
+      <PublicProfile
+        accountOwner={owner}
+        instanceHost={instanceHost}
+        visiblePostCount={owner.account.postsCount ?? undefined}
+        selectedTab="posts"
+      >
+        <div class="feedhead">▸ latest · public</div>
+        {pinnedVisible.map((post) => (
+          <ProfilePostEntry
+            post={post}
+            ownerHandle={owner.handle}
+            pinned={true}
+          />
+        ))}
+        {postList
+          .slice(0, PAGE_SIZE)
+          .map((post) => (
+            <ProfilePostEntry post={post} ownerHandle={owner.handle} />
+          ))}
+        <div
+          class="feedhead"
+          style="text-align:center;margin-top:20px;"
+        >
+          —{" "}
+          {`${postList.length} of ${(
+            owner.account.postsCount ?? postList.length
+          ).toLocaleString()} public posts`}{" "}
+          ·{" "}
+          <a href={atomUrl.href} style="color:var(--lnk);text-decoration:underline;">
+            follow for more
+          </a>{" "}
+          —
+        </div>
+      </PublicProfile>,
+    );
+  }
+
   return c.html(
     <ProfilePage
       accountOwner={owner}
       posts={postList.slice(0, PAGE_SIZE)}
-      pinnedPosts={pinnedPostList
-        .map((p) => p.post)
-        .filter(
-          (p) => p.visibility === "public" || p.visibility === "unlisted",
-        )}
+      pinnedPosts={pinnedVisible}
       featuredTags={featuredTagList}
       atomUrl={atomUrl.href}
       olderUrl={olderUrl}
