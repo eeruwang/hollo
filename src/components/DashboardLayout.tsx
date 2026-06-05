@@ -84,7 +84,7 @@ export async function DashboardLayout(
 
   return (
     <Layout {...props} themeColor={themeColor}>
-      <div class="win">
+      <div class="win has-bottomnav">
         <div class="titlebar">
           <div class="dots">
             <i />
@@ -188,8 +188,68 @@ export async function DashboardLayout(
           <span class="sp" />
           <span>{props.title}</span>
         </div>
+        <nav class="bottomnav">
+          <BottomNav
+            href="/social"
+            glyph="⌂"
+            label="home"
+            on={props.selectedMenu === "home" || props.selectedMenu === "social"}
+          />
+          <BottomNav
+            href="/search"
+            glyph="⌕"
+            label="search"
+            on={false}
+          />
+          <BottomNav
+            href="/compose"
+            glyph="✎"
+            label="compose"
+            cta
+            on={props.selectedMenu === "compose"}
+          />
+          <BottomNav
+            href="/notifications"
+            glyph="◔"
+            label={`notifs${unread > 0 ? ` ${unread}` : ""}`}
+            on={props.selectedMenu === "notifications"}
+          />
+          <BottomNav
+            href={handle ? `/@${handle}` : "/accounts"}
+            glyph="@"
+            label="profile"
+            on={
+              props.selectedMenu === "profile" ||
+              props.selectedMenu === "accounts"
+            }
+          />
+        </nav>
       </div>
     </Layout>
+  );
+}
+
+function BottomNav({
+  href,
+  glyph,
+  label,
+  on,
+  cta,
+}: {
+  href: string;
+  glyph: string;
+  label: string;
+  on?: boolean;
+  cta?: boolean;
+}) {
+  return (
+    <a
+      href={href}
+      class={`bn${on ? " on" : ""}${cta ? " cta" : ""}`}
+    >
+      <span class="gl">{glyph}</span>
+      <span class="lbl">{label}</span>
+    </a>
   );
 }
 

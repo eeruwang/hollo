@@ -1,40 +1,39 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import { Hono } from "hono";
-import { Layout } from "../../components/Layout.tsx";
-import { Post as PostView } from "../../components/Post.tsx";
+import { DashboardLayout } from "../../components/DashboardLayout.tsx";
+import { TimelineEntry } from "../../components/TimelineEntry.tsx";
 import { db } from "../../db.ts";
-import {
-  type Account,
-  accountOwners,
-  type Medium,
-  type Poll,
-  type PollOption,
-  type Post,
-  posts,
-  type Reaction,
-} from "../../schema.ts";
+import { isLoggedIn } from "../../login.ts";
+import { accountOwners, posts } from "../../schema.ts";
 
 const tags = new Hono().basePath("/:tag");
 
 tags.get(async (c) => {
-  const tag = c.req.param("tag");
-  const handle = c.req.query("handle");
-  const hashtag = `#${tag.toLowerCase()}`;
-  const postList = await db.query.posts.findMany({
+  const rawTag = c.req.param("tag");
+  const tag = rawTag.replace(/^#/, "").toLowerCase();
+  const hashtag = `#${tag}`;
+  const handleFilter = c.req.query("handle");
+  const owner = await db.query.accountOwners.findFirst({
+    with: { account: true },
+  });
+  if (owner == null) return c.redirect("/setup");
+
+  const tagPosts = await db.query.posts.findMany({
     where: and(
       sql`${posts.tags} ? ${hashtag}`,
       eq(posts.visibility, "public"),
-      handle == null
+      handleFilter == null
         ? undefined
         : eq(
             posts.accountId,
             db
               .select({ id: accountOwners.id })
               .from(accountOwners)
-              .where(eq(accountOwners.handle, handle)),
+              .where(eq(accountOwners.handle, handleFilter)),
           ),
     ),
     orderBy: desc(posts.id),
+    limit: 40,
     with: {
       account: true,
       media: true,
@@ -45,81 +44,83 @@ tags.get(async (c) => {
           media: true,
           poll: { with: { options: true } },
           replyTarget: { with: { account: true } },
-          quoteTarget: {
-            with: {
-              account: true,
-              media: true,
-              poll: { with: { options: true } },
-              replyTarget: { with: { account: true } },
-              reactions: true,
-            },
-          },
           reactions: true,
         },
       },
       replyTarget: { with: { account: true } },
-      quoteTarget: {
-        with: {
-          account: true,
-          media: true,
-          poll: { with: { options: true } },
-          replyTarget: { with: { account: true } },
-          reactions: true,
-        },
-      },
       reactions: true,
     },
   });
-  return c.html(<TagPage tag={tag} posts={postList} />);
-});
 
-interface TagPageProps {
-  readonly tag: string;
-  readonly posts: (Post & {
-    account: Account;
-    media: Medium[];
-    poll: (Poll & { options: PollOption[] }) | null;
-    sharing:
-      | (Post & {
-          account: Account;
-          media: Medium[];
-          poll: (Poll & { options: PollOption[] }) | null;
-          replyTarget: (Post & { account: Account }) | null;
-          quoteTarget:
-            | (Post & {
-                account: Account;
-                media: Medium[];
-                poll: (Poll & { options: PollOption[] }) | null;
-                replyTarget: (Post & { account: Account }) | null;
-                reactions: Reaction[];
-              })
-            | null;
-          reactions: Reaction[];
-        })
-      | null;
-    replyTarget: (Post & { account: Account }) | null;
-    quoteTarget:
-      | (Post & {
-          account: Account;
-          media: Medium[];
-          poll: (Poll & { options: PollOption[] }) | null;
-          replyTarget: (Post & { account: Account }) | null;
-          reactions: Reaction[];
-        })
-      | null;
-    reactions: Reaction[];
-  })[];
-}
+  const recent = tagPosts.filter(
+    (p) =>
+      (p.published ?? p.updated).getTime() >
+      Date.now() - 7 * 24 * 60 * 60 * 1000,
+  ).length;
+  const loggedIn = await isLoggedIn(c);
 
-function TagPage({ tag, posts }: TagPageProps) {
-  return (
-    <Layout title={`#${tag}`}>
-      <h1>#{tag}</h1>
-      {posts.map((post) => (
-        <PostView post={post} />
-      ))}
-    </Layout>
+  // Logged-out visitors get a stripped-down view (no rail) reusing the
+  // same DashboardLayout markup for now; if they hit an action it'll
+  // route them through login. A full PublicTag view can come later.
+  void loggedIn;
+
+  return c.html(
+    <DashboardLayout
+      title={`#${tag} · Hollo`}
+      selectedMenu="settings"
+      shellPath={`tags/${tag}`}
+      shellStatus={`#${tag} · ${tagPosts.length} posts`}
+      themeColor={owner.themeColor}
+      shellHints={[
+        { key: "j/k", label: "move" },
+        { key: "Enter", label: "open" },
+        { key: "f", label: "follow tag" },
+      ]}
+    >
+      <div class="cmdline">
+        <span class="u">{owner.handle}@hollo</span>:~${" "}
+        <span class="cmd">tag</span> <span class="arg">#{tag}</span>
+      </div>
+
+      <div class="taghero" style="margin-bottom:18px;">
+        <h1
+          class="tag"
+          style="font-family:var(--mono); font-size:30px; margin:0 0 5px;"
+        >
+          #{tag}
+        </h1>
+        <div class="muted">
+          {tagPosts.length} posts · {recent} this week
+        </div>
+      </div>
+
+      {tagPosts.length === 0 ? (
+        <div class="state">
+          <div class="glyph">#</div>
+          <div class="ttl">no posts with #{tag} yet</div>
+          <div class="msg">
+            once someone you follow uses this hashtag it'll show up here.
+          </div>
+        </div>
+      ) : (
+        tagPosts.map((post) => (
+          <TimelineEntry
+            post={post}
+            mine={post.accountId === owner.id}
+            openHref={`/@${post.account.handle.replace(/^@/, "")}/${post.id}`}
+          />
+        ))
+      )}
+
+      {tagPosts.length > 0 && (
+        <div class="endcap">
+          — {tagPosts.length} of all #{tag} posts ·{" "}
+          <span class="gn">[/]</span> search · <span class="gn">[r]</span>{" "}
+          refresh —
+        </div>
+      )}
+    </DashboardLayout>,
   );
-}
+});
 
 export default tags;
