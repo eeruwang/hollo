@@ -13,9 +13,9 @@ import { csrf } from "hono/csrf";
 import type { CookieOptions } from "hono/utils/cookie";
 import { TOTP } from "otpauth";
 import { z } from "zod";
-import { Layout } from "../components/Layout.tsx";
 import { LoginForm } from "../components/LoginForm.tsx";
 import { OtpForm } from "../components/OtpForm.tsx";
+import { PublicShellLayout } from "../components/PublicShellLayout.tsx";
 import { db } from "../db.ts";
 import { SECRET_KEY } from "../env.ts";
 import {
@@ -165,29 +165,49 @@ function LoginPage(props: LoginPageProps) {
   const hasPasswordError =
     props.errors?.email != null || props.errors?.password != null;
   return (
-    <Layout title="Sign in to Hollo">
-      <hgroup>
-        <h1>Sign in to Hollo</h1>
-        <p>To continue, sign in with your Hollo account.</p>
-      </hgroup>
+    <PublicShellLayout
+      title="~/login · Hollo"
+      shellPath="login"
+      shellStatus="auth required"
+      shellHints={[
+        { key: "Tab", label: "field" },
+        { key: "Enter", label: "submit" },
+      ]}
+      shellContext="login"
+    >
+      <div class="cmdline">
+        <span class="u">hollo</span>:~$ <span class="cmd">login</span>
+      </div>
+      <h2 class="h-sec">Sign in to continue</h2>
       {props.passkeyEnrolled ? (
         <>
           <button
             type="button"
             id="passkey-signin-button"
+            class="btn pri"
             data-next={props.next ?? ""}
+            style="margin-bottom:10px;"
           >
             Sign in with passkey
           </button>
-          <p id="passkey-signin-status" aria-live="polite" />
+          <p
+            id="passkey-signin-status"
+            class="muted"
+            aria-live="polite"
+            style="margin-bottom:14px;"
+          />
           <details open={hasPasswordError}>
-            <summary>Sign in with password instead</summary>
-            <LoginForm
-              action="/login"
-              next={props.next}
-              values={props.values}
-              errors={props.errors}
-            />
+            <summary class="muted" style="cursor:pointer;">
+              Sign in with password instead
+            </summary>
+            <div style="margin-top:12px;">
+              <LoginForm
+                action="/login"
+                next={props.next}
+                values={props.values}
+                errors={props.errors}
+              />
+            </div>
           </details>
         </>
       ) : (
@@ -204,7 +224,7 @@ function LoginPage(props: LoginPageProps) {
           <script src="/public/passkey.js" defer />
         </>
       )}
-    </Layout>
+    </PublicShellLayout>
   );
 }
 
@@ -269,13 +289,22 @@ interface OtpPageProps {
 
 function OtpPage(props: OtpPageProps) {
   return (
-    <Layout title="Sign in to Hollo">
-      <hgroup>
-        <h1>Sign in to Hollo</h1>
-        <p>To continue, sign in with your Hollo account.</p>
-      </hgroup>
+    <PublicShellLayout
+      title="~/login/otp · Hollo"
+      shellPath="login/otp"
+      shellStatus="2fa required"
+      shellHints={[
+        { key: "Enter", label: "submit" },
+      ]}
+      shellContext="login · 2fa"
+    >
+      <div class="cmdline">
+        <span class="u">hollo</span>:~$ <span class="cmd">login</span>{" "}
+        <span class="arg">--otp</span>
+      </div>
+      <h2 class="h-sec">Enter your one-time code</h2>
       <OtpForm action="/login/otp" next={props.next} errors={props.errors} />
-    </Layout>
+    </PublicShellLayout>
   );
 }
 
