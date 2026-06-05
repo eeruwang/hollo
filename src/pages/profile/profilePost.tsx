@@ -185,6 +185,27 @@ function PostPage({
       ]}
       themeColor={accountOwner.themeColor}
     >
+      <div class="win">
+        <div class="titlebar">
+          <div class="dots">
+            <i />
+            <i />
+            <i />
+          </div>
+          <div class="path">
+            <b>{accountOwner.handle}@hollo</b>
+            <span>: </span>
+            <span class="ac">~/post/{root.id.slice(0, 8)}</span>
+          </div>
+          <div class="tright">
+            <span>conversation</span>
+            <span class="led" />
+            <span data-clock>00:00</span>
+          </div>
+        </div>
+        <div class="mid" style="grid-template-columns: 1fr;">
+          <main class="page">
+            <div class="wrap">
       <Profile accountOwner={accountOwner} />
       <div class="article-page">
         <header class="article-hero">
@@ -252,6 +273,24 @@ function PostPage({
             localEmojiMap={localEmojiMap}
           />
         )}
+      </div>
+            </div>
+          </main>
+        </div>
+        <div class="statusbar">
+          <span class="mode">FOCUS</span>
+          <span class="k">
+            [<b>u</b>] parent
+          </span>
+          <span class="k">
+            [<b>r</b>] reply
+          </span>
+          <span class="k">
+            [<b>f</b>] fav
+          </span>
+          <span class="sp" />
+          <span>conversation</span>
+        </div>
       </div>
     </Layout>
   );

@@ -16,6 +16,7 @@ import settings from "./settings";
 import setup from "./setup";
 import social from "./social";
 import tags from "./tags";
+import threads from "./threads";
 import webhookPages from "./webhooks";
 
 const page = new Hono();
@@ -37,6 +38,7 @@ page.route("/federation", federation);
 page.route("/notifications", notifications);
 page.route("/social", social);
 page.route("/tags", tags);
+page.route("/threads", threads);
 page.route("/webhooks", webhookPages);
 
 export default page;
