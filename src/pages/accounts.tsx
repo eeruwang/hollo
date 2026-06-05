@@ -367,25 +367,25 @@ interface AccountListPageProps {
 
 function AccountListPage({ accountOwners, baseUrl }: AccountListPageProps) {
   return (
-    <DashboardLayout title="Hollo: Accounts" selectedMenu="accounts">
-      <header class="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 class="text-2xl font-semibold text-neutral-900 dark:text-neutral-100">
-            Accounts
-          </h1>
-          <p class="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-            You can have more than one account. Each account has its own handle,
-            settings, and data, and you can switch between them at any time.
-          </p>
-        </div>
-        <a
-          href="/accounts/new"
-          class="inline-flex items-center gap-1.5 rounded-md bg-brand-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700 dark:bg-brand-700 dark:hover:bg-brand-800"
-        >
-          <span class="i-lucide-plus" aria-hidden="true" />
-          New account
+    <DashboardLayout
+      title="~/accounts · Hollo"
+      selectedMenu="accounts"
+      shellPath="accounts"
+      shellStatus={`${accountOwners.length} account${
+        accountOwners.length === 1 ? "" : "s"
+      }`}
+    >
+      <div class="cmdline">
+        <span class="u">root@hollo</span>:~${" "}
+        <span class="cmd">accounts</span> <span class="arg">--list</span>
+      </div>
+      <div
+        style="display:flex; justify-content:flex-end; margin-bottom:14px;"
+      >
+        <a class="btn-pri" href="/accounts/new">
+          ＋ new account
         </a>
-      </header>
+      </div>
       <AccountList accountOwners={accountOwners} baseUrl={baseUrl} />
     </DashboardLayout>
   );
@@ -445,29 +445,17 @@ function AccountPage(props: AccountPageProps) {
   const username = `@${props.accountOwner.handle}`;
   return (
     <DashboardLayout
-      title={`Hollo: Edit ${username}`}
+      title={`~/accounts/edit/${username} · Hollo`}
       selectedMenu="accounts"
+      shellPath={`accounts/edit/${username}`}
+      shellStatus={`editing ${username}`}
       themeColor={props.accountOwner.themeColor}
     >
-      <header class="mb-6">
-        <p class="text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
-          <a
-            href="/accounts"
-            class="hover:text-neutral-700 dark:hover:text-neutral-300"
-          >
-            Accounts
-          </a>
-        </p>
-        <h1 class="mt-1 text-2xl font-semibold text-neutral-900 dark:text-neutral-100">
-          Edit{" "}
-          <span class="font-mono text-brand-700 dark:text-brand-400">
-            {username}
-          </span>
-        </h1>
-        <p class="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-          Update profile fields, defaults, and theme color for this account.
-        </p>
-      </header>
+      <div class="cmdline">
+        <span class="u">root@hollo</span>:~${" "}
+        <span class="cmd">profile edit</span>{" "}
+        <span class="arg">{username}</span>
+      </div>
       <AccountForm
         action={`/accounts/${props.accountOwner.account.id}`}
         readOnly={{ username: true }}
@@ -919,29 +907,17 @@ accounts.get("/:id/migrate", async (c) => {
   ];
   return c.html(
     <DashboardLayout
-      title={`Hollo: Migrate ${username} from/to`}
+      title={`~/accounts/migrate/${username} · Hollo`}
       selectedMenu="accounts"
+      shellPath={`accounts/migrate/${username}`}
+      shellStatus={`migrate ${username}`}
       themeColor={accountOwner.themeColor}
     >
-      <header class="mb-6">
-        <p class="text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
-          <a
-            href="/accounts"
-            class="hover:text-neutral-700 dark:hover:text-neutral-300"
-          >
-            Accounts
-          </a>
-        </p>
-        <h1 class="mt-1 text-2xl font-semibold text-neutral-900 dark:text-neutral-100">
-          Migrate{" "}
-          <span class="font-mono text-brand-700 dark:text-brand-400">
-            {username}
-          </span>
-        </h1>
-        <p class="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-          Move data and aliases between fediverse accounts.
-        </p>
-      </header>
+      <div class="cmdline">
+        <span class="u">root@hollo</span>:~${" "}
+        <span class="cmd">account migrate</span>{" "}
+        <span class="arg">{username}</span>
+      </div>
 
       <div class="space-y-6">
         <section class={sectionClass}>
