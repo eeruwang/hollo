@@ -1,12 +1,10 @@
-import { and, asc, desc, eq, inArray, ne, or } from "drizzle-orm";
+import { and, asc, eq, inArray, or } from "drizzle-orm";
 import { escape } from "es-toolkit";
 import { Hono } from "hono";
-import { Layout } from "../../components/Layout.tsx";
-import { Profile } from "../../components/Profile.tsx";
+import { DashboardLayout } from "../../components/DashboardLayout.tsx";
 import db from "../../db.ts";
 import {
   type Account,
-  type AccountOwner,
   accountOwners,
   customEmojis,
   type Medium,
@@ -15,22 +13,16 @@ import {
   type Post,
   posts,
   type Reaction,
-  reactions,
 } from "../../schema.ts";
 import { renderCustomEmojis } from "../../text.ts";
-import { isUuid } from "../../uuid.ts";
+import { isUuid, type Uuid } from "../../uuid.ts";
 
 const profilePost = new Hono();
 
-type ThreadPost = Post & {
+type FullPost = Post & {
   account: Account;
   media: Medium[];
   poll: (Poll & { options: PollOption[] }) | null;
-};
-
-type CommentPost = Post & {
-  account: Account;
-  media: Medium[];
   reactions: Reaction[];
 };
 
@@ -45,75 +37,78 @@ profilePost.get<"/:handle{@[^/]+}/:id{[-a-f0-9]+}">(async (c) => {
   });
   if (accountOwner == null) return c.notFound();
 
-  // Fetch all user posts so we can flatten this post's full
-  // descendant tree (replies of replies, etc.).
-  const allUserPosts = await db.query.posts.findMany({
+  const root = (await db.query.posts.findFirst({
     where: and(
-      eq(posts.accountId, accountOwner.id),
+      eq(posts.id, postId),
       or(eq(posts.visibility, "public"), eq(posts.visibility, "unlisted")),
     ),
-    orderBy: desc(posts.id),
     with: {
       account: true,
       media: true,
       poll: { with: { options: true } },
+      reactions: true,
     },
-  });
-
-  const root = allUserPosts.find((p) => p.id === postId);
+  })) as FullPost | undefined;
   if (root == null) return c.notFound();
 
-  // Build parent → children map, sort children chronologically
-  const childrenMap = new Map<string, ThreadPost[]>();
-  for (const p of allUserPosts) {
-    if (p.replyTargetId != null) {
-      const bucket = childrenMap.get(p.replyTargetId) ?? [];
-      bucket.push(p);
-      childrenMap.set(p.replyTargetId, bucket);
-    }
+  // Walk up the parent chain (any account) up to a small limit
+  const ancestors: FullPost[] = [];
+  let cursor: Uuid | null = root.replyTargetId ?? null;
+  while (cursor != null && ancestors.length < 8) {
+    const parent = (await db.query.posts.findFirst({
+      where: eq(posts.id, cursor),
+      with: {
+        account: true,
+        media: true,
+        poll: { with: { options: true } },
+        reactions: true,
+      },
+    })) as FullPost | undefined;
+    if (parent == null) break;
+    ancestors.unshift(parent);
+    cursor = parent.replyTargetId ?? null;
   }
-  for (const bucket of childrenMap.values()) {
-    bucket.sort((a, b) => a.id.localeCompare(b.id));
-  }
 
-  // DFS flatten descendants (chronological at each level)
-  const descendants: ThreadPost[] = [];
-  const walk = (node: ThreadPost) => {
-    const kids = childrenMap.get(node.id) ?? [];
-    for (const kid of kids) {
-      descendants.push(kid);
-      walk(kid);
-    }
-  };
-  walk(root);
-
-  // Reactions (emoji reactions) on the root post
-  const rootReactions = await db.query.reactions.findMany({
-    where: eq(reactions.postId, root.id),
-    orderBy: asc(reactions.created),
-  });
-
-  // Non-author replies to any post in the author's thread — these
-  // are the "comments" from other people on the fediverse.
-  const threadPostIds = [root.id, ...descendants.map((d) => d.id)];
-  const comments = (await db.query.posts.findMany({
+  // Direct + nested replies (any account, public+unlisted)
+  const allDescendants = (await db.query.posts.findMany({
     where: and(
-      inArray(posts.replyTargetId, threadPostIds),
-      ne(posts.accountId, accountOwner.id),
       or(eq(posts.visibility, "public"), eq(posts.visibility, "unlisted")),
     ),
     orderBy: asc(posts.published),
     with: {
       account: true,
       media: true,
+      poll: { with: { options: true } },
       reactions: true,
     },
-  })) as CommentPost[];
+  })) as FullPost[];
+  // Build parent → children map, then DFS from root
+  const childrenOf = new Map<string, FullPost[]>();
+  for (const p of allDescendants) {
+    if (p.replyTargetId != null) {
+      const bucket = childrenOf.get(p.replyTargetId) ?? [];
+      bucket.push(p);
+      childrenOf.set(p.replyTargetId, bucket);
+    }
+  }
+  type ReplyNode = { post: FullPost; children: ReplyNode[] };
+  const buildTree = (parentId: Uuid, depth: number): ReplyNode[] => {
+    if (depth > 4) return [];
+    return (childrenOf.get(parentId) ?? []).map((post) => ({
+      post,
+      children: buildTree(post.id, depth + 1),
+    }));
+  };
+  const replyTree = buildTree(root.id, 0);
 
-  // Build a local-shortcode → local URL map so render-time code can
-  // swap remote reaction image URLs for the locally-mirrored copy
-  // when an admin has already imported that emoji. Only the codes
-  // actually used in this post's reactions are fetched.
+  // Aggregate reactions on the root + collect "who fav/boosted"
+  const favWho = await db.query.likes.findMany({
+    where: eq(posts.id, root.id), // placeholder — Hollo's "likes" relation is on posts
+    limit: 0, // disabled until likes schema is wired here; keep stub
+  });
+  void favWho;
+
+  // Locally-mirrored custom emoji map for reaction rendering
   const usedShortcodes = new Set<string>();
   const collectCodes = (list: readonly Reaction[]) => {
     for (const r of list) {
@@ -122,9 +117,7 @@ profilePost.get<"/:handle{@[^/]+}/:id{[-a-f0-9]+}">(async (c) => {
       }
     }
   };
-  collectCodes(rootReactions);
-  for (const c of comments) collectCodes(c.reactions);
-
+  collectCodes(root.reactions);
   const localEmojiMap = new Map<string, string>();
   if (usedShortcodes.size > 0) {
     const localEmojis = await db.query.customEmojis.findMany({
@@ -136,267 +129,239 @@ profilePost.get<"/:handle{@[^/]+}/:id{[-a-f0-9]+}">(async (c) => {
     }
   }
 
+  const replyCount = countReplies(replyTree);
+
   return c.html(
-    <PostPage
-      root={root}
-      descendants={descendants}
-      accountOwner={accountOwner}
-      rootReactions={rootReactions}
-      comments={comments}
-      localEmojiMap={localEmojiMap}
-    />,
-  );
-});
-
-interface PostPageProps {
-  readonly accountOwner: AccountOwner & { account: Account };
-  readonly root: ThreadPost;
-  readonly descendants: ThreadPost[];
-  readonly rootReactions: Reaction[];
-  readonly comments: CommentPost[];
-  readonly localEmojiMap: ReadonlyMap<string, string>;
-}
-
-function PostPage({
-  root,
-  descendants,
-  accountOwner,
-  rootReactions,
-  comments,
-  localEmojiMap,
-}: PostPageProps) {
-  const publishedAt = root.published ?? root.updated;
-  const { title, bodyHtml } = deriveTitleAndBody(root);
-  const rootBodyHtml = renderCustomEmojis(bodyHtml, root.emojis);
-  const metaTitle =
-    title ??
-    ((root.content ?? "").length > 30
-      ? `${(root.content ?? "").substring(0, 30)}…`
-      : (root.content ?? ""));
-  return (
-    <Layout
-      title={`${metaTitle} — ${root.account.name}`}
-      shortTitle={metaTitle}
-      description={root.summary ?? root.content}
-      imageUrl={root.account.avatarUrl}
+    <DashboardLayout
+      title={`~/post/${root.id.slice(0, 8)} · ${accountOwner.account.name}`}
+      selectedMenu="home"
+      shellPath={`post/${root.id.slice(0, 8)}`}
+      shellMode="FOCUS"
+      shellStatus={`${root.id.slice(0, 8)} · ${replyCount} repl${
+        replyCount === 1 ? "y" : "ies"
+      }`}
+      shellHints={[
+        { key: "u", label: "parent" },
+        { key: "r", label: "reply" },
+        { key: "f", label: "fav" },
+        { key: "o", label: "open author" },
+      ]}
+      themeColor={accountOwner.themeColor}
+      description={root.summary ?? root.content ?? undefined}
+      imageUrl={accountOwner.account.avatarUrl}
       url={root.url ?? root.iri}
       links={[
         { rel: "alternate", type: "application/activity+json", href: root.iri },
       ]}
-      themeColor={accountOwner.themeColor}
     >
-      <div class="win">
-        <div class="titlebar">
-          <div class="dots">
-            <i />
-            <i />
-            <i />
-          </div>
-          <div class="path">
-            <b>{accountOwner.handle}@hollo</b>
-            <span>: </span>
-            <span class="ac">~/post/{root.id.slice(0, 8)}</span>
-          </div>
-          <div class="tright">
-            <span>conversation</span>
-            <span class="led" />
-            <span data-clock>00:00</span>
-          </div>
-        </div>
-        <div class="mid" style="grid-template-columns: 1fr;">
-          <main class="page">
-            <div class="wrap">
-      <Profile accountOwner={accountOwner} />
-      <div class="article-page">
-        <header class="article-hero">
-          {title && <h1 class="article-title">{title}</h1>}
-          <div class="article-byline">
-            <span class="byline-authors">
-              {root.account.avatarUrl && (
-                <button
-                  type="button"
-                  class="byline-avatar-btn"
-                  aria-label={`View ${root.account.name}'s profile`}
-                  {...({ popovertarget: "profile-popup" } as Record<
-                    string,
-                    string
-                  >)}
-                >
-                  <img
-                    src={root.account.avatarUrl}
-                    alt=""
-                    class="byline-avatar"
-                    width={28}
-                    height={28}
-                  />
-                </button>
-              )}
-              <a href={root.account.url ?? root.account.iri}>
-                {root.account.name}
-              </a>
-            </span>
-            <span class="byline-date">
-              <a href={root.url ?? root.iri}>
-                <time dateTime={publishedAt.toISOString()}>
-                  {publishedAt.toLocaleString("en", { dateStyle: "long" })}
-                </time>
-              </a>
-            </span>
-          </div>
-        </header>
-        <ProfilePopup accountOwner={accountOwner} />
-        <article class="article-body">
-          {rootBodyHtml && (
-            <div
-              class="article-segment markdown-content"
-              dangerouslySetInnerHTML={{ __html: rootBodyHtml }}
-              lang={root.language ?? undefined}
-            />
-          )}
-          {root.media.map((medium) => (
-            <ThreadMedia medium={medium} />
-          ))}
-          {descendants.map((post) => (
-            <ThreadSegment post={post} />
-          ))}
-        </article>
-        <ArticleEngagement
-          post={root}
-          reactions={rootReactions}
-          commentCount={comments.length}
-          localEmojiMap={localEmojiMap}
-        />
-        {comments.length > 0 && (
-          <CommentList
-            comments={comments}
-            accountOwner={accountOwner}
-            localEmojiMap={localEmojiMap}
-          />
-        )}
+      <div class="cmdline">
+        <span class="u">{accountOwner.handle}@hollo</span>:~${" "}
+        <span class="cmd">post open {root.id.slice(0, 4)}</span>{" "}
+        <span class="arg">--context</span>
       </div>
-            </div>
-          </main>
-        </div>
-        <div class="statusbar">
-          <span class="mode">FOCUS</span>
-          <span class="k">
-            [<b>u</b>] parent
-          </span>
-          <span class="k">
-            [<b>r</b>] reply
-          </span>
-          <span class="k">
-            [<b>f</b>] fav
-          </span>
-          <span class="sp" />
-          <span>conversation</span>
-        </div>
-      </div>
-    </Layout>
-  );
-}
 
-// If a post has no explicit summary, promote its first paragraph to
-// the article title and drop it from the body so content doesn't
-// repeat. Otherwise use summary as title and keep body intact.
-function deriveTitleAndBody(post: ThreadPost): {
-  title: string | null;
-  bodyHtml: string;
-} {
-  if (post.summary != null && post.summary.trim() !== "") {
-    return { title: post.summary.trim(), bodyHtml: post.contentHtml ?? "" };
-  }
-  const html = post.contentHtml ?? "";
-  const firstParagraph = html.match(/^\s*<p\b[^>]*>([\s\S]*?)<\/p>\s*/i);
-  if (firstParagraph) {
-    const titleText = firstParagraph[1]
-      .replace(/<[^>]+>/g, "")
-      .replace(/\s+/g, " ")
-      .trim();
-    if (titleText !== "") {
-      return {
-        title: titleText,
-        bodyHtml: html.substring(firstParagraph[0].length),
-      };
-    }
-  }
-  return { title: null, bodyHtml: html };
-}
-
-interface ArticleEngagementProps {
-  readonly post: ThreadPost;
-  readonly reactions: Reaction[];
-  readonly commentCount: number;
-  readonly localEmojiMap: ReadonlyMap<string, string>;
-}
-
-function ArticleEngagement({
-  post,
-  reactions,
-  commentCount,
-  localEmojiMap,
-}: ArticleEngagementProps) {
-  const grouped = groupByEmojis(reactions, localEmojiMap);
-  const likes = post.likesCount ?? 0;
-  const shares = post.sharesCount ?? 0;
-  const hasAny =
-    likes > 0 || shares > 0 || reactions.length > 0 || commentCount > 0;
-  if (!hasAny) return null;
-  return (
-    <aside class="article-engagement">
-      <div class="engagement-stats">
-        {likes > 0 && (
-          <span class="engagement-stat">
-            <span class="engagement-icon" aria-hidden="true">
-              &#9829;
-            </span>
-            {likes} {likes === 1 ? "like" : "likes"}
-          </span>
-        )}
-        {shares > 0 && (
-          <span class="engagement-stat">
-            <span class="engagement-icon" aria-hidden="true">
-              &#8634;
-            </span>
-            {shares} {shares === 1 ? "share" : "shares"}
-          </span>
-        )}
-        {commentCount > 0 && (
-          <a href="#comments" class="engagement-stat">
-            <span class="engagement-icon" aria-hidden="true">
-              &#128172;
-            </span>
-            {commentCount} {commentCount === 1 ? "comment" : "comments"}
-          </a>
-        )}
-      </div>
-      {Object.keys(grouped).length > 0 && (
-        <div class="engagement-reactions">
-          {Object.entries(grouped).map(([emoji, { src, count }]) => (
-            <span class="reaction-chip" title={`${emoji} × ${count}`}>
-              {src == null ? (
-                <span class="reaction-emoji">{emoji}</span>
-              ) : (
-                <img class="reaction-emoji" src={src} alt={emoji} />
-              )}
-              <span class="reaction-count">{count}</span>
-            </span>
+      {ancestors.length > 0 && (
+        <>
+          <div class="ctxhead">
+            ↑ context · {ancestors.length} earlier —{" "}
+            <span class="gn">[u] expand</span>
+          </div>
+          {ancestors.map((p, idx) => (
+            <CtxLine post={p} depth={idx} />
           ))}
+        </>
+      )}
+
+      <FocusBlock post={root} localEmojiMap={localEmojiMap} />
+
+      {replyCount > 0 && (
+        <div class="rephead">
+          ↓ {replyCount} repl{replyCount === 1 ? "y" : "ies"}
         </div>
       )}
-    </aside>
+      {replyTree.map((node) => (
+        <ReplyBlock node={node} />
+      ))}
+
+      <div class="endcap">
+        — end of conversation · <span class="gn">[r]</span> reply ·{" "}
+        {ancestors.length > 0 && (
+          <>
+            <span class="gn">[u]</span> jump to parent
+          </>
+        )}{" "}
+        —
+      </div>
+    </DashboardLayout>,
+  );
+});
+
+function countReplies(tree: { children: any[] }[]): number {
+  let n = 0;
+  const walk = (nodes: { children: any[] }[]) => {
+    for (const n2 of nodes) {
+      n++;
+      walk(n2.children);
+    }
+  };
+  walk(tree);
+  return n;
+}
+
+function CtxLine({ post, depth }: { post: FullPost; depth: number }) {
+  const handle = post.account.handle;
+  const shortHandle = handle.startsWith("@")
+    ? handle.split("@")[1] ?? handle
+    : handle;
+  const indent = " ".repeat(depth);
+  const text = stripHtmlInline(post.contentHtml ?? "");
+  return (
+    <div class="ctx">
+      <span class="dimc">{indent}╰</span>{" "}
+      <span class="au">{shortHandle}</span>{" "}
+      <span class="muted">{text.slice(0, 80)}</span>
+    </div>
   );
 }
 
-function groupByEmojis(
+function FocusBlock({
+  post,
+  localEmojiMap,
+}: {
+  post: FullPost;
+  localEmojiMap: ReadonlyMap<string, string>;
+}) {
+  const html = renderCustomEmojis(post.contentHtml ?? "", post.emojis);
+  const account = post.account;
+  const nameHtml = renderCustomEmojis(escape(account.name), account.emojis);
+  const initial =
+    account.name.trim().charAt(0).toUpperCase() ||
+    account.handle.replace(/^@/, "").charAt(0).toUpperCase();
+  const handleStr = account.handle.startsWith("@")
+    ? account.handle
+    : `@${account.handle}`;
+  const published = post.published ?? post.updated;
+  const grouped = groupReactions(post.reactions, localEmojiMap);
+  return (
+    <div class="focus">
+      <div class="ph">
+        {account.avatarUrl ? (
+          <img
+            src={account.avatarUrl}
+            alt=""
+            class="av"
+            width={30}
+            height={30}
+            style="object-fit:cover;"
+          />
+        ) : (
+          <span class="av">{initial}</span>
+        )}
+        <span
+          class="au"
+          dangerouslySetInnerHTML={{ __html: nameHtml }}
+        />{" "}
+        <span class="hn">{handleStr}</span>
+      </div>
+      <div class="bigtx" dangerouslySetInnerHTML={{ __html: html }} />
+      <div class="acts">
+        <span class="a reply">
+          ↩ <b>{post.repliesCount ?? 0}</b>
+        </span>
+        <span class="a boost">
+          ↻ <b>{post.sharesCount ?? 0}</b>
+        </span>
+        <span class="a fav">
+          ♥ <b>{post.likesCount ?? 0}</b>
+        </span>
+        <span class="muted">
+          ⌗ bookmark ·{" "}
+          {published.toLocaleString("en", {
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </span>
+      </div>
+      {Object.keys(grouped).length > 0 && (
+        <div class="reactions">
+          <div class="rxn-chips">
+            {Object.entries(grouped).map(([emoji, { count, src }]) => (
+              <span class="rxn-chip">
+                {src ? (
+                  <img
+                    class="em"
+                    src={src}
+                    alt={emoji}
+                    style="width:13px;height:13px;object-fit:contain;"
+                  />
+                ) : (
+                  <span class="em">{emoji}</span>
+                )}
+                <span class="n">{count}</span>
+              </span>
+            ))}
+            <span class="rxn-chip add">
+              <span class="em">＋</span>
+              <span class="n">react</span>
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ReplyBlock({
+  node,
+}: {
+  node: { post: FullPost; children: { post: FullPost; children: any[] }[] };
+}) {
+  const post = node.post;
+  const account = post.account;
+  const handleStr = account.handle.startsWith("@")
+    ? account.handle
+    : `@${account.handle}`;
+  const published = post.published ?? post.updated;
+  const html = renderCustomEmojis(post.contentHtml ?? "", post.emojis);
+  return (
+    <div class="reply">
+      <div>
+        <span
+          class="au"
+          dangerouslySetInnerHTML={{
+            __html: renderCustomEmojis(escape(account.name), account.emojis),
+          }}
+        />{" "}
+        <span class="hn">
+          {handleStr} ·{" "}
+          {published.toLocaleString("en", {
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </span>
+      </div>
+      <div class="txt" dangerouslySetInnerHTML={{ __html: html }} />
+      <div class="acts">
+        <span class="a reply">↩ {post.repliesCount ?? 0}</span>
+        <span class="a fav">♥ {post.likesCount ?? 0}</span>
+      </div>
+      {node.children.map((child) => (
+        <ReplyBlock node={child} />
+      ))}
+    </div>
+  );
+}
+
+function groupReactions(
   reactionList: Reaction[],
   localEmojiMap: ReadonlyMap<string, string>,
-): Record<string, { src?: string; count: number }> {
-  const result: Record<string, { src?: string; count: number }> = {};
+): Record<string, { count: number; src?: string }> {
+  const result: Record<string, { count: number; src?: string }> = {};
   for (const r of reactionList) {
-    // Prefer the locally-mirrored copy when the shortcode already
-    // lives in customEmojis. Falls back to the remote URL stored on
-    // the reaction if we haven't imported it.
     let src = r.customEmoji ?? undefined;
     if (r.emoji.startsWith(":") && r.emoji.endsWith(":")) {
       const code = r.emoji.slice(1, -1);
@@ -404,7 +369,7 @@ function groupByEmojis(
       if (localUrl != null) src = localUrl;
     }
     if (result[r.emoji] == null) {
-      result[r.emoji] = { src, count: 1 };
+      result[r.emoji] = { count: 1, src };
     } else {
       result[r.emoji].count++;
     }
@@ -412,280 +377,11 @@ function groupByEmojis(
   return result;
 }
 
-interface CommentListProps {
-  readonly comments: CommentPost[];
-  readonly accountOwner: AccountOwner & { account: Account };
-  readonly localEmojiMap: ReadonlyMap<string, string>;
-}
-
-function CommentList({
-  comments,
-  accountOwner,
-  localEmojiMap,
-}: CommentListProps) {
-  return (
-    <section class="article-comments" id="comments">
-      <h2 class="article-comments-heading">
-        {comments.length === 1 ? "1 comment" : `${comments.length} comments`}
-      </h2>
-      <ul class="comment-list">
-        {comments.map((c) => (
-          <Comment
-            comment={c}
-            accountOwner={accountOwner}
-            localEmojiMap={localEmojiMap}
-          />
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-interface CommentProps {
-  readonly comment: CommentPost;
-  readonly accountOwner: AccountOwner & { account: Account };
-  readonly localEmojiMap: ReadonlyMap<string, string>;
-}
-
-function Comment({ comment, accountOwner, localEmojiMap }: CommentProps) {
-  const published = comment.published ?? comment.updated;
-  const contentHtml = renderCustomEmojis(
-    comment.contentHtml ?? "",
-    comment.emojis,
-  );
-  const grouped = groupByEmojis(comment.reactions, localEmojiMap);
-  const account = comment.account;
-  const accountUrl = account.url ?? account.iri;
-  const isOwner = comment.accountId === accountOwner.id;
-  return (
-    <li class={`comment${isOwner ? " comment-owner" : ""}`}>
-      <a class="comment-avatar-link" href={accountUrl}>
-        {account.avatarUrl ? (
-          <img
-            class="comment-avatar"
-            src={account.avatarUrl}
-            alt=""
-            width={36}
-            height={36}
-          />
-        ) : (
-          <span class="comment-avatar comment-avatar-placeholder">
-            {account.name?.[0] ?? "?"}
-          </span>
-        )}
-      </a>
-      <div class="comment-body">
-        <div class="comment-meta">
-          <a
-            class="comment-name"
-            href={accountUrl}
-            dangerouslySetInnerHTML={{
-              __html: renderCustomEmojis(escape(account.name), account.emojis),
-            }}
-          />
-          <span class="comment-handle">
-            {account.handle.startsWith("@")
-              ? account.handle
-              : `@${account.handle}`}
-          </span>
-          <a
-            class="comment-date"
-            href={comment.url ?? comment.iri}
-            title={published.toISOString()}
-          >
-            <time dateTime={published.toISOString()}>
-              {published.toLocaleString("en", { dateStyle: "medium" })}
-            </time>
-          </a>
-        </div>
-        {comment.contentHtml && (
-          <div
-            class="comment-content markdown-content"
-            dangerouslySetInnerHTML={{ __html: contentHtml }}
-            lang={comment.language ?? undefined}
-          />
-        )}
-        {comment.media.length > 0 && (
-          <div class="comment-media">
-            {comment.media.map((m) => (
-              <a href={m.url}>
-                <img
-                  src={m.thumbnailUrl}
-                  alt={m.description ?? ""}
-                  loading="lazy"
-                />
-              </a>
-            ))}
-          </div>
-        )}
-        {Object.keys(grouped).length > 0 && (
-          <div class="comment-reactions">
-            {Object.entries(grouped).map(([emoji, { src, count }]) => (
-              <span class="reaction-chip" title={`${emoji} × ${count}`}>
-                {src == null ? (
-                  <span class="reaction-emoji">{emoji}</span>
-                ) : (
-                  <img class="reaction-emoji" src={src} alt={emoji} />
-                )}
-                {count > 1 && <span class="reaction-count">{count}</span>}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-    </li>
-  );
-}
-
-interface ThreadMediaProps {
-  readonly medium: Medium;
-}
-
-function ThreadMedia({ medium }: ThreadMediaProps) {
-  return (
-    <div class="article-media">
-      <a href={medium.url}>
-        <img
-          src={medium.thumbnailUrl}
-          alt={medium.description ?? ""}
-          width={medium.thumbnailWidth ?? undefined}
-          height={medium.thumbnailHeight ?? undefined}
-        />
-      </a>
-    </div>
-  );
-}
-
-interface ThreadSegmentProps {
-  readonly post: ThreadPost;
-}
-
-function ThreadSegment({ post }: ThreadSegmentProps) {
-  const html = renderCustomEmojis(post.contentHtml ?? "", post.emojis);
-  return (
-    <>
-      {post.contentHtml && (
-        <div
-          class="article-segment markdown-content"
-          dangerouslySetInnerHTML={{ __html: html }}
-          lang={post.language ?? undefined}
-        />
-      )}
-      {post.media.map((medium) => (
-        <ThreadMedia medium={medium} />
-      ))}
-    </>
-  );
-}
-
-interface ProfilePopupProps {
-  readonly accountOwner: AccountOwner & { account: Account };
-}
-
-function ProfilePopup({ accountOwner }: ProfilePopupProps) {
-  const account = accountOwner.account;
-  const nameHtml = renderCustomEmojis(escape(account.name), account.emojis);
-  const bioHtml = renderCustomEmojis(account.bioHtml ?? "", account.emojis);
-  const url = account.url ?? account.iri;
-  return (
-    <>
-      <div
-        id="profile-popup"
-        class="profile-popup"
-        {...({ popover: "auto" } as Record<string, string>)}
-      >
-        <button
-          type="button"
-          class="profile-popup-close"
-          aria-label="Close profile"
-          {...({
-            popovertarget: "profile-popup",
-            popovertargetaction: "hide",
-          } as Record<string, string>)}
-        >
-          &times;
-        </button>
-        {account.coverUrl && (
-          <div class="profile-popup-cover">
-            <img src={account.coverUrl} alt="" />
-          </div>
-        )}
-        <div class="profile-popup-body">
-          <div class="profile-popup-ident">
-            {account.avatarUrl && (
-              <img
-                class="profile-popup-avatar"
-                src={account.avatarUrl}
-                alt=""
-                width={48}
-                height={48}
-              />
-            )}
-            <div class="profile-popup-ident-text">
-              <a
-                class="profile-popup-name"
-                href={url}
-                dangerouslySetInnerHTML={{ __html: nameHtml }}
-              />
-              <div class="profile-popup-handle">{account.handle}</div>
-              <div class="profile-popup-stats">
-                {account.followingCount} following &middot;{" "}
-                {account.followersCount === 1
-                  ? "1 follower"
-                  : `${account.followersCount} followers`}
-              </div>
-            </div>
-          </div>
-          {account.bioHtml && (
-            <div
-              class="profile-popup-bio"
-              dangerouslySetInnerHTML={{ __html: bioHtml }}
-            />
-          )}
-          {account.fieldHtmls && Object.keys(account.fieldHtmls).length > 0 && (
-            <dl class="profile-popup-fields">
-              {Object.entries(account.fieldHtmls).map(([key, value]) => (
-                <>
-                  <dt>{key}</dt>
-                  <dd dangerouslySetInnerHTML={{ __html: value }} />
-                </>
-              ))}
-            </dl>
-          )}
-        </div>
-      </div>
-      <script
-        // biome-ignore lint/security/noDangerouslySetInnerHtml: inline positioning script
-        dangerouslySetInnerHTML={{
-          __html: `(() => {
-  const popup = document.getElementById('profile-popup');
-  if (!popup) return;
-  const place = () => {
-    const btn = document.querySelector('[popovertarget="profile-popup"]');
-    if (!btn) return;
-    const r = btn.getBoundingClientRect();
-    const pw = popup.offsetWidth || 340;
-    const ph = popup.offsetHeight || 200;
-    const vw = document.documentElement.clientWidth;
-    const vh = document.documentElement.clientHeight;
-    let top = r.bottom + 8;
-    let left = r.left;
-    if (top + ph > vh - 12) top = Math.max(12, r.top - ph - 8);
-    if (left + pw > vw - 12) left = Math.max(12, vw - pw - 12);
-    popup.style.top = top + 'px';
-    popup.style.left = left + 'px';
-  };
-  popup.addEventListener('toggle', (e) => {
-    if (e.newState === 'open') requestAnimationFrame(place);
-  });
-  window.addEventListener('resize', () => {
-    if (popup.matches(':popover-open')) place();
-  });
-})();`,
-        }}
-      />
-    </>
-  );
+function stripHtmlInline(html: string): string {
+  return html
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 export default profilePost;

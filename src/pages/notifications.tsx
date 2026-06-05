@@ -95,6 +95,21 @@ interface NotificationRowProps {
 }
 
 function NotificationRow({ row, unread }: NotificationRowProps) {
+  if (row.type === "admin_warning") {
+    return (
+      <div class="notif banner alert">
+        <div class="bh">⚠ moderation notice · from your instance admin</div>
+        <div class="bb">
+          {stripHtml(row.targetPost?.contentHtml ?? "").slice(0, 280) ||
+            "A moderation action was taken on your instance."}
+        </div>
+        <div class="bf">
+          <span class="gn">view report</span>
+          <span class="gn">dismiss</span>
+        </div>
+      </div>
+    );
+  }
   const meta = describeNotification(row.type);
   const actorName = row.actorAccount?.name ?? "someone";
   const actorHandle = row.actorAccount?.handle ?? "";
@@ -108,7 +123,12 @@ function NotificationRow({ row, unread }: NotificationRowProps) {
       : null;
   return (
     <div class={`notif${unread ? " sel" : ""}`} data-open={openHref}>
-      <div class={`ic ${meta.iconClass}`}>{meta.glyph}</div>
+      <div
+        class={`ic ${meta.iconClass}`}
+        style={meta.iconStyle}
+      >
+        {meta.glyph}
+      </div>
       <div class="body2">
         <div class="who">
           <span
@@ -135,6 +155,8 @@ function describeNotification(type: string): {
   iconClass: string;
   glyph: string;
   verb: string;
+  /** Inline style override for the glyph color (when not encoded by class). */
+  iconStyle?: string;
 } {
   switch (type) {
     case "mention":
@@ -152,9 +174,33 @@ function describeNotification(type: string): {
     case "status":
       return { iconClass: "reply", glyph: "↩", verb: "replied" };
     case "poll":
-      return { iconClass: "boost", glyph: "▤", verb: "poll ended" };
+      return {
+        iconClass: "mention",
+        glyph: "▤",
+        verb: "a poll you voted in ended",
+        iconStyle: "color:var(--am)",
+      };
     case "update":
-      return { iconClass: "boost", glyph: "✎", verb: "edited a post" };
+      return {
+        iconClass: "mention",
+        glyph: "✎",
+        verb: "edited a post you boosted",
+        iconStyle: "color:var(--dim)",
+      };
+    case "quote":
+      return {
+        iconClass: "mention",
+        glyph: "❝",
+        verb: "quoted your post",
+        iconStyle: "color:var(--am)",
+      };
+    case "move":
+      return {
+        iconClass: "mention",
+        glyph: "↪",
+        verb: "moved",
+        iconStyle: "color:var(--blue)",
+      };
     default:
       return { iconClass: "mention", glyph: "•", verb: type };
   }
