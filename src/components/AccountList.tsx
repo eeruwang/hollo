@@ -30,64 +30,66 @@ function AccountItem({ accountOwner: { account } }: AccountItemProps) {
   );
   const href = account.url ?? account.iri;
   return (
-    <article>
-      <header>
-        <hgroup>
-          <h2>
-            <a dangerouslySetInnerHTML={{ __html: nameHtml }} href={href} />
-          </h2>
-          <p style="user-select: all;">{account.handle}</p>
-        </hgroup>
-      </header>
-      <div dangerouslySetInnerHTML={{ __html: bioHtml }} />
-      <p>
-        {account.published ? (
-          <small>
-            Created at{" "}
-            <time dateTime={account.published.toISOString()}>
-              {account.published.toLocaleDateString()}
-            </time>
-            .
-          </small>
-        ) : (
-          <small>
-            Fetched at{" "}
-            <time dateTime={account.updated.toISOString()}>
-              {account.updated.toLocaleDateString()}
-            </time>
-            .
-          </small>
-        )}
-      </p>
-      <footer>
+    <article class="entry mine" style="margin-bottom:14px;">
+      <div class="meta">
+        <span
+          class="au"
+          dangerouslySetInnerHTML={{ __html: nameHtml }}
+        />
+        <span class="ts" style="user-select:all;">
+          {account.handle}
+        </span>
+        <span class="dimc" style="margin-left:auto;">
+          {account.published ? (
+            <>
+              created{" "}
+              <time dateTime={account.published.toISOString()}>
+                {account.published.toLocaleDateString()}
+              </time>
+            </>
+          ) : (
+            <>
+              fetched{" "}
+              <time dateTime={account.updated.toISOString()}>
+                {account.updated.toLocaleDateString()}
+              </time>
+            </>
+          )}
+        </span>
+      </div>
+      {bioHtml && (
+        <div
+          class="txt"
+          style="max-width:60ch;"
+          dangerouslySetInnerHTML={{ __html: bioHtml }}
+        />
+      )}
+      <div class="acts" style="margin-top:10px;">
+        <a class="btn-pri" href={`/accounts/${account.id}`}>
+          ✎ edit
+        </a>
+        <a class="btn-line" href={`/accounts/${account.id}/migrate`}>
+          ↪ migrate
+        </a>
+        <a class="btn-line" href={href} target="_blank" rel="noreferrer">
+          open ↗
+        </a>
+        <span class="sp" style="margin-left:auto;" />
         <form
-          className="grid"
           action={`/accounts/${account.id}/delete`}
           method="post"
-          onsubmit="return confirm('Are you sure you want to delete this account?')"
+          onsubmit="return confirm('Delete this account? This is irreversible.')"
+          style="display:inline; margin:0;"
         >
-          <div role="group">
-            <a
-              href={`/accounts/${account.id}`}
-              role="button"
-              style="display: block;"
-            >
-              Edit
-            </a>
-            <a
-              href={`/accounts/${account.id}/migrate`}
-              role="button"
-              className="contrast"
-              style="display: block;"
-            >
-              Migrate from/to
-            </a>
-            <button type="submit" className="secondary">
-              Delete
-            </button>
-          </div>
+          <button
+            type="submit"
+            class="btn-line"
+            style="color:var(--red); border-color:var(--bd);"
+          >
+            delete
+          </button>
         </form>
-      </footer>
+      </div>
     </article>
   );
 }

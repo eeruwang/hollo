@@ -36,11 +36,16 @@ emojis.get("/", async (c) => {
   ].sort();
 
   return c.html(
-    <DashboardLayout title="Hollo: Custom emojis" selectedMenu="emojis">
-      <hgroup>
-        <h1>Custom emojis</h1>
-        <p>You can register custom emojis for your Hollo accounts.</p>
-      </hgroup>
+    <DashboardLayout
+      title="~/emojis · Hollo"
+      selectedMenu="emojis"
+      shellPath="emojis"
+      shellStatus={`${rows.length} custom`}
+    >
+      <div class="cmdline">
+        <span class="u">root@hollo</span>:~${" "}
+        <span class="cmd">emojis</span> <span class="arg">--list</span>
+      </div>
       <form
         method="post"
         action="/emojis/delete"
@@ -230,11 +235,15 @@ emojis.get("/new", async (c) => {
     .where(isNotNull(customEmojis.category))
     .groupBy(customEmojis.category);
   return c.html(
-    <DashboardLayout title="Hollo: Add custom emoji" selectedMenu="emojis">
-      <hgroup>
-        <h1>Add custom emoji</h1>
-        <p>You can add a custom emoji to your Hollo server.</p>
-      </hgroup>
+    <DashboardLayout
+      title="~/emojis/new · Hollo"
+      selectedMenu="emojis"
+      shellPath="emojis/new"
+    >
+      <div class="cmdline">
+        <span class="u">root@hollo</span>:~${" "}
+        <span class="cmd">emoji add</span> <span class="arg">--upload</span>
+      </div>
       <form method="post" action="/emojis" enctype="multipart/form-data">
         <fieldset class="grid">
           <label>
@@ -424,7 +433,7 @@ emojis.get("/import", async (c) => {
     }
   }
   return c.html(
-    <DashboardLayout title="Hollo: Import custom emojis" selectedMenu="emojis">
+    <DashboardLayout title="~/emojis/import · Hollo" selectedMenu="emojis">
       <hgroup>
         <h1>Import custom emojis</h1>
         <p>
@@ -614,7 +623,7 @@ emojis.get("/import/remote", async (c) => {
   if (!source) {
     return c.html(
       <DashboardLayout
-        title="Hollo: Import from remote instance"
+        title="~/emojis/import/remote · Hollo"
         selectedMenu="emojis"
       >
         <hgroup>
@@ -696,7 +705,7 @@ emojis.get("/import/remote", async (c) => {
 
   return c.html(
     <DashboardLayout
-      title={`Hollo: Emojis from ${domain}`}
+      title={`~/emojis/from/${domain} · Hollo`}
       selectedMenu="emojis"
     >
       <hgroup>
@@ -730,7 +739,7 @@ emojis.get("/import/remote", async (c) => {
 function renderRemoteFetchError(c: Context, source: string, message: string) {
   return c.html(
     <DashboardLayout
-      title="Hollo: Import from remote instance"
+      title="~/emojis/import/remote · Hollo"
       selectedMenu="emojis"
     >
       <hgroup>
@@ -1136,7 +1145,7 @@ async function mirrorEmojiImage(
 
 emojis.get("/import/zip", async (c) => {
   return c.html(
-    <DashboardLayout title="Hollo: Import emoji pack" selectedMenu="emojis">
+    <DashboardLayout title="~/emojis/import/pack · Hollo" selectedMenu="emojis">
       <hgroup>
         <h1>Import emoji pack (.zip)</h1>
         <p>
@@ -1443,7 +1452,7 @@ emojis.get("/:shortcode/edit", async (c) => {
 
   return c.html(
     <DashboardLayout
-      title={`Hollo: Edit :${row.shortcode}:`}
+      title={`~/emojis/:${row.shortcode}:/edit · Hollo`}
       selectedMenu="emojis"
     >
       <hgroup>
