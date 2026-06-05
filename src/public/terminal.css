@@ -36,6 +36,15 @@ html[data-theme="paper"]{
 }
 *{ box-sizing:border-box; }
 html,body{ margin:0; padding:0; height:100%; }
+/* iOS Safari overscroll: paint the root the page bg color so the
+ * rubber-band bounce reveals dark instead of the browser default
+ * white. Also tell the browser our scroll containers own their
+ * overscroll so the page doesn't bounce on top of fixed shells. */
+html{
+  background:var(--bg);
+  overscroll-behavior:none;
+  -webkit-text-size-adjust:100%;
+}
 body{
   background:var(--page-bg);
   background-image:radial-gradient(60% 80% at 50% 0%, var(--page-glow) 0, var(--page-bg) 70%);
