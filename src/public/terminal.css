@@ -795,22 +795,24 @@ html[data-theme="paper"] .tright .led, html[data-theme="paper"] .pubtop .inst .d
    terminal design components. Scoped to `.page` so terminal
    components above are unaffected.
    =================================================================== */
-.page article {
+/* Pico-style <article> (sections without a terminal class) — scoped to
+ * NOT touch .entry / .notif which are real terminal components. */
+.page article:not(.entry):not(.notif) {
   border: 1px solid var(--bd);
   padding: 13px 15px;
   margin-bottom: 14px;
   background: color-mix(in oklab, var(--bg2) 55%, var(--bg));
   border-radius: 4px;
 }
-.page article header,
-.page article footer {
+.page article:not(.entry):not(.notif) header,
+.page article:not(.entry):not(.notif) footer {
   margin: 0 0 9px;
 }
-.page article footer { margin: 9px 0 0; }
-.page article > header > h1,
-.page article > header > h2,
-.page article > header > h3,
-.page article > header > h4 {
+.page article:not(.entry):not(.notif) footer { margin: 9px 0 0; }
+.page article:not(.entry):not(.notif) > header > h1,
+.page article:not(.entry):not(.notif) > header > h2,
+.page article:not(.entry):not(.notif) > header > h3,
+.page article:not(.entry):not(.notif) > header > h4 {
   margin: 0;
   color: var(--fgs);
   font-family: var(--mono);
@@ -843,7 +845,7 @@ html[data-theme="paper"] .tright .led, html[data-theme="paper"] .pubtop .inst .d
 }
 .page hgroup p { margin: 4px 0 0; color: var(--faint); font-size: 12.5px; }
 .page p { color: var(--fg); margin: 0 0 11px; }
-.page p a, .page article a, .page td a, .page label a {
+.page p a, .page article:not(.entry):not(.notif) a, .page td a, .page label a {
   color: var(--lnk);
   text-decoration: underline;
   text-underline-offset: 2px;
