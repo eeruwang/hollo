@@ -2,7 +2,6 @@ import { and, count, desc, eq, or, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import xss from "xss";
 import { Layout } from "../../components/Layout.tsx";
-import { Post as PostView } from "../../components/Post.tsx";
 import { Profile } from "../../components/Profile.tsx";
 import { db } from "../../db.ts";
 import {
@@ -390,7 +389,9 @@ type PostWithDetails = Post & {
   reactions: Reaction[];
 };
 
-function groupByMonth<T extends { published: Date | null; updated: Date }>(
+// biome-ignore lint/correctness/noUnusedFunctionParameters: kept for future grouped view
+// @ts-expect-error: unused for now
+function _groupByMonth<T extends { published: Date | null; updated: Date }>(
   items: T[],
 ): { label: string; posts: T[] }[] {
   const groups: { label: string; posts: T[] }[] = [];
@@ -460,7 +461,8 @@ function truncateToChars(text: string, maxChars: number): string {
   return `${sliced.trim()}…`;
 }
 
-function makePreview(
+// @ts-expect-error: unused for now
+function _makePreview(
   post: { contentHtml: string | null },
   maxChars = LONG_POST_THRESHOLD_CHARS,
 ): string {
@@ -511,6 +513,57 @@ interface ProfilePageProps {
   readonly atomUrl?: string;
   readonly olderUrl?: string;
   readonly newerUrl?: string;
+}
+
+// Using `any` for the post type because pinned posts and regular posts
+// have subtly different field sets (pinned posts include an extra
+// `pinned` boolean) — we only consume a handful of fields here, so it
+// isn't worth the type gymnastics.
+// biome-ignore lint/suspicious/noExplicitAny: see comment above
+function ProfilePostEntry({
+  post,
+  ownerHandle,
+  pinned,
+}: {
+  post: any;
+  ownerHandle: string;
+  pinned?: boolean;
+}) {
+  const url = `/@${ownerHandle}/${post.id}`;
+  const text = stripHtml(post.contentHtml);
+  const replyText = (post.replies as Array<{ contentHtml: string | null }>)
+    .map((r) => stripHtml(r.contentHtml))
+    .filter((t: string) => t !== "")
+    .join(" · ");
+  const isLong = text.length > LONG_POST_THRESHOLD_CHARS;
+  const body = isLong ? truncateToChars(text, LONG_POST_THRESHOLD_CHARS) : text;
+  const ts = (post.published ?? post.updated) as Date;
+  return (
+    <article class="entry mine" data-open={url}>
+      <div class="meta">
+        {pinned && <span class="badge">PINNED</span>}
+        <span class="ts">
+          {ts.toLocaleDateString("en", { month: "2-digit", day: "2-digit" })}
+        </span>
+        {post.replies.length > 0 && (
+          <span class="dimc">· {post.replies.length} repl{post.replies.length === 1 ? "y" : "ies"}</span>
+        )}
+      </div>
+      <div class="txt">
+        <a href={url} style="color:inherit;">
+          <strong>{body}</strong>
+          {replyText && !isLong && (
+            <span class="dimc"> · {replyText.slice(0, 80)}…</span>
+          )}
+        </a>
+      </div>
+      <div class="acts">
+        <span class="a reply">↩ <b>{post.repliesCount ?? 0}</b></span>
+        <span class="a boost">↻ <b>{post.sharesCount ?? 0}</b></span>
+        <span class="a fav">♥ <b>{post.likesCount ?? 0}</b></span>
+      </div>
+    </article>
+  );
 }
 
 function ProfilePage({
@@ -602,124 +655,36 @@ function ProfilePage({
           </p>
         )}
         {tag == null &&
-          pinnedPosts.map((post) => <PostView post={post} pinned={true} />)}
-        {groupByMonth(posts).map((group) => (
-          <>
-            <div class="date-group">{group.label}</div>
-            {group.posts.map((post) => {
-              const hasReplies = post.replies.length > 0;
-              const postUrl = `/@${accountOwner.handle}/${post.id}`;
-              const rootText = stripHtml(post.contentHtml);
-              const repliesText = post.replies
-                .map((r) => stripHtml(r.contentHtml))
-                .filter((t) => t !== "")
-                .join(" ");
-              const combinedLen =
-                rootText.length +
-                (repliesText ? 1 + repliesText.length : 0);
-
-              // Threads with replies: root text bold, replies normal.
-              // Whole card is a clickable link to the full post page.
-              if (hasReplies) {
-                if (combinedLen <= LONG_POST_THRESHOLD_CHARS) {
-                  return (
-                    <article class="post-preview">
-                      <a href={postUrl}>
-                        <strong>{rootText}</strong>
-                        {repliesText && ` ${repliesText}`}
-                      </a>
-                    </article>
-                  );
-                }
-                if (rootText.length >= LONG_POST_THRESHOLD_CHARS) {
-                  return (
-                    <article class="post-preview">
-                      <a href={postUrl}>
-                        <strong>
-                          {truncateToChars(rootText, LONG_POST_THRESHOLD_CHARS)}
-                        </strong>
-                      </a>
-                    </article>
-                  );
-                }
-                const remaining =
-                  LONG_POST_THRESHOLD_CHARS - rootText.length - 1;
-                return (
-                  <article class="post-preview">
-                    <a href={postUrl}>
-                      <strong>{rootText}</strong>{" "}
-                      {truncateToChars(repliesText, remaining)}
-                    </a>
-                  </article>
-                );
-              }
-
-              // Standalone post over the limit: clickable preview
-              // card with the (bold) truncated root text.
-              if (rootText.length > LONG_POST_THRESHOLD_CHARS) {
-                return (
-                  <article class="post-preview">
-                    <a href={postUrl}>
-                      <strong>
-                        {makePreview({ contentHtml: post.contentHtml })}
-                      </strong>
-                    </a>
-                  </article>
-                );
-              }
-              return <PostView post={post} />;
-            })}
-          </>
+          pinnedPosts.map((post) => (
+            <ProfilePostEntry
+              post={post}
+              ownerHandle={accountOwner.handle}
+              pinned={true}
+            />
+          ))}
+        {posts.map((post) => (
+          <ProfilePostEntry post={post} ownerHandle={accountOwner.handle} />
         ))}
       {(newerUrl || olderUrl) && (
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <div>{newerUrl && <a href={newerUrl}>&larr; Newer</a>}</div>
-          <div>{olderUrl && <a href={olderUrl}>Older &rarr;</a>}</div>
+        <div
+          style="display:flex; justify-content:space-between; margin-top:18px;"
+        >
+          <div>
+            {newerUrl && (
+              <a class="btn" href={newerUrl}>
+                ← newer
+              </a>
+            )}
+          </div>
+          <div>
+            {olderUrl && (
+              <a class="btn" href={olderUrl}>
+                older →
+              </a>
+            )}
+          </div>
         </div>
       )}
-      <footer class="profile-footer">
-        <h3>Contact</h3>
-        <div class="contact-grid">
-          <div class="contact-item">
-            <label>Handle</label>
-            <div class="handle-with-avatar">
-              {accountOwner.account.avatarUrl && (
-                <img
-                  src={accountOwner.account.avatarUrl}
-                  alt=""
-                  width={16}
-                  height={16}
-                />
-              )}
-              <span style="user-select: all;">@{accountOwner.handle}</span>
-            </div>
-          </div>
-          <div class="contact-item">
-            <label>Following</label>
-            <p>{accountOwner.account.followingCount}</p>
-          </div>
-          <div class="contact-item">
-            <label>Followers</label>
-            <p>{accountOwner.account.followersCount}</p>
-          </div>
-        </div>
-        {accountOwner.account.fieldHtmls != null &&
-          Object.keys(accountOwner.account.fieldHtmls).length > 0 && (
-            <>
-              <h3>Links</h3>
-              <div class="contact-grid">
-                {Object.entries(accountOwner.account.fieldHtmls).map(
-                  ([key, value]) => (
-                    <div class="contact-item">
-                      <label>{key}</label>
-                      <div dangerouslySetInnerHTML={{ __html: value }} />
-                    </div>
-                  ),
-                )}
-              </div>
-            </>
-          )}
-      </footer>
             </div>
           </main>
         </div>
