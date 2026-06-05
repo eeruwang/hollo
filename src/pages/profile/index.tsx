@@ -1,9 +1,10 @@
-import { and, count, desc, eq, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, or, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import xss from "xss";
 import { DashboardLayout } from "../../components/DashboardLayout.tsx";
 import { Profile } from "../../components/Profile.tsx";
 import { PublicProfile } from "../../components/PublicProfile.tsx";
+import { TimelineEntry } from "../../components/TimelineEntry.tsx";
 import { db } from "../../db.ts";
 import { isLoggedIn } from "../../login.ts";
 import {
@@ -204,6 +205,32 @@ profile.get<"/:handle">(async (c) => {
     .map((p) => p.post)
     .filter((p) => p.visibility === "public" || p.visibility === "unlisted");
 
+  // For each owner-authored root post on the page, mark whether it's
+  // the head of a self-thread (≥1 same-author reply). One batched
+  // query so the feed render stays cheap.
+  const visibleIds = [...pinnedVisible.map((p) => p.id), ...postList.map((p) => p.id)];
+  let threadHeads = new Map<string, number>();
+  if (visibleIds.length > 0) {
+    const replyRows = await db
+      .select({ replyTargetId: posts.replyTargetId })
+      .from(posts)
+      .where(
+        and(
+          eq(posts.accountId, owner.id),
+          inArray(posts.replyTargetId, visibleIds),
+        ),
+      );
+    const counts = new Map<string, number>();
+    for (const row of replyRows) {
+      if (row.replyTargetId == null) continue;
+      counts.set(
+        row.replyTargetId,
+        (counts.get(row.replyTargetId) ?? 0) + 1,
+      );
+    }
+    threadHeads = counts;
+  }
+
   if (!loggedIn) {
     const instanceHost = new URL(c.req.url).host;
     return c.html(
@@ -214,18 +241,35 @@ profile.get<"/:handle">(async (c) => {
         selectedTab="posts"
       >
         <div class="feedhead">▸ latest · public</div>
-        {pinnedVisible.map((post) => (
-          <ProfilePostEntry
-            post={post}
-            ownerHandle={owner.handle}
-            pinned={true}
-          />
-        ))}
-        {postList
-          .slice(0, PAGE_SIZE)
-          .map((post) => (
-            <ProfilePostEntry post={post} ownerHandle={owner.handle} />
-          ))}
+        {pinnedVisible.map((post) => {
+          const partCount = threadHeads.get(post.id);
+          return (
+            <TimelineEntry
+              post={post}
+              mine={true}
+              pinned={true}
+              openHref={`/@${owner.handle}/${post.id}`}
+              threadPartCount={
+                partCount != null ? partCount + 1 : undefined
+              }
+              threadHandle={owner.handle}
+            />
+          );
+        })}
+        {postList.slice(0, PAGE_SIZE).map((post) => {
+          const partCount = threadHeads.get(post.id);
+          return (
+            <TimelineEntry
+              post={post}
+              mine={true}
+              openHref={`/@${owner.handle}/${post.id}`}
+              threadPartCount={
+                partCount != null ? partCount + 1 : undefined
+              }
+              threadHandle={owner.handle}
+            />
+          );
+        })}
         <div
           class="feedhead"
           style="text-align:center;margin-top:20px;"
@@ -253,6 +297,7 @@ profile.get<"/:handle">(async (c) => {
       atomUrl={atomUrl.href}
       olderUrl={olderUrl}
       newerUrl={newerUrl}
+      threadHeads={threadHeads}
     />,
   );
 });
@@ -516,6 +561,7 @@ function _makePreview(
 interface ProfilePageProps {
   readonly accountOwner: AccountOwner & { account: Account };
   readonly tag?: string;
+  readonly threadHeads?: ReadonlyMap<string, number>;
   readonly posts: (PostWithDetails & {
     replies: PostWithDetails[];
   })[];
@@ -559,57 +605,6 @@ interface ProfilePageProps {
   readonly newerUrl?: string;
 }
 
-// Using `any` for the post type because pinned posts and regular posts
-// have subtly different field sets (pinned posts include an extra
-// `pinned` boolean) — we only consume a handful of fields here, so it
-// isn't worth the type gymnastics.
-// biome-ignore lint/suspicious/noExplicitAny: see comment above
-function ProfilePostEntry({
-  post,
-  ownerHandle,
-  pinned,
-}: {
-  post: any;
-  ownerHandle: string;
-  pinned?: boolean;
-}) {
-  const url = `/@${ownerHandle}/${post.id}`;
-  const text = stripHtml(post.contentHtml);
-  const replyText = (post.replies as Array<{ contentHtml: string | null }>)
-    .map((r) => stripHtml(r.contentHtml))
-    .filter((t: string) => t !== "")
-    .join(" · ");
-  const isLong = text.length > LONG_POST_THRESHOLD_CHARS;
-  const body = isLong ? truncateToChars(text, LONG_POST_THRESHOLD_CHARS) : text;
-  const ts = (post.published ?? post.updated) as Date;
-  return (
-    <article class="entry mine" data-open={url}>
-      <div class="meta">
-        {pinned && <span class="badge">PINNED</span>}
-        <span class="ts">
-          {ts.toLocaleDateString("en", { month: "2-digit", day: "2-digit" })}
-        </span>
-        {post.replies.length > 0 && (
-          <span class="dimc">· {post.replies.length} repl{post.replies.length === 1 ? "y" : "ies"}</span>
-        )}
-      </div>
-      <div class="txt">
-        <a href={url} style="color:inherit;">
-          <strong>{body}</strong>
-          {replyText && !isLong && (
-            <span class="dimc"> · {replyText.slice(0, 80)}…</span>
-          )}
-        </a>
-      </div>
-      <div class="acts">
-        <span class="a reply">↩ <b>{post.repliesCount ?? 0}</b></span>
-        <span class="a boost">↻ <b>{post.sharesCount ?? 0}</b></span>
-        <span class="a fav">♥ <b>{post.likesCount ?? 0}</b></span>
-      </div>
-    </article>
-  );
-}
-
 async function ProfilePage({
   accountOwner,
   tag,
@@ -619,6 +614,7 @@ async function ProfilePage({
   atomUrl,
   olderUrl,
   newerUrl,
+  threadHeads,
 }: ProfilePageProps) {
   const totalPosts = (
     accountOwner.account.postsCount ?? posts.length
@@ -700,16 +696,35 @@ async function ProfilePage({
       )}
 
       {tag == null &&
-        pinnedPosts.map((post) => (
-          <ProfilePostEntry
+        pinnedPosts.map((post) => {
+          const partCount = threadHeads?.get(post.id);
+          return (
+            <TimelineEntry
+              post={post}
+              mine={true}
+              pinned={true}
+              openHref={`/@${accountOwner.handle}/${post.id}`}
+              threadPartCount={
+                partCount != null ? partCount + 1 : undefined
+              }
+              threadHandle={accountOwner.handle}
+            />
+          );
+        })}
+      {posts.map((post) => {
+        const partCount = threadHeads?.get(post.id);
+        return (
+          <TimelineEntry
             post={post}
-            ownerHandle={accountOwner.handle}
-            pinned={true}
+            mine={true}
+            openHref={`/@${accountOwner.handle}/${post.id}`}
+            threadPartCount={
+              partCount != null ? partCount + 1 : undefined
+            }
+            threadHandle={accountOwner.handle}
           />
-        ))}
-      {posts.map((post) => (
-        <ProfilePostEntry post={post} ownerHandle={accountOwner.handle} />
-      ))}
+        );
+      })}
 
       {(newerUrl || olderUrl) && (
         <div

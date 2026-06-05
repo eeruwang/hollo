@@ -101,13 +101,13 @@ export function Profile({ accountOwner, isOwner }: ProfileProps) {
         {isOwner ? (
           <>
             <a class="btn pri" href="/accounts">
-              ✎ edit profile
+              ✎ Edit
             </a>
-            <a class="btn" href={url} target="_blank" rel="noreferrer">
-              open in fediverse ↗
+            <a class="btn" href="/compose">
+              ✉ Compose
             </a>
-            <a class="btn" href={`/@${accountOwner.handle}.atom`}>
-              atom
+            <a class="btn" href="/settings">
+              ⋯
             </a>
           </>
         ) : (
@@ -115,8 +115,11 @@ export function Profile({ accountOwner, isOwner }: ProfileProps) {
             <a class="btn pri" href={url}>
               ＋ Follow
             </a>
+            <a class="btn" href={url}>
+              ✉ Message
+            </a>
             <a class="btn" href={`/@${accountOwner.handle}.atom`}>
-              atom
+              ⋯
             </a>
           </>
         )}
