@@ -1,7 +1,10 @@
+import { and, asc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { DashboardLayout } from "../components/DashboardLayout.tsx";
 import db from "../db.ts";
 import { loginRequired } from "../login.ts";
+import { posts } from "../schema.ts";
+import { isUuid, type Uuid } from "../uuid.ts";
 
 const LANGUAGE_OPTIONS: Array<{ code: string; label: string }> = [
   { code: "en", label: "English" },
@@ -26,14 +29,68 @@ composePage.get("/", async (c) => {
   });
   if (owner == null) return c.redirect("/accounts");
 
+  // ?reply_to=<postId> mode: when set, the editor renders the .chain
+  // block listing the existing thread the new post will continue. The
+  // POSTed status sets in_reply_to_id so federation stitches it onto
+  // the chain.
+  const replyToParam = c.req.query("reply_to");
+  let replyTo: Uuid | null = null;
+  let chain: { id: Uuid; content: string | null; published: Date | null }[] = [];
+  if (replyToParam != null && isUuid(replyToParam)) {
+    // Resolve the chain head and walk the whole same-author chain so
+    // we can show every previous part.
+    let cursor: Uuid | null = replyToParam as Uuid;
+    let head: Uuid = cursor;
+    const seen = new Set<string>();
+    while (cursor != null && !seen.has(cursor)) {
+      seen.add(cursor);
+      const row: { id: Uuid; accountId: Uuid; replyTargetId: Uuid | null } | undefined =
+        await db.query.posts.findFirst({
+          where: eq(posts.id, cursor),
+          columns: { id: true, accountId: true, replyTargetId: true },
+        });
+      if (row == null || row.accountId !== owner.id) break;
+      head = row.id;
+      cursor = row.replyTargetId ?? null;
+    }
+    // Walk forward from head
+    let nextId: Uuid | null = head;
+    const forwardSeen = new Set<string>();
+    while (nextId != null && !forwardSeen.has(nextId)) {
+      forwardSeen.add(nextId);
+      const node: {
+        id: Uuid;
+        content: string | null;
+        published: Date | null;
+      } | undefined = await db.query.posts.findFirst({
+        where: eq(posts.id, nextId),
+        columns: { id: true, content: true, published: true },
+      });
+      if (node == null) break;
+      chain.push(node);
+      const reply: { id: Uuid } | undefined = await db.query.posts.findFirst({
+        where: and(
+          eq(posts.replyTargetId, node.id),
+          eq(posts.accountId, owner.id),
+        ),
+        orderBy: [asc(posts.published)],
+        columns: { id: true },
+      });
+      nextId = reply?.id ?? null;
+    }
+    // replyTo is the LEAF of the existing chain (the post we're
+    // continuing) — that's the last entry in chain[].
+    replyTo = chain.length > 0 ? chain[chain.length - 1].id : null;
+  }
+
   return c.html(
     <DashboardLayout
       title="~/compose · Hollo"
       selectedMenu="compose"
-      shellPath="compose"
+      shellPath={replyTo ? "compose --continue" : "compose"}
       shellMode="INSERT"
       shellModeAlt={true}
-      shellStatus="draft"
+      shellStatus={replyTo ? `continuing 🧵 (part ${chain.length + 1})` : "draft"}
       shellHints={[
         { key: "⌘↵", label: "post" },
         { key: "⌃w", label: "cw" },
@@ -44,7 +101,9 @@ composePage.get("/", async (c) => {
       <div class="cmdline">
         <span class="u">{owner.handle}@hollo</span>:~${" "}
         <span class="cmd">compose</span>{" "}
-        <span class="arg">--new</span>
+        <span class="arg">
+          {replyTo ? `--reply-to ${replyTo.slice(0, 4)}` : "--new"}
+        </span>
       </div>
 
       <form
@@ -53,9 +112,20 @@ composePage.get("/", async (c) => {
         enctype="multipart/form-data"
         class="composer"
       >
+        {replyTo && (
+          <input type="hidden" name="in_reply_to_id" value={replyTo} />
+        )}
         <div class="ce-head">
           writing as <span class="au">@{owner.handle}</span>{" "}
-          <span class="dimc">·</span> federated via ActivityPub
+          <span class="dimc">·</span>{" "}
+          {replyTo ? (
+            <>
+              continuing 🧵 self-thread{" "}
+              <span class="dimc">(part {chain.length + 1})</span>
+            </>
+          ) : (
+            <>federated via ActivityPub</>
+          )}
         </div>
         <div class="ce-body">
           <textarea
@@ -116,6 +186,51 @@ composePage.get("/", async (c) => {
           </button>
         </div>
       </form>
+
+      {chain.length > 0 && (
+        <div class="chain">
+          <div class="ch-h">
+            ▸ this continues your thread — readers see it stitched into the
+            article:
+          </div>
+          {chain.map((part, idx) => {
+            const snippet = (part.content ?? "")
+              .replace(/<[^>]+>/g, " ")
+              .replace(/\s+/g, " ")
+              .trim();
+            return (
+              <div class="prev">
+                <span class="n">
+                  {idx + 1}/{chain.length} ·
+                </span>{" "}
+                {snippet.length > 120
+                  ? `${snippet.slice(0, 120)}…`
+                  : snippet}
+              </div>
+            );
+          })}
+          <div
+            class="prev"
+            style="border-left-color:var(--ac); color:var(--fgs);"
+          >
+            <span class="n" style="color:var(--ac);">
+              {chain.length + 1}/{chain.length + 1} ·
+            </span>{" "}
+            <span class="dimc">draft</span>
+            <span class="cursor" />
+          </div>
+        </div>
+      )}
+
+      {!replyTo && (
+        <p
+          style="margin-top:12px; color:var(--faint); font-size:12px;"
+        >
+          continuing an existing thread? open one of your posts and the{" "}
+          <span class="gn">🧵 read as one article</span> CTA will offer a
+          "continue" link.
+        </p>
+      )}
 
       <div class="endcap">
         ⌘↵ to post · federated via ActivityPub · drafts saved client-side

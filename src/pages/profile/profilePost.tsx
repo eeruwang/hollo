@@ -242,6 +242,12 @@ profilePost.get("/thread", async (c) => {
           ↩ <b>{totalReplies}</b>
         </span>
         <span class="sp" style="margin-left:auto;" />
+        <a
+          class="gn"
+          href={`/compose?reply_to=${chain[chain.length - 1].id}`}
+        >
+          ＋ continue thread →
+        </a>
         <span class="gn">[s] save .md</span>
         <span class="gn">[r] reply</span>
       </div>

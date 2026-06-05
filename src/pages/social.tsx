@@ -175,6 +175,19 @@ social.post("/compose", async (c) => {
     .filter((v): v is File => v instanceof File && v.size > 0);
   const mediaDescription =
     form.get("media_description")?.toString()?.trim() || undefined;
+  const inReplyToRaw = form.get("in_reply_to_id")?.toString()?.trim();
+  // Accept only an owner-authored target so the value can't be used to
+  // smuggle a forged reply context.
+  let inReplyToId: Uuid | null = null;
+  if (inReplyToRaw && inReplyToRaw.length === 36) {
+    const target = await db.query.posts.findFirst({
+      where: eq(posts.id, inReplyToRaw as Uuid),
+      columns: { id: true, accountId: true, iri: true },
+    });
+    if (target != null && target.accountId === owner.id) {
+      inReplyToId = target.id;
+    }
+  }
 
   if (!content && mediaFiles.length === 0) return c.redirect("/social");
 
@@ -214,6 +227,7 @@ social.post("/compose", async (c) => {
     sensitive: sensitive || spoilerText != null,
     url: url.href,
     published: sql`CURRENT_TIMESTAMP`,
+    replyTargetId: inReplyToId,
   });
 
   // Process uploaded media after the post row is in place so the FK
