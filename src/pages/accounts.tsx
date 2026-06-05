@@ -872,16 +872,13 @@ accounts.get("/:id/migrate", async (c) => {
   // Check if we need to auto-refresh (job in progress)
   const shouldAutoRefresh =
     activeJob?.status === "pending" || activeJob?.status === "processing";
-  const sectionClass =
-    "rounded-xl border border-neutral-200 bg-white p-6 dark:border-neutral-800 dark:bg-neutral-900";
-  const inputClass =
-    "rounded-md border bg-white px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-neutral-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-neutral-950 dark:text-neutral-100 dark:placeholder:text-neutral-500 dark:focus:ring-brand-900";
-  const primaryButtonClass =
-    "rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-brand-700 dark:hover:bg-brand-800";
-  const secondaryButtonClass =
-    "rounded-md border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800";
-  const csvLinkClass =
-    "inline-flex items-center gap-1 text-sm text-brand-700 underline-offset-2 hover:underline dark:text-brand-400";
+  // Terminal-component classes (kept as string constants so the JSX
+  // below stays diff-friendly with the original Tailwind version).
+  const sectionClass = "setblock";
+  const inputClass = "";
+  const primaryButtonClass = "btn-pri";
+  const secondaryButtonClass = "btn-line";
+  const csvLinkClass = "gn";
   const dataRows = [
     {
       label: "Follows",
@@ -919,35 +916,35 @@ accounts.get("/:id/migrate", async (c) => {
         <span class="arg">{username}</span>
       </div>
 
-      <div class="space-y-6">
+      <div style="display:flex; flex-direction:column; gap:14px;">
         <section class={sectionClass}>
-          <header class="mb-4">
-            <h2 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+          <header style="margin-bottom:11px;">
+            <h2 style="margin:0 0 4px; color:var(--ac); font-family:var(--mono); font-weight:600; font-size:15px;">
               Aliases
             </h2>
-            <p class="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
+            <p class="dimc" style="margin:0; font-size:12.5px;">
               Add aliases that point to{" "}
-              <code class="font-mono text-brand-700 dark:text-brand-400">
+              <code class="gn">
                 {accountOwner.account.handle}
               </code>{" "}
               when migrating an old account here.
             </p>
           </header>
           {aliases && aliases.length > 0 && (
-            <ul class="mb-4 space-y-1 text-sm">
+            <ul style="list-style:none; padding:0; margin:0 0 11px; display:flex; flex-direction:column; gap:5px;">
               {aliases.map(({ iri, handle }) => (
-                <li class="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-1.5 font-mono text-neutral-800 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-200">
+                <li style="border:1px solid var(--bd); background:var(--bg2); padding:5px 11px; font-family:var(--mono); color:var(--fg);">
                   {handle == null ? (
                     <>
                       {iri}{" "}
-                      <span class="font-sans text-xs text-neutral-500 dark:text-neutral-400">
+                      <span class="dimc" style="font-size:11.5px;">
                         (server unavailable)
                       </span>
                     </>
                   ) : (
                     <>
                       {handle}{" "}
-                      <span class="font-sans text-xs text-neutral-500 dark:text-neutral-400">
+                      <span class="dimc" style="font-size:11.5px;">
                         ({iri})
                       </span>
                     </>
@@ -957,7 +954,7 @@ accounts.get("/:id/migrate", async (c) => {
             </ul>
           )}
           <form method="post" action="migrate/from">
-            <div class="flex gap-2">
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
               <input
                 type="text"
                 name="handle"
@@ -965,44 +962,40 @@ accounts.get("/:id/migrate", async (c) => {
                 required
                 aria-invalid={aliasesError === "from" ? "true" : undefined}
                 value={aliasesError === "from" ? aliasesHandle : undefined}
-                class={`${inputClass} flex-1 ${
-                  aliasesError === "from"
-                    ? "border-red-500"
-                    : "border-neutral-300 dark:border-neutral-700"
-                }`}
+                style="flex:1; min-width:200px; background:transparent; border:1px solid var(--bd); padding:7px 10px; color:var(--fgs); font-family:var(--mono); font-size:13px; outline:none;"
               />
               <button type="submit" class={primaryButtonClass}>
                 Add alias
               </button>
             </div>
-            <p class="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+            <p class="dimc" style="margin:8px 0 0; font-size:11.5px;">
               A fediverse handle (e.g.{" "}
-              <code class="font-mono">@hollo@hollo.social</code>) or an actor
+              <code>@hollo@hollo.social</code>) or an actor
               URI (e.g.{" "}
-              <code class="font-mono">https://hollo.social/@hollo</code>) is
+              <code>https://hollo.social/@hollo</code>) is
               allowed.
             </p>
           </form>
         </section>
 
         <section class={sectionClass}>
-          <header class="mb-4">
-            <h2 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+          <header style="margin-bottom:11px;">
+            <h2 style="margin:0 0 4px; color:var(--ac); font-family:var(--mono); font-weight:600; font-size:15px;">
               Move {username} to a new account
             </h2>
-            <p class="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
+            <p class="dimc" style="margin:0; font-size:12.5px;">
               Move{" "}
-              <code class="font-mono text-brand-700 dark:text-brand-400">
+              <code class="gn">
                 {accountOwner.account.handle}
               </code>{" "}
               to a new account.{" "}
-              <strong class="font-semibold text-red-700 dark:text-red-400">
+              <strong style="color:var(--red);">
                 This action is irreversible.
               </strong>
             </p>
           </header>
           <form method="post" action="migrate/to">
-            <div class="flex gap-2">
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
               <input
                 type="text"
                 name="handle"
@@ -1015,11 +1008,7 @@ accounts.get("/:id/migrate", async (c) => {
                     : accountOwner.account.successor?.handle
                 }
                 disabled={accountOwner.account.successorId != null}
-                class={`${inputClass} flex-1 ${
-                  aliasesError === "to"
-                    ? "border-red-500"
-                    : "border-neutral-300 dark:border-neutral-700"
-                }`}
+                style="flex:1; min-width:200px; background:transparent; border:1px solid var(--bd); padding:7px 10px; color:var(--fgs); font-family:var(--mono); font-size:13px; outline:none;"
               />
               <button
                 type="submit"
@@ -1029,56 +1018,55 @@ accounts.get("/:id/migrate", async (c) => {
                 {accountOwner.account.successorId == null ? "Move" : "Moved"}
               </button>
             </div>
-            <p class="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+            <p class="dimc" style="margin:8px 0 0; font-size:11.5px;">
               The new account must have an alias to this old account.
             </p>
           </form>
         </section>
 
         <section class={sectionClass}>
-          <header class="mb-4">
-            <h2 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+          <header style="margin-bottom:11px;">
+            <h2 style="margin:0 0 4px; color:var(--ac); font-family:var(--mono); font-weight:600; font-size:15px;">
               Export data
             </h2>
-            <p class="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
+            <p class="dimc" style="margin:0; font-size:12.5px;">
               Download your data as Mastodon-compatible CSV files.
             </p>
           </header>
-          <div class="overflow-hidden rounded-lg border border-neutral-200 dark:border-neutral-800">
-            <table class="w-full text-sm">
-              <thead class="bg-neutral-50 text-xs uppercase tracking-wider text-neutral-500 dark:bg-neutral-900 dark:text-neutral-400">
-                <tr>
-                  <th class="px-3 py-2 text-left font-semibold">Category</th>
-                  <th class="px-3 py-2 text-right font-semibold">Entries</th>
-                  <th class="px-3 py-2 text-right font-semibold">Download</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-neutral-200 bg-white dark:divide-neutral-800 dark:bg-neutral-900">
-                {dataRows.map((row) => (
-                  <tr>
-                    <td class="px-3 py-2 text-neutral-800 dark:text-neutral-200">
-                      {row.label}
-                    </td>
-                    <td class="px-3 py-2 text-right tabular-nums text-neutral-700 dark:text-neutral-300">
-                      {row.count.toLocaleString("en-US")}
-                    </td>
-                    <td class="px-3 py-2 text-right">
-                      <a href={row.href} class={csvLinkClass}>
-                        <span class="i-lucide-download" aria-hidden="true" />
-                        CSV
-                      </a>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div class="ttable" style="margin-top:11px;">
+            <div
+              class="tr th"
+              style="grid-template-columns: 1fr 110px 90px;"
+            >
+              <span>category</span>
+              <span style="text-align:right;">entries</span>
+              <span style="text-align:right;">download</span>
+            </div>
+            {dataRows.map((row) => (
+              <div
+                class="tr"
+                style="grid-template-columns: 1fr 110px 90px;"
+              >
+                <span>{row.label}</span>
+                <span
+                  style="text-align:right; font-variant-numeric:tabular-nums;"
+                >
+                  {row.count.toLocaleString("en-US")}
+                </span>
+                <span style="text-align:right;">
+                  <a href={row.href} class={csvLinkClass}>
+                    CSV ↓
+                  </a>
+                </span>
+              </div>
+            ))}
           </div>
         </section>
 
         {activeJob && (
           <section id="import-progress" class={sectionClass}>
-            <header class="mb-3">
-              <h2 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+            <header style="margin-bottom:11px;">
+              <h2 style="margin:0 0 4px; color:var(--ac); font-family:var(--mono); font-weight:600; font-size:15px;">
                 {activeJob.status === "pending"
                   ? "Import queued"
                   : activeJob.status === "processing"
@@ -1089,28 +1077,27 @@ accounts.get("/:id/migrate", async (c) => {
                         ? "Import cancelled"
                         : "Import failed"}
               </h2>
-              <p class="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
+              <p class="dimc" style="margin:0; font-size:12.5px;">
                 Importing {activeJob.category.replace(/_/g, " ")}
                 {activeJob.status === "pending" && " (waiting to start)"}
                 {activeJob.status === "processing" && "..."}
               </p>
             </header>
 
-            <div class="h-2 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-800">
+            <div style="margin:11px 0; height:6px; background:var(--bg2); border:1px solid var(--bds); overflow:hidden;">
               <div
-                class="h-full bg-brand-600 transition-all"
-                style={`width: ${
+                style={`height:100%; background:var(--ac); transition:width .2s linear; width:${
                   activeJob.totalItems > 0
                     ? Math.round(
                         (activeJob.processedItems / activeJob.totalItems) * 100,
                       )
                     : 0
-                }%`}
+                }%;`}
               />
             </div>
 
-            <p class="mt-3 text-sm text-neutral-700 dark:text-neutral-300">
-              <strong class="font-semibold text-neutral-900 dark:text-neutral-100">
+            <p class="dimc" style="font-size:12px;">
+              <strong>
                 {activeJob.processedItems.toLocaleString("en-US")}
               </strong>{" "}
               / {activeJob.totalItems.toLocaleString("en-US")} items processed
@@ -1118,14 +1105,14 @@ accounts.get("/:id/migrate", async (c) => {
                 <>
                   {" "}
                   (
-                  <strong class="font-semibold text-green-700 dark:text-green-400">
+                  <strong class="gn">
                     {activeJob.successfulItems.toLocaleString("en-US")}
                   </strong>{" "}
                   successful
                   {activeJob.failedItems > 0 && (
                     <>
                       ,{" "}
-                      <strong class="font-semibold text-red-700 dark:text-red-400">
+                      <strong style="color:var(--red);">
                         {activeJob.failedItems.toLocaleString("en-US")}
                       </strong>{" "}
                       failed
@@ -1141,13 +1128,13 @@ accounts.get("/:id/migrate", async (c) => {
                 <form
                   method="post"
                   action={`migrate/import/${activeJob.id}/cancel`}
-                  class="mt-4"
+                 
                 >
                   <button type="submit" class={secondaryButtonClass}>
                     Cancel import
                   </button>
                 </form>
-                <p class="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+                <p class="dimc" style="margin:8px 0 0; font-size:11.5px;">
                   This page refreshes every 5 seconds. You can navigate away
                   safely — the import keeps running in the background.
                 </p>
@@ -1180,11 +1167,11 @@ accounts.get("/:id/migrate", async (c) => {
         )}
 
         <section id="import-data" class={sectionClass}>
-          <header class="mb-4">
-            <h2 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+          <header style="margin-bottom:11px;">
+            <h2 style="margin:0 0 4px; color:var(--ac); font-family:var(--mono); font-weight:600; font-size:15px;">
               Import data
             </h2>
-            <p class="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
+            <p class="dimc" style="margin:0; font-size:12.5px;">
               {importDataResult ??
                 "Import account data from CSV files exported by other Hollo or Mastodon instances.  Existing data is preserved; new data is merged in."}
             </p>
@@ -1217,7 +1204,7 @@ accounts.get("/:id/migrate", async (c) => {
                   <option value="blocked_accounts">Blocked accounts</option>
                   <option value="bookmarks">Bookmarks</option>
                 </select>
-                <p class="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                <p class="dimc" style="font-size:12px;">
                   The category of the data you want to import.
                 </p>
               </div>
@@ -1236,18 +1223,18 @@ accounts.get("/:id/migrate", async (c) => {
                   required
                   class="mt-1 block w-full text-sm text-neutral-700 file:mr-3 file:rounded-md file:border-0 file:bg-brand-600 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-white hover:file:bg-brand-700 dark:text-neutral-300 dark:file:bg-brand-700 dark:hover:file:bg-brand-800"
                 />
-                <p class="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                <p class="dimc" style="font-size:12px;">
                   A CSV file exported from another Hollo or Mastodon instance.
                 </p>
               </div>
             </fieldset>
-            <div class="flex justify-end">
+            <div style="display:flex; justify-content:flex-end;">
               <button
                 type="submit"
                 disabled={shouldAutoRefresh}
                 class={primaryButtonClass}
               >
-                {shouldAutoRefresh ? "Import in progress..." : "Import"}
+                {shouldAutoRefresh ? "import in progress..." : "import →"}
               </button>
             </div>
           </form>

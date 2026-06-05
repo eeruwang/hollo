@@ -103,7 +103,7 @@ export async function DashboardLayout(
           <aside class="rail">
             <div class="node">
               <div class="mk">▌ HOLLO</div>
-              <div class="sub">eeruwang fork · 0.9.x</div>
+              <div class="sub">eeruwang fork</div>
             </div>
             <nav>
               <RailLink

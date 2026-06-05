@@ -31,16 +31,22 @@ export interface NewAccountPageProps {
 
 export function NewAccountPage(props: NewAccountPageProps) {
   return (
-    <DashboardLayout title="Hollo: New account" selectedMenu="accounts">
-      <hgroup>
-        <h1>Create a new account</h1>
-        <p>You can create a new account by filling out the form below.</p>
-      </hgroup>
+    <DashboardLayout
+      title="~/accounts/new · Hollo"
+      selectedMenu="accounts"
+      shellPath="accounts/new"
+      shellStatus="new account"
+    >
+      <div class="cmdline">
+        <span class="u">root@hollo</span>:~${" "}
+        <span class="cmd">account create</span>{" "}
+        <span class="arg">--new</span>
+      </div>
       <AccountForm
         action="/accounts"
         values={props.values}
         errors={props.errors}
-        submitLabel="Create a new account"
+        submitLabel="create account"
         officialAccount={props.officialAccount}
         host={props.host}
       />
