@@ -1,4 +1,11 @@
-/* 홀로 포크 — shared shell: clock · j/k selection · action toggles · peek drawer */
+/* 홀로 포크 — shared shell: clock · j/k selection · action toggles · command palette · reaction picker
+ * NOTE: the design's peek drawer was wired to a hardcoded REPLIES fixture
+ * (mira / jin / dev) so every post showed the same fake conversation
+ * regardless of who authored it. Until a real /@h/:id/peek partial-
+ * content endpoint lands, clicking the reply count or post body
+ * navigates to the conversation page via the entry's [data-open]
+ * attribute. Inline counters (♥ ↻) still toggle locally without
+ * navigating; ↩ (reply) does navigate to the conversation. */
 (function(){
   function pad(n){ return String(n).padStart(2,'0'); }
   function tick(){
@@ -10,96 +17,38 @@
 
   var page=document.querySelector('.page');
 
-  /* ---------- peek drawer (split pane) ---------- */
-  var REPLIES = {
-    self: [
-      {au:'mira', hn:'@mira@social.coop · +6m', tx:'so you\u2019d red-team the disposition, not the transcript? that reframes the whole eval pipeline.', a:'\u21a9 1   \u2665 22',
-        kids:[{au:'eeru', hn:'@eeru · +9m', tx:'exactly \u2014 that\u2019s the whole essay. <span class="tag">#alignment</span>', a:'\u2665 96'}]},
-      {au:'jin', hn:'@jin@assemblag.es · +14m', tx:'ok, that distinction is actually useful. retracting my snark.', a:'\u21a9 0   \u2665 18'},
-      {au:'dev', hn:'@dev@merveilles.town · +20m', tx:'does Hollo thread your own follow-ups into one page? \ud83d\udc40', a:'\u21a9 1   \u2665 7'}
-    ]
-  };
-  var backEl, peekEl, savedScroll=0;
-  function buildPeek(){
-    backEl=document.createElement('div'); backEl.className='peek-back';
-    peekEl=document.createElement('aside'); peekEl.className='peek';
-    var mid=document.querySelector('.mid')||document.querySelector('.win');
-    mid.appendChild(backEl); mid.appendChild(peekEl);
-    backEl.addEventListener('click', closePeek);
-  }
-  function reactionsHTML(){
-    return '<div class="rxn-chips">'+
-      '<span class="rxn-chip mine"><span class="em">\ud83d\udd25</span><span class="n">6</span></span>'+
-      '<span class="rxn-chip"><span class="em">\ud83d\udca1</span><span class="n">4</span></span>'+
-      '<span class="rxn-chip"><span class="em">\ud83e\udde0</span><span class="n">3</span></span>'+
-      '<span class="rxn-chip"><span class="em">\ud83d\udc40</span><span class="n">2</span></span>'+
-      '<span class="rxn-chip add"><span class="em">\uff0b</span><span class="n">react</span></span>'+
-      '</div>'+
-      '<div class="rxn-by">'+
-      '<span class="ic fav">\u2665</span><span class="who"><span class="au">mira</span>, <span class="au">jin</span>, <span class="au">noor</span> <span class="more">+71 favourited</span></span>'+
-      '<span class="ic boost">\u21bb</span><span class="who"><span class="au">jin</span>, <span class="au">assemblage.bot</span> <span class="more">+10 boosted</span></span>'+
-      '</div>';
-  }
-  function replyHTML(r){
-    var kids = (r.kids||[]).map(replyHTML).join('');
-    return '<div class="pk-reply"><div><span class="au">'+r.au+'</span> <span class="hn">'+r.hn+'</span></div>'+
-      '<div class="rtx">'+r.tx+'</div><div class="ra"><span class="a reply">'+r.a.split('   ')[0]+'</span>'+
-      (r.a.split('   ')[1]?'<span class="a fav">'+r.a.split('   ')[1]+'</span>':'')+'</div>'+kids+'</div>';
-  }
-  function openPeek(entry){
-    if(!peekEl) buildPeek();
-    var au=(entry.querySelector('.au')||{}).textContent||'eeru';
-    var meta=entry.querySelector('.meta');
-    var hn='@'+au;
-    if(meta){ var ts=meta.querySelector('.ts'); if(ts) hn=ts.textContent.replace(/^@?/, '@').replace('@@','@'); }
-    var txEl=entry.querySelector('.txt, .quote, .thr-title');
-    var tx=txEl?txEl.innerHTML:'';
-    var acts=entry.querySelector('.acts');
-    var actsHTML=acts?acts.innerHTML:'<span class="a reply">\u21a9 <b>0</b></span>';
-    var replies=REPLIES.self;
-    var rc=replies.reduce(function(n,r){ return n+1+((r.kids&&r.kids.length)||0); },0);
-    peekEl.innerHTML =
-      '<div class="pk-head"><span class="ttl"><span class="ac">\u275a</span> conversation \u00b7 '+rc+' replies</span><span class="x" data-close>esc \u2715</span></div>'+
-      '<div class="pk-body">'+
-        '<div class="pk-op"><div class="ph"><span class="av">'+au.charAt(0)+'</span><span class="au">'+au+'</span> <span class="hn">'+hn+'</span></div>'+
-        '<div class="tx">'+tx+'</div>'+
-        '<div class="pk-acts">'+actsHTML+'</div></div>'+
-        '<div class="pk-sec">\u2728 reactions \u00b7 who responded</div>'+ reactionsHTML()+
-        '<div class="pk-sec">\u21b3 '+replies.length+' reply threads</div>'+ replies.map(replyHTML).join('')+
-        '<div class="pk-reply-box"><span class="u">eeru@hollo</span>:reply$ <span class="cursor"></span></div>'+
-        '<div class="pk-foot"><a href="post.html">open full conversation \u2197</a></div>'+
-      '</div>';
-    peekEl.querySelector('[data-close]').addEventListener('click', closePeek);
-    savedScroll = page?page.scrollTop:0;
-    backEl.classList.add('open'); peekEl.classList.add('open');
-    var sm=document.querySelector('.statusbar .mode'); if(sm){ peekEl._oldmode=sm.textContent; sm.textContent='PEEK'; }
-  }
-  function closePeek(){
-    if(!peekEl) return;
-    backEl.classList.remove('open'); peekEl.classList.remove('open');
-    if(page) page.scrollTop=savedScroll;        // keep your place
-    var sm=document.querySelector('.statusbar .mode'); if(sm&&peekEl._oldmode) sm.textContent=peekEl._oldmode;
-  }
-
   /* ---------- clicks ---------- */
   document.addEventListener('click', function(e){
-    if(e.target.closest('.peek')) {              // inside drawer: toggles only
-      var rxd=e.target.closest('.rxn-chip'); if(rxd && !rxd.classList.contains('add')){ var nd=rxd.querySelector('.n'); var vd=parseInt((nd&&nd.textContent)||'0',10)||0; var od=rxd.classList.toggle('mine'); if(nd) nd.textContent=(od?vd+1:vd-1); return; }
-      var ad=e.target.closest('.pk-acts .a, .pk-reply .a'); if(ad){ var bd=ad.querySelector('b'); if(bd){ var mb=parseInt(bd.textContent.replace(/,/g,''),10)||0; var ob=ad.classList.toggle('on'); bd.textContent=(ob?mb+1:mb-1).toLocaleString(); } return; }
+    /* emoji reaction chips: ＋ opens picker (handled below), other
+       chips just toggle the local count + .mine state. */
+    var rx=e.target.closest('.rxn-chip, .rxn-mini .chip');
+    if(rx){
+      if(rx.classList.contains('add')){ return; }
+      var nn=rx.querySelector('.n');
+      var v=parseInt((nn&&nn.textContent)||'0',10)||0;
+      var ron=rx.classList.toggle('mine');
+      if(nn) nn.textContent=(ron?v+1:v-1);
       return;
     }
-    var rx=e.target.closest('.rxn-chip, .rxn-mini .chip');
-    if(rx){ if(rx.classList.contains('add')){ return; } var nn=rx.querySelector('.n'); var v=parseInt((nn&&nn.textContent)||'0',10)||0; var ron=rx.classList.toggle('mine'); if(nn) nn.textContent=(ron?v+1:v-1); return; }
+    /* ↻ ↩ ♥ — boost / fav toggle locally; ↩ falls through so the
+       entry's data-open navigation handler picks it up. */
     var a=e.target.closest('.acts .a, .focus .acts .a');
-    if(a && !a.classList.contains('reply')){ var b=a.querySelector('b'); var n=b?parseInt(b.textContent.replace(/,/g,''),10)||0:0; var on=a.classList.toggle('on'); if(b){ b.textContent=(on?n+1:n-1).toLocaleString(); } return; }
-    // self-thread CTA → article reader
-    if(e.target.closest('.threadcta')){ location.href='thread.html'; return; }
-    // reply count OR post body → peek drawer (no navigation, keeps scroll)
-    var rep=e.target.closest('.a.reply');
+    if(a && !a.classList.contains('reply')){
+      var b=a.querySelector('b');
+      var n=b?parseInt(b.textContent.replace(/,/g,''),10)||0:0;
+      var on=a.classList.toggle('on');
+      if(b){ b.textContent=(on?n+1:n-1).toLocaleString(); }
+      return;
+    }
+    /* self-thread CTA already has an <a href> — let the link navigate */
+    if(e.target.closest('.threadcta a, .threadcta')){ return; }
+    /* Any other click on an entry/notif row (including the reply
+       count ↩) navigates to the URL the server put in [data-open]. */
     var entry=e.target.closest('.entry, .notif');
-    if(entry && entry.dataset.open==='thread.html' && !rep){ location.href='thread.html'; return; }
-    if(rep && entry){ e.preventDefault(); openPeek(entry); return; }
-    if(entry && !e.target.closest('a')){ openPeek(entry); return; }
+    if(entry && !e.target.closest('a, button, input, textarea, select, label')){
+      var href=entry.getAttribute('data-open');
+      if(href){ e.preventDefault(); location.href=href; }
+    }
   });
 
   /* ---------- j/k selection ---------- */
@@ -118,7 +67,6 @@
   document.addEventListener('keydown', function(e){
     if(/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)) return;
     var k=e.key;
-    if(k==='Escape'){ closePeek(); return; }
     if(k==='/' && !e.metaKey && !e.ctrlKey){ e.preventDefault(); location.href='/search'; return; }
     if(k==='c' && !e.metaKey && !e.ctrlKey){ e.preventDefault(); location.href='/compose'; return; }
     if(k==='j'||k==='ArrowDown'){ if(!items.length) return; e.preventDefault(); sel=Math.min(sel+1,items.length-1); paint(); }
@@ -216,7 +164,7 @@
      ==================================================================== */
   var EMO={
     smileys:['😀','😄','😁','😅','😂','🙂','😉','😊','😍','😘','😎','🤔','🫡','😴','😮','😢','😭','😡','🥹','🤝','🙌','👏','👍','👎','🙏','💪','👀','🫶','💯','🔥','✨','⭐'],
-    objects:['💡','🧠','📚','📝','💻','🖥','⌨','🔭','🧪','🧵','📌','🔗','📈','🗂','☕','🌱','🌙','🛰','⚙','🔒','🧭','📡','🪄','📎','✅','❌','⚠','❤','💚','💙','💜','🩵'],
+    objects:['💡','🧠','📚','📝','💻','🖥','⌨','🔭','🧪','🧵','📌','🔗','📈','🗂','☕','🌱','🌙','🛰','⚙','🔒','🧭','📡','🪄','📎','✅','❌','⚠','❤','💚','💙','💜','🫥'],
     custom:[':blobcat:',':ablobwave:',':verified:',':fediverse:',':hollo:',':loading:',':thisisfine:',':partyparrot:']
   };
   var rxpick, rxTarget, rxTab='smileys';

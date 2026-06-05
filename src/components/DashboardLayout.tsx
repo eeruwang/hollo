@@ -116,7 +116,7 @@ export async function DashboardLayout(
                 }
               />
               <RailLink
-                href="/accounts"
+                href={handle ? `/@${handle}` : "/accounts"}
                 kb="2"
                 label="profile"
                 on={

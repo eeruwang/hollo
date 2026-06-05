@@ -8,6 +8,17 @@ export interface ProfileProps {
   isOwner?: boolean;
 }
 
+/**
+ * In-app profile body (Shell A).
+ * Markup matches design/profile.html exactly:
+ *   <div class="pname"><span class="ava">e</span>name</div>
+ *   <div class="kv">handle / bio / fields / joined / stats</div>
+ *   <div class="btnrow">＋ Follow / ✉ Message / ⋯</div>
+ *
+ * No cover image, no <img> avatar in .pname — the design uses a single
+ * mono initial inside the .ava box. (Cover + the bigger banner are
+ * reserved for the public Shell B in @eeruwang.html.)
+ */
 export function Profile({ accountOwner, isOwner }: ProfileProps) {
   const account = accountOwner.account;
   const nameHtml = renderCustomEmojis(escape(account.name), account.emojis);
@@ -15,7 +26,6 @@ export function Profile({ accountOwner, isOwner }: ProfileProps) {
     account.bioHtml != null && account.bioHtml !== ""
       ? renderCustomEmojis(account.bioHtml, account.emojis)
       : null;
-  const url = account.url ?? account.iri;
   const initial =
     account.name.trim().charAt(0).toUpperCase() ||
     account.handle.replace(/^@/, "").charAt(0).toUpperCase();
@@ -34,37 +44,9 @@ export function Profile({ accountOwner, isOwner }: ProfileProps) {
 
   return (
     <>
-      {account.coverUrl && (
-        <div
-          style={`
-            margin: -6px -6px 16px;
-            border: 1px solid var(--bds);
-            aspect-ratio: 3 / 1;
-            background-image: url("${account.coverUrl}");
-            background-size: cover;
-            background-position: center;
-          `}
-        />
-      )}
-
       <div class="pname">
-        {account.avatarUrl ? (
-          <img
-            src={account.avatarUrl}
-            alt=""
-            width={48}
-            height={48}
-            class="ava"
-            style="padding:0; width:48px; height:48px; object-fit:cover;"
-          />
-        ) : (
-          <span class="ava">{initial}</span>
-        )}
-        <a
-          dangerouslySetInnerHTML={{ __html: nameHtml }}
-          href={url}
-          style="color:inherit;"
-        />
+        <span class="ava">{initial.toLowerCase()}</span>
+        <span dangerouslySetInnerHTML={{ __html: nameHtml }} />
       </div>
 
       <div class="kv">
@@ -100,27 +82,35 @@ export function Profile({ accountOwner, isOwner }: ProfileProps) {
       <div class="btnrow">
         {isOwner ? (
           <>
-            <a class="btn pri" href="/accounts">
-              ✎ Edit
-            </a>
-            <a class="btn" href="/compose">
+            <button type="button" class="btn pri" onclick="location.href='/accounts'">
+              ＋ Edit
+            </button>
+            <button type="button" class="btn" onclick="location.href='/compose'">
               ✉ Compose
-            </a>
-            <a class="btn" href="/settings">
+            </button>
+            <button type="button" class="btn" onclick="location.href='/settings'">
               ⋯
-            </a>
+            </button>
           </>
         ) : (
           <>
-            <a class="btn pri" href={url}>
+            <button
+              type="button"
+              class="btn pri"
+              onclick={`location.href='${account.url ?? account.iri}'`}
+            >
               ＋ Follow
-            </a>
-            <a class="btn" href={url}>
+            </button>
+            <button
+              type="button"
+              class="btn"
+              onclick={`location.href='${account.url ?? account.iri}'`}
+            >
               ✉ Message
-            </a>
-            <a class="btn" href={`/@${accountOwner.handle}.atom`}>
+            </button>
+            <button type="button" class="btn">
               ⋯
-            </a>
+            </button>
           </>
         )}
       </div>
