@@ -119,11 +119,13 @@
     if(/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)) return;
     var k=e.key;
     if(k==='Escape'){ closePeek(); return; }
+    if(k==='/' && !e.metaKey && !e.ctrlKey){ e.preventDefault(); location.href='/search'; return; }
+    if(k==='c' && !e.metaKey && !e.ctrlKey){ e.preventDefault(); location.href='/compose'; return; }
     if(k==='j'||k==='ArrowDown'){ if(!items.length) return; e.preventDefault(); sel=Math.min(sel+1,items.length-1); paint(); }
     else if(k==='k'||k==='ArrowUp'){ if(!items.length) return; e.preventDefault(); sel=Math.max(sel-1,0); paint(); }
     else if(k==='f'){ var s=items[sel]; if(s){ var f=s.querySelector('.a.fav'); if(f) f.click(); } }
     else if(k==='b'){ var s2=items[sel]; if(s2){ var bo=s2.querySelector('.a.boost'); if(bo) bo.click(); } }
-    else if(k==='Enter'){ var s3=items[sel]; if(s3){ if(s3.dataset.open==='thread.html'){ location.href='thread.html'; } else { openPeek(s3); } } }
+    else if(k==='Enter'){ var s3=items[sel]; if(s3 && s3.dataset.open){ location.href=s3.dataset.open; } }
   });
 
   /* ---------- compose char counter ---------- */
@@ -142,17 +144,21 @@
      Command palette  ( : / Ctrl+K )
      ==================================================================== */
   var CMDS=[
-    {sec:'go', ico:'⌂', lbl:'home', hint:'timeline', kb:'1', url:'index.html'},
-    {sec:'go', ico:'☻', lbl:'profile', hint:'@eeru', kb:'2', url:'profile.html'},
-    {sec:'go', ico:'◔', lbl:'notifications', hint:'7 new', kb:'3', url:'notifications.html'},
-    {sec:'go', ico:'⌗', lbl:'bookmarks', kb:'4', url:'bookmarks.html'},
-    {sec:'go', ico:'🧵', lbl:'threads', hint:'self-threads', kb:'5', url:'threads.html'},
-    {sec:'go', ico:'⚙', lbl:'settings', kb:',', url:'settings.html'},
-    {sec:'action', ico:'✎', lbl:'compose', hint:'new post', kb:'c', url:'compose.html'},
-    {sec:'action', ico:'🧵', lbl:'new self-thread', hint:'compose → thread', url:'compose.html'},
+    {sec:'go', ico:'⌂', lbl:'home', hint:'timeline', kb:'1', url:'/social'},
+    {sec:'go', ico:'⌕', lbl:'search', hint:'people · posts · tags', kb:'/', url:'/search'},
+    {sec:'go', ico:'◔', lbl:'notifications', kb:'3', url:'/notifications'},
+    {sec:'go', ico:'⌗', lbl:'bookmarks', kb:'4', url:'/bookmarks'},
+    {sec:'go', ico:'🧵', lbl:'threads', hint:'self-threads', kb:'5', url:'/threads'},
+    {sec:'go', ico:'⚙', lbl:'settings', kb:',', url:'/settings'},
+    {sec:'go', ico:'🔑', lbl:'security', hint:'2FA · passkeys', url:'/auth'},
+    {sec:'go', ico:'🌐', lbl:'federation', hint:'peers · refresh', url:'/federation'},
+    {sec:'go', ico:'😀', lbl:'custom emojis', url:'/emojis'},
+    {sec:'go', ico:'🪝', lbl:'webhooks', url:'/webhooks'},
+    {sec:'go', ico:'📦', lbl:'backup / export', url:'/backup'},
+    {sec:'action', ico:'✎', lbl:'compose', hint:'new post', kb:'c', url:'/compose'},
     {sec:'action', ico:'☀', lbl:'theme: paper (light)', run:function(){ holloSetTheme('paper'); }},
     {sec:'action', ico:'◐', lbl:'theme: green (dark)', run:function(){ holloSetTheme('dark'); }},
-    {sec:'go', ico:'↗', lbl:'goto @handle…', hint:'open a profile', arg:true}
+    {sec:'action', ico:'⎋', lbl:'log out', url:'/logout'}
   ];
   var ck, ckInput, ckList, ckSel=0, ckRows=[];
   function buildCK(){

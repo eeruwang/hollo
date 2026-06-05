@@ -19,12 +19,276 @@ import { isUuid, type Uuid } from "../../uuid.ts";
 
 const profilePost = new Hono();
 
+/** Walk back from `postId` to the root of the self-thread chain.
+ * A self-thread is the maximal chain where each post's `replyTargetId`
+ * points to another post by the SAME account. Returns the chain
+ * root → leaf, ordered. Returns just `[startPost]` if startPost has
+ * no self-reply chain context. */
+async function resolveSelfThread(startPostId: Uuid): Promise<FullPost[]> {
+  // Walk backward to root
+  let cursor: Uuid | null = startPostId;
+  let rootId: Uuid = startPostId;
+  let accountId: Uuid | null = null;
+  const seen = new Set<string>();
+  while (cursor != null && !seen.has(cursor)) {
+    seen.add(cursor);
+    const row: { id: Uuid; accountId: Uuid; replyTargetId: Uuid | null } | undefined =
+      await db.query.posts.findFirst({
+        where: eq(posts.id, cursor),
+        columns: { id: true, accountId: true, replyTargetId: true },
+      });
+    if (row == null) break;
+    if (accountId == null) accountId = row.accountId;
+    if (row.accountId !== accountId) break;
+    rootId = row.id;
+    cursor = row.replyTargetId ?? null;
+  }
+  if (accountId == null) return [];
+
+  // Walk forward, gathering same-author replies. Breadth-first so we
+  // pick the canonical chain (first reply at each branch) rather than
+  // an exploded tree.
+  const chain: FullPost[] = [];
+  let nextId: Uuid | null = rootId;
+  const seenForward = new Set<string>();
+  while (nextId != null && !seenForward.has(nextId)) {
+    seenForward.add(nextId);
+    const node = (await db.query.posts.findFirst({
+      where: eq(posts.id, nextId),
+      with: {
+        account: true,
+        media: true,
+        poll: { with: { options: true } },
+        reactions: true,
+      },
+    })) as FullPost | undefined;
+    if (node == null || node.accountId !== accountId) break;
+    chain.push(node);
+    // First same-author reply
+    const reply = await db.query.posts.findFirst({
+      where: and(
+        eq(posts.replyTargetId, node.id),
+        eq(posts.accountId, accountId),
+      ),
+      orderBy: [asc(posts.published)],
+      columns: { id: true },
+    });
+    nextId = reply?.id ?? null;
+  }
+  return chain;
+}
+
 type FullPost = Post & {
   account: Account;
   media: Medium[];
   poll: (Poll & { options: PollOption[] }) | null;
   reactions: Reaction[];
 };
+
+/* /@:handle/:id/thread — render the self-thread reader (article ↔ parts). */
+profilePost.get("/thread", async (c) => {
+  let handle = c.req.param("handle") ?? "";
+  const postId = c.req.param("id") ?? "";
+  if (!isUuid(postId)) return c.notFound();
+  if (handle.startsWith("@")) handle = handle.substring(1);
+  const accountOwner = await db.query.accountOwners.findFirst({
+    where: eq(accountOwners.handle, handle),
+    with: { account: true },
+  });
+  if (accountOwner == null) return c.notFound();
+
+  const chain = await resolveSelfThread(postId);
+  if (chain.length === 0) return c.notFound();
+  // If the chain has only one post, it's just a regular post — fall back.
+  if (chain.length === 1) {
+    return c.redirect(`/@${handle}/${chain[0].id}`);
+  }
+
+  const head = chain[0];
+  const title = pickTitle(head);
+  const byline = (head.published ?? head.updated).toLocaleDateString("en", {
+    year: "numeric",
+    month: "long",
+    day: "2-digit",
+  });
+  const totalLikes = chain.reduce((sum, p) => sum + (p.likesCount ?? 0), 0);
+  const totalBoosts = chain.reduce((sum, p) => sum + (p.sharesCount ?? 0), 0);
+  const totalReplies = chain.reduce(
+    (sum, p) => sum + (p.repliesCount ?? 0),
+    0,
+  );
+  // Estimate read time (200 wpm)
+  const wordCount = chain.reduce(
+    (n, p) =>
+      n +
+      (p.content ?? "")
+        .replace(/<[^>]+>/g, " ")
+        .split(/\s+/)
+        .filter(Boolean).length,
+    0,
+  );
+  const readMin = Math.max(1, Math.round(wordCount / 200));
+
+  return c.html(
+    <DashboardLayout
+      title={`${title} · ${accountOwner.account.name}`}
+      selectedMenu="threads"
+      shellPath={`thread/${head.id.slice(0, 8)}`}
+      shellMode="ARTICLE"
+      shellStatus={`${chain.length} posts · ${readMin} min`}
+      shellHints={[
+        { key: "a/p", label: "article/parts" },
+        { key: "s", label: "save .md" },
+        { key: "r", label: "reply" },
+      ]}
+      themeColor={accountOwner.themeColor}
+    >
+      <div class="cmdline">
+        <span class="u">{accountOwner.handle}@hollo</span>:~${" "}
+        <span class="cmd">thread read {head.id.slice(0, 4)}</span>{" "}
+        <span class="arg">--as-article</span>
+      </div>
+
+      <div class="arthead">
+        <div class="kicker">
+          🧵 self-thread · stitched from {chain.length} posts
+        </div>
+        <div class="title">{title}</div>
+        <div class="byline">
+          <span class="au">{accountOwner.handle}</span>{" "}
+          {accountOwner.account.handle} <span class="sep">·</span> {byline}{" "}
+          <span class="sep">·</span> {readMin} min read
+        </div>
+      </div>
+
+      <hr class="artrule" />
+
+      <div class="thread-toolbar">
+        <span class="seg">
+          <a
+            href={`/@${handle}/${postId}/thread`}
+            class="on"
+            data-thread-view="article"
+          >
+            article
+          </a>
+          <a
+            href={`/@${handle}/${postId}/thread?view=parts`}
+            data-thread-view="parts"
+          >
+            parts
+          </a>
+        </span>
+        <span class="meta-r">
+          {chain.length} parts · ♥ {totalLikes} · ↻ {totalBoosts} · ↩{" "}
+          {totalReplies}
+        </span>
+      </div>
+
+      <article id="art" class="pg-article">
+        <div class="doc seamless">
+          {chain.map((part, idx) => (
+            <p class={idx === 0 ? "lede" : undefined}>
+              <span class="seam">{(idx + 1).toString().padStart(2, "0")}</span>{" "}
+              <span
+                dangerouslySetInnerHTML={{
+                  __html: renderCustomEmojis(part.contentHtml ?? "", part.emojis),
+                }}
+              />
+            </p>
+          ))}
+          <div class="endmark">─── /end ───</div>
+        </div>
+
+        <div class="doc parts">
+          {chain.map((part, idx) => (
+            <div class={`part${idx === 0 ? " first" : ""}`}>
+              <div class="mg">
+                <div class="no">{(idx + 1).toString().padStart(2, "0")}</div>
+                <div class="node" />
+              </div>
+              <div class="ct">
+                <p
+                  dangerouslySetInnerHTML={{
+                    __html: renderCustomEmojis(
+                      part.contentHtml ?? "",
+                      part.emojis,
+                    ),
+                  }}
+                />
+                <div class="pm">
+                  {(part.published ?? part.updated).toLocaleString("en", {
+                    month: "2-digit",
+                    day: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}{" "}
+                  · ♥ {part.likesCount ?? 0}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </article>
+
+      <div class="artfoot">
+        <span>
+          ♥ <b>{totalLikes}</b> across thread
+        </span>
+        <span>
+          ↻ <b>{totalBoosts}</b>
+        </span>
+        <span>
+          ↩ <b>{totalReplies}</b>
+        </span>
+        <span class="sp" style="margin-left:auto;" />
+        <span class="gn">[s] save .md</span>
+        <span class="gn">[r] reply</span>
+      </div>
+
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `(() => {
+  const art = document.getElementById('art');
+  if (!art) return;
+  function setView(v){
+    if (v === 'parts') art.classList.add('show-parts');
+    else art.classList.remove('show-parts');
+    document.querySelectorAll('[data-thread-view]').forEach((a) => {
+      a.classList.toggle('on', a.dataset.threadView === v);
+    });
+  }
+  document.querySelectorAll('[data-thread-view]').forEach((a) => {
+    a.addEventListener('click', (ev) => { ev.preventDefault(); setView(a.dataset.threadView); });
+  });
+  document.addEventListener('keydown', (ev) => {
+    if (ev.target && /^(INPUT|TEXTAREA)$/.test(ev.target.tagName)) return;
+    if (ev.key === 'a') setView('article');
+    else if (ev.key === 'p') setView('parts');
+  });
+  // honor ?view=parts on initial load
+  if (new URLSearchParams(location.search).get('view') === 'parts') setView('parts');
+  // persist user's default via localStorage
+  const def = localStorage.getItem('hollo-thread-default');
+  if (def && new URLSearchParams(location.search).get('view') == null) setView(def);
+})();`,
+        }}
+      />
+    </DashboardLayout>,
+  );
+});
+
+function pickTitle(p: FullPost): string {
+  if (p.summary != null && p.summary.trim() !== "") return p.summary.trim();
+  const text = (p.content ?? "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  // First sentence boundary
+  const m = text.match(/^([^.!?。！？]+)[.!?。！？]/);
+  if (m) return m[1].trim();
+  return text.length > 80 ? `${text.slice(0, 80).trim()}…` : text;
+}
 
 profilePost.get<"/:handle{@[^/]+}/:id{[-a-f0-9]+}">(async (c) => {
   let handle = c.req.param("handle");
