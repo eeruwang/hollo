@@ -1,6 +1,6 @@
 import { Note } from "@fedify/vocab";
 import { getLogger } from "@logtape/logtape";
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, lte, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import mime from "mime";
 import sharp from "sharp";
@@ -10,27 +10,12 @@ import db from "../db.ts";
 import fedi from "../federation";
 import { loginRequired } from "../login.ts";
 import { makeVideoScreenshot, uploadThumbnail } from "../media.ts";
-import { media, posts } from "../schema.ts";
+import { media, posts, timelinePosts } from "../schema.ts";
 import { drive } from "../storage.ts";
 import { formatPostContent } from "../text.ts";
 import { type Uuid, uuidv7 } from "../uuid.ts";
 
 const logger = getLogger(["hollo", "pages", "social"]);
-
-// A small curated language list shown in the composer on top of the
-// owner's configured account language. Values are ISO 639-1 codes.
-const LANGUAGE_OPTIONS: Array<{ code: string; label: string }> = [
-  { code: "en", label: "English" },
-  { code: "ko", label: "Korean" },
-  { code: "ja", label: "Japanese" },
-  { code: "zh", label: "Chinese" },
-  { code: "es", label: "Spanish" },
-  { code: "fr", label: "French" },
-  { code: "de", label: "German" },
-  { code: "ru", label: "Russian" },
-  { code: "pt", label: "Portuguese" },
-  { code: "it", label: "Italian" },
-];
 
 const social = new Hono();
 
@@ -43,7 +28,18 @@ social.get("/", async (c) => {
   if (owner == null) return c.redirect("/accounts");
 
   const timeline = await db.query.posts.findMany({
-    where: eq(posts.accountId, owner.id),
+    where: and(
+      inArray(
+        posts.id,
+        db
+          .select({ id: timelinePosts.postId })
+          .from(timelinePosts)
+          .where(eq(timelinePosts.accountId, owner.id))
+          .orderBy(desc(timelinePosts.postId))
+          .limit(40),
+      ),
+      lte(posts.published, sql`NOW() + INTERVAL '5 minutes'`),
+    ),
     with: {
       account: true,
       media: true,
@@ -54,32 +50,14 @@ social.get("/", async (c) => {
           media: true,
           poll: { with: { options: true } },
           replyTarget: { with: { account: true } },
-          quoteTarget: {
-            with: {
-              account: true,
-              media: true,
-              poll: { with: { options: true } },
-              replyTarget: { with: { account: true } },
-              reactions: true,
-            },
-          },
           reactions: true,
         },
       },
       replyTarget: { with: { account: true } },
-      quoteTarget: {
-        with: {
-          account: true,
-          media: true,
-          poll: { with: { options: true } },
-          replyTarget: { with: { account: true } },
-          reactions: true,
-        },
-      },
       reactions: true,
     },
     orderBy: [desc(posts.published)],
-    limit: 30,
+    limit: 40,
   });
 
   return c.html(
@@ -99,92 +77,40 @@ social.get("/", async (c) => {
     >
       <div class="cmdline">
         <span class="u">{owner.handle}@hollo</span>:~${" "}
-        <span class="cmd">timeline</span>{" "}
-        <span class="arg">--home</span>
+        <span class="cmd">timeline</span> <span class="arg">--home</span>
       </div>
 
-      <details
-        style="border:1px solid var(--bd); padding:9px 12px; margin-bottom:14px;"
-      >
-        <summary style="cursor:pointer; color:var(--ac);">
-          ＋ quick compose
-        </summary>
-        <form
-          method="post"
-          action="/social/compose"
-          enctype="multipart/form-data"
-          style="margin-top:11px;"
-        >
-          <textarea
-            name="content"
-            placeholder="$ post --message ..."
-            required
-            rows={3}
-            style="width:100%; background:transparent; border:1px solid var(--bd); padding:8px; color:var(--fgs); font-family:var(--mono); font-size:13.5px; line-height:1.65; resize:vertical; outline:none;"
-          />
-          <input
-            type="text"
-            name="spoiler_text"
-            placeholder="content warning (optional)"
-            style="width:100%; margin-top:7px; background:transparent; border:1px solid var(--bd); padding:6px 8px; color:var(--fg); font-family:var(--mono); font-size:12.5px; outline:none;"
-          />
-          <div
-            style="display:flex; align-items:center; gap:10px; margin-top:9px; flex-wrap:wrap;"
-          >
-            <label class="muted" style="font-size:12px;">
-              <input type="checkbox" name="sensitive" value="true" /> sensitive
-            </label>
-            <label class="muted" style="font-size:12px;">
-              <input
-                type="file"
-                name="media"
-                multiple
-                accept="image/png,image/jpeg,image/gif,image/webp,video/mp4,video/webm"
-              />
-            </label>
-            <select
-              name="visibility"
-              style="background:var(--bg2); border:1px solid var(--bd); color:var(--fg); font-family:var(--mono); font-size:12px; padding:5px 8px;"
-            >
-              <option value="public">public</option>
-              <option value="unlisted">unlisted</option>
-              <option value="private">followers</option>
-              <option value="direct">direct</option>
-            </select>
-            <select
-              name="language"
-              style="background:var(--bg2); border:1px solid var(--bd); color:var(--fg); font-family:var(--mono); font-size:12px; padding:5px 8px;"
-            >
-              <option value="">{owner.language}</option>
-              {LANGUAGE_OPTIONS.map((opt) => (
-                <option value={opt.code}>{opt.code}</option>
-              ))}
-            </select>
-            <button
-              type="submit"
-              class="btn pri"
-              style="margin-left:auto; padding:5px 14px; font-size:12.5px;"
-            >
-              post ↵
-            </button>
-          </div>
-        </form>
-      </details>
-
       {timeline.length === 0 ? (
-        <p class="muted">
-          — empty timeline · use <span class="gn">[c]</span> to compose —
-        </p>
+        <div class="state">
+          <div class="glyph">⌂</div>
+          <div class="ttl">your timeline is quiet</div>
+          <div class="msg">
+            follow accounts on the fediverse and their posts will land here.
+          </div>
+          <a class="cta btn pri" href="/compose">
+            ＋ write your first post
+          </a>
+        </div>
       ) : (
         timeline.map((post) => (
-          <TimelineEntry post={post} mine={true} openHref={`/@${owner.handle}/${post.id}`} />
+          <TimelineEntry
+            post={post}
+            mine={post.accountId === owner.id}
+            openHref={
+              post.sharing != null
+                ? `/@${post.sharing.account.handle.replace(/^@/, "")}/${post.sharing.id}`
+                : `/@${owner.handle}/${post.id}`
+            }
+          />
         ))
       )}
 
-      <div class="endcap">
-        — end of recent · <span class="gn">[r]</span> refresh · federated via
-        ActivityPub —
-      </div>
+      {timeline.length > 0 && (
+        <div class="endcap">
+          — end of recent · <span class="gn">[r]</span> refresh · federated via
+          ActivityPub —
+        </div>
+      )}
     </DashboardLayout>,
   );
 });
@@ -226,7 +152,6 @@ social.post("/compose", async (c) => {
 
   const fmtResult = await formatPostContent(db, content ?? "", owner.language, {
     url: fedCtx.getActorUri(owner.id),
-    class: null,
     documentLoader,
   });
 
@@ -314,7 +239,7 @@ async function attachMediumToPost(
 }
 
 social.post("/delete/:id", async (c) => {
-  const postId = c.req.param("id");
+  const postId = c.req.param("id") as Uuid;
   const owner = await db.query.accountOwners.findFirst();
   if (owner == null) return c.redirect("/accounts");
 

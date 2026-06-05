@@ -1,5 +1,7 @@
+import { and, count, eq, isNull, ne } from "drizzle-orm";
 import type { PropsWithChildren } from "hono/jsx";
 import db from "../db";
+import { instances, notifications } from "../schema";
 import { Layout, type LayoutProps } from "./Layout";
 
 export type Menu =
@@ -44,21 +46,41 @@ const DEFAULT_HINTS: { key: string; label: string }[] = [
 export async function DashboardLayout(
   props: PropsWithChildren<DashboardLayoutProps>,
 ) {
-  let themeColor = props.themeColor;
-  let handle: string | undefined;
-  if (themeColor == null) {
-    const owner = await db.query.accountOwners.findFirst({
-      with: { account: true },
-    });
-    themeColor = owner?.themeColor ?? "azure";
-    handle = owner?.handle;
-  }
+  const owner = await db.query.accountOwners.findFirst({
+    with: { account: true },
+  });
+  const themeColor = props.themeColor ?? owner?.themeColor ?? "azure";
+  const handle = owner?.handle;
+  const postsCount = owner?.account.postsCount ?? 0;
+
+  const [unreadRow] = owner
+    ? await db
+        .select({ n: count() })
+        .from(notifications)
+        .where(
+          and(
+            eq(notifications.accountOwnerId, owner.id),
+            isNull(notifications.readAt),
+          ),
+        )
+    : [{ n: 0 }];
+  const unread = Number(unreadRow?.n ?? 0);
+
+  const [peerRow] = await db
+    .select({ n: count() })
+    .from(instances)
+    .where(
+      owner?.account.instanceHost
+        ? ne(instances.host, owner.account.instanceHost)
+        : undefined,
+    );
+  const peers = Number(peerRow?.n ?? 0);
 
   const promptUser = handle ?? "eeru";
   const promptPath = props.shellPath ?? menuToPath(props.selectedMenu);
   const mode = props.shellMode ?? "NORMAL";
   const hints = props.shellHints ?? DEFAULT_HINTS;
-  const status = props.shellStatus ?? "● federated";
+  const status = props.shellStatus ?? "federated";
 
   return (
     <Layout {...props} themeColor={themeColor}>
@@ -75,8 +97,8 @@ export async function DashboardLayout(
             <span class="ac">~/{promptPath}</span>
           </div>
           <div class="tright">
-            <span>{status}</span>
             <span class="led" />
+            <span>{status} · </span>
             <span data-clock>00:00</span>
           </div>
         </div>
@@ -110,6 +132,7 @@ export async function DashboardLayout(
                 kb="3"
                 label="notifications"
                 on={props.selectedMenu === "notifications"}
+                count={unread > 0 ? String(unread) : undefined}
               />
               <RailLink
                 href="/bookmarks"
@@ -146,6 +169,9 @@ export async function DashboardLayout(
             </nav>
             <div class="foot">
               <span class="ok">●</span> federating
+              <br />
+              {peers.toLocaleString()} peers · {postsCount.toLocaleString()}{" "}
+              posts
             </div>
           </aside>
           <main class="page">

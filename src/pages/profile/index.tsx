@@ -1,7 +1,7 @@
 import { and, count, desc, eq, or, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import xss from "xss";
-import { Layout } from "../../components/Layout.tsx";
+import { DashboardLayout } from "../../components/DashboardLayout.tsx";
 import { Profile } from "../../components/Profile.tsx";
 import { db } from "../../db.ts";
 import {
@@ -566,7 +566,7 @@ function ProfilePostEntry({
   );
 }
 
-function ProfilePage({
+async function ProfilePage({
   accountOwner,
   tag,
   posts,
@@ -576,8 +576,11 @@ function ProfilePage({
   olderUrl,
   newerUrl,
 }: ProfilePageProps) {
+  const totalPosts = (
+    accountOwner.account.postsCount ?? posts.length
+  ).toLocaleString();
   return (
-    <Layout
+    <DashboardLayout
       title={
         tag == null
           ? accountOwner.account.name
@@ -603,68 +606,67 @@ function ProfilePage({
         },
       ]}
       themeColor={accountOwner.themeColor}
+      selectedMenu="profile"
+      shellPath={tag == null ? "profile" : `profile/#${tag}`}
+      shellStatus={`@${accountOwner.handle} · ${totalPosts} posts`}
+      shellHints={[
+        { key: "j/k", label: "move" },
+        { key: "Enter", label: "open" },
+        { key: "e", label: "edit profile" },
+        { key: "c", label: "compose" },
+      ]}
     >
-      <div class="win">
-        <div class="titlebar">
-          <div class="dots">
-            <i />
-            <i />
-            <i />
-          </div>
-          <div class="path">
-            <b>{accountOwner.handle}@hollo</b>
-            <span>: </span>
-            <span class="ac">
-              ~/profile{tag != null ? `/#${tag}` : ""}
-            </span>
-          </div>
-          <div class="tright">
-            <span>● federated</span>
-            <span class="led" />
-            <span data-clock>00:00</span>
-          </div>
-        </div>
-        <div class="mid" style="grid-template-columns: 1fr;">
-          <main class="page">
-            <div class="wrap">
-              <Profile accountOwner={accountOwner} />
-              <div class="tabs">
-                <a class={tag == null ? "on" : ""} href={`/@${accountOwner.handle}`}>
-                  posts
-                </a>
-                <a href={`/@${accountOwner.handle}/with_replies`}>
-                  replies
-                </a>
-                {atomUrl != null && (
-                  <a href={atomUrl}>atom</a>
-                )}
-              </div>
-              {featuredTags.length > 0 && (
-                <p style="margin-top:10px;">
-                  <span class="dimc">featured: </span>
-                  {featuredTags.map((tag) => (
-                    <>
-                      <a
-                        class="tag"
-                        href={`/@${accountOwner.handle}/tagged/${encodeURIComponent(tag.name)}`}
-                      >
-                  #{tag.name}
-                </a>{" "}
-              </>
-            ))}
-          </p>
-        )}
-        {tag == null &&
-          pinnedPosts.map((post) => (
-            <ProfilePostEntry
-              post={post}
-              ownerHandle={accountOwner.handle}
-              pinned={true}
-            />
+      <div class="cmdline">
+        <span class="u">{accountOwner.handle}@hollo</span>:~${" "}
+        <span class="cmd">whoami</span> <span class="arg">--profile</span>
+      </div>
+
+      <Profile accountOwner={accountOwner} isOwner={true} />
+
+      <div class="rule">
+        ──────────────────────────────────────────────────────────────
+      </div>
+
+      <nav class="tabs">
+        <a
+          class={tag == null ? "on" : ""}
+          href={`/@${accountOwner.handle}`}
+        >
+          posts
+        </a>
+        <a href={`/@${accountOwner.handle}/with_replies`}>posts &amp; replies</a>
+        <a href={`/@${accountOwner.handle}/media`}>media</a>
+        <a href={`/@${accountOwner.handle}/about`}>about</a>
+      </nav>
+
+      {featuredTags.length > 0 && (
+        <p style="margin-top:10px;">
+          <span class="dimc">featured: </span>
+          {featuredTags.map((featured) => (
+            <>
+              <a
+                class="tag"
+                href={`/@${accountOwner.handle}/tagged/${encodeURIComponent(featured.name)}`}
+              >
+                #{featured.name}
+              </a>{" "}
+            </>
           ))}
-        {posts.map((post) => (
-          <ProfilePostEntry post={post} ownerHandle={accountOwner.handle} />
+        </p>
+      )}
+
+      {tag == null &&
+        pinnedPosts.map((post) => (
+          <ProfilePostEntry
+            post={post}
+            ownerHandle={accountOwner.handle}
+            pinned={true}
+          />
         ))}
+      {posts.map((post) => (
+        <ProfilePostEntry post={post} ownerHandle={accountOwner.handle} />
+      ))}
+
       {(newerUrl || olderUrl) && (
         <div
           style="display:flex; justify-content:space-between; margin-top:18px;"
@@ -685,24 +687,19 @@ function ProfilePage({
           </div>
         </div>
       )}
-            </div>
-          </main>
-        </div>
-        <div class="statusbar">
-          <span class="mode">NORMAL</span>
-          <span class="k">
-            [<b>j/k</b>] move
-          </span>
-          <span class="k">
-            [<b>Enter</b>] open
-          </span>
-          <span class="sp" />
-          <span>
-            profile · @{accountOwner.handle}
-          </span>
-        </div>
+
+      <div class="endcap">
+        — {totalPosts} posts ·{" "}
+        {olderUrl ? (
+          <>
+            load more with <span class="gn">[m]</span>
+          </>
+        ) : (
+          "end of feed"
+        )}{" "}
+        —
       </div>
-    </Layout>
+    </DashboardLayout>
   );
 }
 
