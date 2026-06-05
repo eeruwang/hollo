@@ -205,6 +205,7 @@ function LoginPage(props: LoginPageProps) {
               values={props.values}
               errors={props.errors}
               hint="single-user instance · only the owner can sign in"
+              resetUrl="/password"
             />
           </details>
         </>
@@ -215,6 +216,7 @@ function LoginPage(props: LoginPageProps) {
           values={props.values}
           errors={props.errors}
           hint="single-user instance · only the owner can sign in"
+          resetUrl="/password"
         />
       )}
       {props.passkeyEnrolled && (

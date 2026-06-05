@@ -276,6 +276,21 @@ async function AuthPage({ totp, tfa, passkeys }: AuthPageProps) {
       </div>
 
       <div class="setblock">
+        <div class="sb-h">[ password ]</div>
+        <div class="setrow">
+          <div class="lab">
+            change password
+            <div class="d">argon2id · used at sign-in</div>
+          </div>
+          <div class="val">
+            <a class="btn-pri" href="/password">
+              change →
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="setblock">
         <div class="sb-h">[ two-factor authentication ]</div>
         {totp == null ? (
           tfa == null ? (

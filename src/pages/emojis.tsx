@@ -39,173 +39,253 @@ emojis.get("/", async (c) => {
     <DashboardLayout
       title="~/emojis · Hollo"
       selectedMenu="emojis"
-      shellPath="emojis"
-      shellStatus={`${rows.length} custom`}
+      shellPath="settings/emojis"
+      shellMode="CONFIG"
+      shellStatus={`emojis · ${rows.length} custom`}
+      shellHints={[
+        { key: "j/k", label: "row" },
+        { key: "n", label: "new" },
+        { key: "d", label: "delete" },
+        { key: "q", label: "back" },
+      ]}
     >
       <div class="cmdline">
         <span class="u">root@hollo</span>:~${" "}
-        <span class="cmd">emojis</span> <span class="arg">--list</span>
+        <span class="cmd">emoji list</span>{" "}
+        <span class="arg">--custom</span>{" "}
+        <span class="dimc">
+          · {rows.length} custom · :shortcode: usable in posts
+        </span>
       </div>
-      <form
-        method="post"
-        action="/emojis/delete"
-        onsubmit="if (event.submitter && event.submitter.formAction && event.submitter.formAction.indexOf('/delete') === -1) return true; const cnt = this.querySelectorAll('input[name=emoji]:checked').length; return window.confirm('Are you sure you want to delete the selected ' + (cnt > 1 ? cnt + ' emojis' : cnt + ' emoji') + '?');"
-      >
-        {rows.length > 0 && (
-          <table>
-            <thead>
-              <tr>
-                <th>Check</th>
-                <th>Category</th>
-                <th>Short code</th>
-                <th>Aliases</th>
-                <th>Image</th>
-                <th>Edit</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((emoji) => (
-                <tr>
-                  <td>
-                    <input
-                      type="checkbox"
-                      id={`emoji-${emoji.shortcode}`}
-                      name="emoji"
-                      value={emoji.shortcode}
-                      class="emoji-row-check"
-                    />
-                  </td>
-                  <td>
-                    <label for={`emoji-${emoji.shortcode}`}>
-                      {emoji.category}
-                    </label>
-                  </td>
-                  <td>
-                    <tt>
-                      <label for={`emoji-${emoji.shortcode}`}>
-                        :{emoji.shortcode}:
-                      </label>
-                    </tt>
-                  </td>
-                  <td>
-                    <small>
-                      {(emoji.aliases ?? []).length === 0
-                        ? "—"
-                        : (emoji.aliases ?? []).map((a) => `:${a}:`).join(", ")}
-                    </small>
-                  </td>
-                  <td>
-                    <label for={`emoji-${emoji.shortcode}`}>
-                      <img
-                        src={emoji.url}
-                        alt={`:${emoji.shortcode}:`}
-                        style="height: 24px"
-                      />
-                    </label>
-                  </td>
-                  <td>
-                    <a
-                      href={`/emojis/${encodeURIComponent(emoji.shortcode)}/edit`}
-                      class="secondary"
-                    >
-                      Edit
-                    </a>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-        {rows.length > 0 && (
-          <fieldset class="grid emoji-bulk-row">
-            <label>
-              Move selected to category
-              <select
-                name="category"
-                onchange="this.form.new.disabled = this.value != 'new'"
-              >
-                <option value="">None (uncategorized)</option>
-                <option value="new">New category</option>
-                <hr />
-                {categories.map((cat) => (
-                  <option value={`category:${cat}`}>{cat}</option>
-                ))}
-              </select>
-            </label>
-            <label>
-              New category
-              <input type="text" name="new" disabled={true} />
-            </label>
-          </fieldset>
-        )}
-        <div class="emoji-actions">
-          <a role="button" href="/emojis/new">
-            + Add emoji
-          </a>
-          <a role="button" href="/emojis/import" class="secondary">
-            From federated
-          </a>
-          <a role="button" href="/emojis/import/remote" class="secondary">
-            From instance
-          </a>
-          <a role="button" href="/emojis/import/zip" class="secondary">
-            Import zip
-          </a>
-          {rows.length > 0 && (
-            <a role="button" href="/emojis/export" class="secondary">
-              Export zip
+
+      <div class="setblock">
+        <div class="sb-h">[ add custom emoji ]</div>
+        <div class="setrow">
+          <div class="lab">
+            upload
+            <div class="d">PNG / GIF, ≤256 KB, square</div>
+          </div>
+          <div class="val">
+            <a class="btn-pri" href="/emojis/new">
+              ＋ upload one →
             </a>
-          )}
-          {rows.length > 0 && (
-            <button
-              type="submit"
-              formaction="/emojis/move"
-              class="emoji-selection-btn emoji-actions-split secondary"
-              disabled
-            >
-              Move selected
-            </button>
-          )}
-          {rows.length > 0 && (
-            <button
-              type="submit"
-              class="contrast emoji-selection-btn"
-              disabled
-            >
-              Delete selected
-            </button>
-          )}
+          </div>
         </div>
-      </form>
+        <div class="setrow">
+          <div class="lab">
+            from another fediverse server
+            <div class="d">copy emoji you've seen in remote posts</div>
+          </div>
+          <div class="val" style="display:flex; gap:7px;">
+            <a class="btn-line" href="/emojis/import">
+              from federated
+            </a>
+            <a class="btn-line" href="/emojis/import/remote">
+              from instance
+            </a>
+          </div>
+        </div>
+        <div class="setrow">
+          <div class="lab">
+            zip pack
+            <div class="d">import or export the whole set</div>
+          </div>
+          <div class="val" style="display:flex; gap:7px;">
+            <a class="btn-line" href="/emojis/import/zip">
+              import zip
+            </a>
+            {rows.length > 0 && (
+              <a class="btn-line" href="/emojis/export">
+                export zip
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {rows.length === 0 ? (
+        <div class="state">
+          <div class="glyph">😀</div>
+          <div class="ttl">no custom emoji yet</div>
+          <div class="msg">
+            once installed, type <code>:shortcode:</code> in any post and it
+            renders as the image.
+          </div>
+        </div>
+      ) : (
+        <form
+          method="post"
+          action="/emojis/delete"
+          onsubmit="if (event.submitter && event.submitter.formAction && event.submitter.formAction.indexOf('/delete') === -1) return true; const cnt = this.querySelectorAll('input[name=emoji]:checked').length; return window.confirm('Delete ' + cnt + ' selected emoji?');"
+        >
+          <div class="h-sec">▸ installed · {rows.length}</div>
+          <div class="ttable">
+            <div
+              class="tr th"
+              style="grid-template-columns:32px 56px 1fr 1.2fr 130px 70px;"
+            >
+              <span />
+              <span>glyph</span>
+              <span>shortcode</span>
+              <span>aliases · category</span>
+              <span>added</span>
+              <span>·</span>
+            </div>
+            {rows.map((emoji) => (
+              <div
+                class="tr"
+                style="grid-template-columns:32px 56px 1fr 1.2fr 130px 70px;"
+              >
+                <span>
+                  <input
+                    type="checkbox"
+                    id={`emoji-${emoji.shortcode}`}
+                    name="emoji"
+                    value={emoji.shortcode}
+                    class="emoji-row-check"
+                  />
+                </span>
+                <span style="font-size:20px; display:flex; align-items:center;">
+                  <img
+                    src={emoji.url}
+                    alt={`:${emoji.shortcode}:`}
+                    style="max-height:24px; max-width:32px;"
+                  />
+                </span>
+                <span class="mono">
+                  <label for={`emoji-${emoji.shortcode}`}>
+                    :{emoji.shortcode}:
+                  </label>
+                </span>
+                <span class="dimc" style="font-size:12px;">
+                  {(emoji.aliases ?? []).length > 0
+                    ? (emoji.aliases ?? []).map((a) => `:${a}:`).join(", ")
+                    : "—"}
+                  {emoji.category && (
+                    <>
+                      {" · "}
+                      <span class="am">{emoji.category}</span>
+                    </>
+                  )}
+                </span>
+                <span class="sub" style="color:var(--faint); font-size:12px;">
+                  {emoji.created.toLocaleDateString("en", {
+                    year: "numeric",
+                    month: "2-digit",
+                    day: "2-digit",
+                  })}
+                </span>
+                <span>
+                  <a
+                    href={`/emojis/${encodeURIComponent(emoji.shortcode)}/edit`}
+                    class="muted"
+                    style="font-size:12px;"
+                  >
+                    ✎ edit
+                  </a>
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {(rows.length > 0 || categories.length > 0) && (
+            <div
+              class="setblock"
+              style="margin-top:14px;"
+            >
+              <div class="sb-h">[ bulk actions on selected ]</div>
+              <div class="setrow">
+                <div class="lab" style="min-width:200px;">
+                  category
+                  <div class="d">move selected emoji to a category</div>
+                </div>
+                <div class="val" style="display:flex; gap:7px; flex-wrap:wrap;">
+                  <select
+                    name="category"
+                    onchange="this.form.new.disabled = this.value != 'new'"
+                    style="background:transparent; border:1px solid var(--bd); color:var(--fg); font-family:var(--mono); font-size:12.5px; padding:5px 9px;"
+                  >
+                    <option value="">none (uncategorized)</option>
+                    <option value="new">＋ new category</option>
+                    {categories.map((cat) => (
+                      <option value={`category:${cat}`}>{cat}</option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    name="new"
+                    placeholder="new category name…"
+                    disabled={true}
+                    style="background:transparent; border:1px solid var(--bd); color:var(--fgs); font-family:var(--mono); font-size:12.5px; padding:5px 9px; flex:1; min-width:160px;"
+                  />
+                  <button
+                    type="submit"
+                    formaction="/emojis/move"
+                    class="btn-line emoji-selection-btn"
+                    disabled
+                  >
+                    apply
+                  </button>
+                </div>
+              </div>
+              <div class="setrow">
+                <div class="lab">delete</div>
+                <div class="val">
+                  <button
+                    type="submit"
+                    class="btn-line emoji-selection-btn"
+                    style="color:var(--red); border-color:var(--bd);"
+                    disabled
+                  >
+                    ⌫ delete selected
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </form>
+      )}
+
       {categories.length > 0 && (
         <form
           method="post"
           action="/emojis/rename-category"
-          class="emoji-rename-category"
+          class="ac-b"
+          style="border:1px solid var(--bd); margin-top:14px; max-width:600px;"
         >
-          <fieldset class="grid">
-            <label>
-              Rename category
-              <select name="from">
-                {categories.map((cat) => (
-                  <option value={`category:${cat}`}>{cat}</option>
-                ))}
-              </select>
-            </label>
-            <label>
-              To
-              <input
-                type="text"
-                name="to"
-                placeholder="new name (blank to clear)"
-              />
-            </label>
-          </fieldset>
-          <button type="submit" class="secondary">
-            Rename category
-          </button>
+          <div class="sb-h" style="padding:8px 12px;">
+            [ rename category ]
+          </div>
+          <div class="field">
+            <label>from</label>
+            <select name="from">
+              {categories.map((cat) => (
+                <option value={`category:${cat}`}>{cat}</option>
+              ))}
+            </select>
+          </div>
+          <div class="field">
+            <label>to</label>
+            <input
+              type="text"
+              name="to"
+              placeholder="new name (blank to clear)"
+            />
+          </div>
+          <div class="formfoot">
+            <span class="sp" />
+            <button type="submit" class="btn-line">
+              rename →
+            </button>
+          </div>
         </form>
       )}
+
+      <div class="endcap">
+        — remote emoji are cached automatically · <span class="gn">[/]</span>{" "}
+        filter —
+      </div>
+
       {rows.length > 0 && (
         <script
           dangerouslySetInnerHTML={{
@@ -244,47 +324,82 @@ emojis.get("/new", async (c) => {
         <span class="u">root@hollo</span>:~${" "}
         <span class="cmd">emoji add</span> <span class="arg">--upload</span>
       </div>
-      <form method="post" action="/emojis" enctype="multipart/form-data">
-        <fieldset class="grid">
-          <label>
-            Category
-            <select
-              name="category"
-              onchange="this.form.new.disabled = this.value != 'new'"
-            >
-              <option>None</option>
-              <option value="new">New category</option>
-              <hr />
-              {categories.map(({ category }) => (
-                <option value={`category:${category}`}>{category}</option>
-              ))}
-            </select>
+      <form
+        method="post"
+        action="/emojis"
+        enctype="multipart/form-data"
+        class="ac-b"
+        style="border:1px solid var(--bd); max-width:600px;"
+      >
+        <div class="sb-h" style="padding:8px 12px;">
+          [ add custom emoji ]
+        </div>
+        <div class="field">
+          <label htmlFor="emoji-shortcode">
+            shortcode <span class="req">*</span>
           </label>
-          <label>
-            New category
-            <input type="text" name="new" disabled={true} />
+          <div class="row2">
+            <span class="dimc">:</span>
+            <input
+              id="emoji-shortcode"
+              type="text"
+              name="shortcode"
+              required
+              pattern="^:?(-|[a-z0-9_])+:?$"
+              placeholder="blobcat"
+              spellcheck={false}
+            />
+            <span class="dimc">:</span>
+          </div>
+          <span class="desc">
+            letters, numbers, underscore — used as <span class="tag">:name:</span>{" "}
+            in posts
+          </span>
+        </div>
+        <div class="field">
+          <label htmlFor="emoji-image">
+            image <span class="req">*</span>
           </label>
-        </fieldset>
-        <label>
-          <span>Short code</span>
           <input
-            type="text"
-            name="shortcode"
-            required
-            pattern="^:(-|[a-z0-9_])+:$"
-            placeholder=":shortcode:"
-          />
-        </label>
-        <label>
-          <span>Image</span>
-          <input
+            id="emoji-image"
             type="file"
             name="image"
             required
             accept="image/png, image/jpeg, image/gif, image/webp"
           />
-        </label>
-        <button type="submit">Add</button>
+          <span class="desc">PNG / GIF / JPEG / WebP · square preferred</span>
+        </div>
+        <div class="field">
+          <label>category</label>
+          <div class="row2">
+            <select
+              name="category"
+              onchange="this.form.new.disabled = this.value != 'new'"
+              style="background:transparent; border:1px solid var(--bd); color:var(--fg); font-family:var(--mono); font-size:13px; padding:6px 10px;"
+            >
+              <option value="">none</option>
+              <option value="new">＋ new category</option>
+              {categories.map(({ category }) => (
+                <option value={`category:${category}`}>{category}</option>
+              ))}
+            </select>
+            <input
+              type="text"
+              name="new"
+              placeholder="new category name…"
+              disabled={true}
+            />
+          </div>
+        </div>
+        <div class="formfoot">
+          <a class="btn-line" href="/emojis" style="text-decoration:none;">
+            cancel
+          </a>
+          <span class="sp" />
+          <button class="btn-pri" type="submit">
+            ＋ add emoji
+          </button>
+        </div>
       </form>
     </DashboardLayout>,
   );
@@ -433,17 +548,23 @@ emojis.get("/import", async (c) => {
     }
   }
   return c.html(
-    <DashboardLayout title="~/emojis/import · Hollo" selectedMenu="emojis">
-      <hgroup>
-        <h1>Import custom emojis</h1>
-        <p>
-          Emojis that other fediverse accounts have used in posts, replies,
-          reactions, or profile data that's already reached this instance.
-        </p>
-      </hgroup>
-      <p>
-        <a role="button" href="/emojis/import/remote" class="secondary">
-          Or pull directly from a remote instance &rarr;
+    <DashboardLayout
+      title="~/emojis/import · Hollo"
+      selectedMenu="emojis"
+      shellPath="emojis/import"
+      shellStatus={`${Object.keys(emojis).length} discovered`}
+    >
+      <div class="cmdline">
+        <span class="u">root@hollo</span>:~${" "}
+        <span class="cmd">emoji import</span>{" "}
+        <span class="arg">--from-federated</span>{" "}
+        <span class="dimc">
+          · {Object.keys(emojis).length} discovered from federated activity
+        </span>
+      </div>
+      <p style="margin-bottom:14px;">
+        <a class="btn-line" href="/emojis/import/remote">
+          or pull directly from a remote instance →
         </a>
       </p>
       <form method="post" action="/emojis/import">
@@ -625,37 +746,50 @@ emojis.get("/import/remote", async (c) => {
       <DashboardLayout
         title="~/emojis/import/remote · Hollo"
         selectedMenu="emojis"
+        shellPath="emojis/import/remote"
       >
-        <hgroup>
-          <h1>Import from remote instance</h1>
-          <p>
-            Pull the full custom-emoji set from another fediverse instance
-            (Mastodon, Misskey, etc.) without waiting for posts to federate in
-            first.
-          </p>
-        </hgroup>
-        <form method="get" action="/emojis/import/remote">
-          <label>
-            Instance domain or fediverse handle
+        <div class="cmdline">
+          <span class="u">root@hollo</span>:~${" "}
+          <span class="cmd">emoji import</span>{" "}
+          <span class="arg">--from-instance</span>
+        </div>
+        <form
+          method="get"
+          action="/emojis/import/remote"
+          class="ac-b"
+          style="border:1px solid var(--bd); max-width:600px;"
+        >
+          <div class="sb-h" style="padding:8px 12px;">
+            [ pull from remote instance ]
+          </div>
+          <div class="field">
+            <label htmlFor="emoji-source">
+              instance domain or handle <span class="req">*</span>
+            </label>
             <input
+              id="emoji-source"
               type="text"
               name="source"
               placeholder="mastodon.social  or  @user@host.tld"
               required
               autocomplete="off"
+              spellcheck={false}
             />
-          </label>
-          <small>
-            Examples: <tt>mastodon.social</tt>, <tt>misskey.io</tt>,{" "}
-            <tt>@user@hollo.social</tt>, or a full URL.
-          </small>
-          <button type="submit">Fetch emojis</button>
+            <span class="desc">
+              examples: <code>mastodon.social</code>, <code>misskey.io</code>,{" "}
+              <code>@user@hollo.social</code>, or a full URL.
+            </span>
+          </div>
+          <div class="formfoot">
+            <a class="btn-line" href="/emojis/import" style="text-decoration:none;">
+              ← federated only
+            </a>
+            <span class="sp" />
+            <button class="btn-pri" type="submit">
+              fetch emojis →
+            </button>
+          </div>
         </form>
-        <p>
-          <a href="/emojis/import" class="secondary" role="button">
-            Back to federated emojis
-          </a>
-        </p>
       </DashboardLayout>,
     );
   }
@@ -707,28 +841,29 @@ emojis.get("/import/remote", async (c) => {
     <DashboardLayout
       title={`~/emojis/from/${domain} · Hollo`}
       selectedMenu="emojis"
+      shellPath={`emojis/from/${domain}`}
+      shellStatus={`${Object.keys(fresh).length} new`}
     >
-      <hgroup>
-        <h1>Emojis from {domain}</h1>
-        <p>
-          Found {fetched.length} public emoji
-          {fetched.length === 1 ? "" : "s"}, {Object.keys(fresh).length} new.
-          Review the list, tick the ones you want, and they'll be imported (and
-          mirrored locally by default).
-        </p>
-      </hgroup>
+      <div class="cmdline">
+        <span class="u">root@hollo</span>:~${" "}
+        <span class="cmd">emoji import</span>{" "}
+        <span class="arg">--from {domain}</span>{" "}
+        <span class="dimc">
+          · {fetched.length} found, {Object.keys(fresh).length} new
+        </span>
+      </div>
       {Object.keys(fresh).length === 0 ? (
-        <>
-          <p>
-            You already have all of {domain}'s emojis imported. Nothing to do
-            here.
-          </p>
-          <p>
-            <a href="/emojis" role="button" class="secondary">
-              Back to custom emojis
-            </a>
-          </p>
-        </>
+        <div class="state">
+          <div class="glyph">✓</div>
+          <div class="ttl">all caught up</div>
+          <div class="msg">
+            you already have every public emoji from <code>{domain}</code>
+            imported.
+          </div>
+          <a class="cta btn pri" href="/emojis">
+            back to emojis →
+          </a>
+        </div>
       ) : (
         renderImportPreviewForm(fresh, categories, domain)
       )}
@@ -741,29 +876,51 @@ function renderRemoteFetchError(c: Context, source: string, message: string) {
     <DashboardLayout
       title="~/emojis/import/remote · Hollo"
       selectedMenu="emojis"
+      shellPath="emojis/import/remote"
     >
-      <hgroup>
-        <h1>Import from remote instance</h1>
-        <p>{message}</p>
-      </hgroup>
-      <form method="get" action="/emojis/import/remote">
-        <label>
-          Instance domain or fediverse handle
+      <div class="cmdline">
+        <span class="u">root@hollo</span>:~${" "}
+        <span class="cmd">emoji import</span>{" "}
+        <span class="arg">--from-instance</span>
+      </div>
+      <div class="state err" style="margin-bottom:14px;">
+        <div class="glyph">⚠</div>
+        <div class="ttl">remote fetch failed</div>
+        <div class="msg">{message}</div>
+      </div>
+      <form
+        method="get"
+        action="/emojis/import/remote"
+        class="ac-b"
+        style="border:1px solid var(--bd); max-width:600px;"
+      >
+        <div class="sb-h" style="padding:8px 12px;">
+          [ try again ]
+        </div>
+        <div class="field">
+          <label htmlFor="emoji-retry-src">
+            instance domain or handle <span class="req">*</span>
+          </label>
           <input
+            id="emoji-retry-src"
             type="text"
             name="source"
             value={source}
             required
             autocomplete="off"
+            spellcheck={false}
           />
-        </label>
-        <button type="submit">Try again</button>
+        </div>
+        <div class="formfoot">
+          <a class="btn-line" href="/emojis/import" style="text-decoration:none;">
+            ← federated only
+          </a>
+          <span class="sp" />
+          <button class="btn-pri" type="submit">
+            retry →
+          </button>
+        </div>
       </form>
-      <p>
-        <a href="/emojis/import" class="secondary" role="button">
-          Back to federated emojis
-        </a>
-      </p>
     </DashboardLayout>,
     400,
   );
@@ -1145,41 +1302,62 @@ async function mirrorEmojiImage(
 
 emojis.get("/import/zip", async (c) => {
   return c.html(
-    <DashboardLayout title="~/emojis/import/pack · Hollo" selectedMenu="emojis">
-      <hgroup>
-        <h1>Import emoji pack (.zip)</h1>
-        <p>
-          Upload a Misskey-style emoji pack — a zip file containing a
-          <tt> meta.json</tt> at its root plus image files. Emojis with{" "}
-          <tt>downloaded: true</tt> are imported using their bundled image and
-          the category/aliases from the metadata.
-        </p>
-      </hgroup>
+    <DashboardLayout
+      title="~/emojis/import/pack · Hollo"
+      selectedMenu="emojis"
+      shellPath="emojis/import/pack"
+    >
+      <div class="cmdline">
+        <span class="u">root@hollo</span>:~${" "}
+        <span class="cmd">emoji import</span>{" "}
+        <span class="arg">--pack</span>
+      </div>
       <form
         method="post"
         action="/emojis/import/zip"
         enctype="multipart/form-data"
+        class="ac-b"
+        style="border:1px solid var(--bd); max-width:600px;"
       >
-        <label>
-          Emoji pack (.zip)
+        <div class="sb-h" style="padding:8px 12px;">
+          [ import misskey-style emoji pack ]
+        </div>
+        <div class="field">
+          <label htmlFor="emoji-pack">
+            pack archive <span class="req">*</span>
+          </label>
           <input
+            id="emoji-pack"
             type="file"
             name="pack"
             required
             accept=".zip,application/zip"
           />
-        </label>
-        <label>
-          <input type="checkbox" name="overwrite" value="true" />
-          Replace existing shortcodes (otherwise duplicates are skipped)
-        </label>
-        <button type="submit">Import pack</button>
+          <span class="desc">
+            zip with a <code>meta.json</code> at root plus image files. Entries
+            marked <code>downloaded: true</code> are imported with their
+            bundled image + category/aliases.
+          </span>
+        </div>
+        <div class="field">
+          <label
+            style="display:flex; align-items:center; gap:8px; cursor:pointer;"
+          >
+            <input type="checkbox" name="overwrite" value="true" /> replace
+            existing shortcodes
+          </label>
+          <span class="desc">otherwise duplicates are skipped.</span>
+        </div>
+        <div class="formfoot">
+          <a class="btn-line" href="/emojis" style="text-decoration:none;">
+            cancel
+          </a>
+          <span class="sp" />
+          <button class="btn-pri" type="submit">
+            import pack →
+          </button>
+        </div>
       </form>
-      <p>
-        <a role="button" href="/emojis" class="secondary">
-          Back to custom emojis
-        </a>
-      </p>
     </DashboardLayout>,
   );
 });
@@ -1454,38 +1632,53 @@ emojis.get("/:shortcode/edit", async (c) => {
     <DashboardLayout
       title={`~/emojis/:${row.shortcode}:/edit · Hollo`}
       selectedMenu="emojis"
+      shellPath={`emojis/:${row.shortcode}:/edit`}
+      shellMode="EDIT"
     >
-      <hgroup>
-        <h1>
-          Edit <tt>:{row.shortcode}:</tt>
-        </h1>
-        <p>
-          Change this emoji's category or give it alternative shortcodes. The
-          primary shortcode itself can't be renamed (doing so would break posts
-          that already reference it).
-        </p>
-      </hgroup>
+      <div class="cmdline">
+        <span class="u">root@hollo</span>:~${" "}
+        <span class="cmd">emoji edit</span>{" "}
+        <span class="arg">:{row.shortcode}:</span>
+      </div>
       <form
         method="post"
         action={`/emojis/${encodeURIComponent(row.shortcode)}/edit`}
+        class="ac-b"
+        style="border:1px solid var(--bd); max-width:600px;"
       >
-        <img
-          src={row.url}
-          alt={`:${row.shortcode}:`}
-          style="height: 48px; margin-bottom: 1rem;"
-        />
-        <fieldset class="grid">
-          <label>
-            Category
+        <div class="sb-h" style="padding:8px 12px;">
+          [ edit :{row.shortcode}: ]
+        </div>
+        <div
+          class="field"
+          style="flex-direction:row; align-items:center; gap:14px;"
+        >
+          <img
+            src={row.url}
+            alt={`:${row.shortcode}:`}
+            style="height: 48px; width:48px; object-fit:contain; border:1px solid var(--bd); padding:6px; background:var(--bg2);"
+          />
+          <div>
+            <div class="mono">:{row.shortcode}:</div>
+            <span class="desc">
+              the primary shortcode can't be changed — that would break posts
+              already referencing it.
+            </span>
+          </div>
+        </div>
+        <div class="field">
+          <label htmlFor="emoji-cat">category</label>
+          <div class="row2">
             <select
+              id="emoji-cat"
               name="category"
               onchange="this.form.new.disabled = this.value != 'new'"
+              style="background:transparent; border:1px solid var(--bd); color:var(--fg); font-family:var(--mono); font-size:13px; padding:6px 10px;"
             >
               <option value="" selected={row.category == null}>
-                None
+                none
               </option>
-              <option value="new">New category</option>
-              <hr />
+              <option value="new">＋ new category</option>
               {categories.map((cat) => (
                 <option
                   value={`category:${cat}`}
@@ -1495,32 +1688,37 @@ emojis.get("/:shortcode/edit", async (c) => {
                 </option>
               ))}
             </select>
-          </label>
-          <label>
-            New category
-            <input type="text" name="new" disabled={true} />
-          </label>
-        </fieldset>
-        <label>
-          Aliases (comma- or space-separated)
+            <input
+              type="text"
+              name="new"
+              placeholder="new category name…"
+              disabled={true}
+            />
+          </div>
+        </div>
+        <div class="field">
+          <label htmlFor="emoji-aliases">aliases</label>
           <input
+            id="emoji-aliases"
             type="text"
             name="aliases"
             value={(row.aliases ?? []).join(", ")}
             placeholder="kitty, meow, smiley"
             autocomplete="off"
           />
-          <small>
-            Lowercase, digits, <tt>_</tt> and <tt>-</tt> only. Rendering of
-            aliases in posts is not yet supported — aliases are exported with
-            the emoji to the Misskey zip pack.
-          </small>
-        </label>
-        <div role="group">
-          <button type="submit">Save</button>
-          <a role="button" href="/emojis" class="secondary">
-            Cancel
+          <span class="desc">
+            comma- or space-separated · lowercase + digits + <code>_-</code>.
+            Aliases are exported with the emoji to the Misskey zip pack.
+          </span>
+        </div>
+        <div class="formfoot">
+          <a class="btn-line" href="/emojis" style="text-decoration:none;">
+            cancel
           </a>
+          <span class="sp" />
+          <button class="btn-pri" type="submit">
+            save →
+          </button>
         </div>
       </form>
     </DashboardLayout>,

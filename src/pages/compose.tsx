@@ -111,6 +111,8 @@ composePage.get("/", async (c) => {
         action="/social/compose"
         enctype="multipart/form-data"
         class="composer"
+        data-draft-id={c.req.query("draft") ?? ""}
+        data-draft-reply-to={replyTo ?? ""}
       >
         {replyTo && (
           <input type="hidden" name="in_reply_to_id" value={replyTo} />
@@ -243,6 +245,7 @@ composePage.get("/", async (c) => {
   if (!form) return;
   const ta = form.querySelector('textarea[name="content"]');
   const counter = form.querySelector('[data-compose-count] b');
+  const spoiler = form.querySelector('input[name="spoiler_text"]');
   if (!ta || !counter) return;
   const max = 500;
   const update = () => {
@@ -252,14 +255,12 @@ composePage.get("/", async (c) => {
   };
   ta.addEventListener('input', update);
   update();
-  // Cmd/Ctrl + Enter submits
   ta.addEventListener('keydown', (ev) => {
     if ((ev.metaKey || ev.ctrlKey) && ev.key === 'Enter') {
       ev.preventDefault();
       form.requestSubmit();
     }
   });
-  // Highlight CW tool when checkbox is checked
   const cw = form.querySelector('input[name="sensitive"]');
   const cwTool = cw && cw.closest('.tool');
   if (cw && cwTool) {
@@ -268,7 +269,6 @@ composePage.get("/", async (c) => {
       cwTool.style.color = cw.checked ? 'var(--am)' : '';
     });
   }
-  // Show attached file count on the image tool
   const attach = form.querySelector('input[name="media"]');
   const attachTool = attach && attach.closest('.tool');
   if (attach && attachTool) {
@@ -284,6 +284,62 @@ composePage.get("/", async (c) => {
       }
     });
   }
+
+  // ---------- Draft autosave ----------
+  function readDrafts(){
+    try { return JSON.parse(localStorage.getItem('hollo-drafts') || '[]') || []; }
+    catch(e){ return []; }
+  }
+  function writeDrafts(list){
+    try { localStorage.setItem('hollo-drafts', JSON.stringify(list)); } catch(e){}
+  }
+  function uuid(){
+    return 'd_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8);
+  }
+  let draftId = form.getAttribute('data-draft-id') || '';
+  const replyToHint = form.getAttribute('data-draft-reply-to') || '';
+
+  // Hydrate from existing draft on load
+  if (draftId) {
+    const existing = readDrafts().find(d => d.id === draftId);
+    if (existing) {
+      ta.value = existing.content || '';
+      if (spoiler && existing.spoiler) spoiler.value = existing.spoiler;
+      if (cw && existing.sensitive) { cw.checked = true; cw.dispatchEvent(new Event('change')); }
+      update();
+    }
+  }
+
+  let savePending = null;
+  function persist(){
+    const content = ta.value || '';
+    if (content.trim().length === 0) return; // don't save empties
+    if (!draftId) draftId = uuid();
+    const list = readDrafts().filter(d => d.id !== draftId);
+    list.push({
+      id: draftId,
+      content,
+      spoiler: spoiler ? spoiler.value : '',
+      sensitive: cw ? cw.checked : false,
+      replyToId: replyToHint || null,
+      updated: Date.now(),
+    });
+    // Cap stored drafts at 25 to avoid runaway localStorage growth.
+    list.sort((a,b) => (b.updated||0) - (a.updated||0));
+    writeDrafts(list.slice(0, 25));
+  }
+  function schedule(){
+    if (savePending) clearTimeout(savePending);
+    savePending = setTimeout(persist, 1500);
+  }
+  ta.addEventListener('input', schedule);
+  if (spoiler) spoiler.addEventListener('input', schedule);
+  if (cw) cw.addEventListener('change', schedule);
+
+  // Clear the matching draft when the form actually submits.
+  form.addEventListener('submit', () => {
+    if (draftId) writeDrafts(readDrafts().filter(d => d.id !== draftId));
+  });
 })();`,
         }}
       />
