@@ -86,21 +86,18 @@ export async function DashboardLayout(
     <Layout {...props} themeColor={themeColor}>
       <div class="win has-bottomnav">
         <div class="titlebar">
-          <div class="dots">
+          <span class="dots">
             <i />
             <i />
             <i />
-          </div>
-          <div class="path">
-            <b>{promptUser}@hollo</b>
-            <span>: </span>
-            <span class="ac">~/{promptPath}</span>
-          </div>
-          <div class="tright">
+          </span>
+          <span class="path">
+            <b>{promptUser}@hollo</b>: <span class="ac">~/{promptPath}</span>
+          </span>
+          <span class="tright">
             <span class="led" />
-            <span>{status} · </span>
-            <span data-clock>00:00</span>
-          </div>
+            {status} · <span data-clock>00:00</span>
+          </span>
         </div>
         <div class="mid">
           <aside class="rail">
