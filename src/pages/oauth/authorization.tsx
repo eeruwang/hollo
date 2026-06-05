@@ -1,5 +1,5 @@
 import { escape } from "es-toolkit";
-import { PublicShellLayout } from "../../components/PublicShellLayout";
+import { AuthLayout } from "../../components/AuthLayout";
 import type { Account, AccountOwner, Application, Scope } from "../../schema";
 import { renderCustomEmojis } from "../../text";
 
@@ -15,64 +15,77 @@ interface AuthorizationPageProps {
 
 export function AuthorizationPage(props: AuthorizationPageProps) {
   return (
-    <PublicShellLayout
-      title={`~/oauth · authorize ${props.application.name}`}
-      shellPath="oauth/authorize"
-      shellStatus="oauth grant"
-      shellHints={[
-        { key: "↵", label: "allow" },
-        { key: "esc", label: "deny" },
-      ]}
-      shellContext={`oauth · ${props.application.name}`}
+    <AuthLayout
+      title={`authorize ${props.application.name} · Hollo`}
+      cardSubtitle="authorize app"
+      promptCommand={`oauth --grant ${props.application.name}`}
     >
-      <div class="cmdline">
-        <span class="u">hollo</span>:~$ <span class="cmd">oauth</span>{" "}
-        <span class="arg">--grant {props.application.name}</span>
-      </div>
-      <h2 class="h-sec">Authorize {props.application.name}?</h2>
-      <p class="muted" style="margin-bottom:14px;">
-        The application is requesting access to:
-      </p>
-      <div
-        style="border:1px solid var(--bd); padding:10px 14px; margin-bottom:18px; max-width:560px;"
-      >
-        {props.scopes.map((scope) => (
-          <div class="ctx" style="color:var(--fg);">
-            <span class="dimc">·</span>
-            <code class="gn">{scope}</code>
+      <form action="/oauth/authorize" method="post" class="ac-b">
+        <div class="field">
+          <label>application</label>
+          <div style="color:var(--fgs); font-weight:600;">
+            {props.application.name}
           </div>
-        ))}
-      </div>
-      <form action="/oauth/authorize" method="post" style="max-width:560px;">
-        <p class="dimc" style="margin-bottom:9px;">choose an account:</p>
-        {props.accountOwners.map((accountOwner, i) => {
-          const accountName = renderCustomEmojis(
-            escape(accountOwner.account.name),
-            accountOwner.account.emojis,
-          );
-          return (
-            <label
-              style="display:flex; gap:11px; align-items:flex-start; padding:11px 12px; border:1px solid var(--bd); margin-bottom:7px; cursor:pointer;"
-            >
-              <input
-                type="radio"
-                name="account_id"
-                value={accountOwner.id}
-                checked={i === 0}
-                style="margin-top:2px;"
-              />
-              <div>
-                <strong
-                  class="gn"
-                  dangerouslySetInnerHTML={{ __html: accountName }}
-                />
-                <div class="muted" style="font-size:12px; margin-top:2px;">
-                  {accountOwner.account.handle}
-                </div>
+          <span class="desc">requests access to your Hollo account.</span>
+        </div>
+
+        <div class="field">
+          <label>requested permissions</label>
+          <div
+            style="display:flex; flex-direction:column; gap:5px; margin-top:3px;"
+          >
+            {props.scopes.map((scope) => (
+              <div style="display:flex; align-items:center; gap:9px;">
+                <code class="gn">{scope}</code>
+                <span class="desc" style="margin-left:auto;">
+                  {scopeDescription(scope)}
+                </span>
               </div>
-            </label>
-          );
-        })}
+            ))}
+          </div>
+        </div>
+
+        {props.accountOwners.length > 1 && (
+          <div class="field">
+            <label>account</label>
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              {props.accountOwners.map((accountOwner, i) => {
+                const accountName = renderCustomEmojis(
+                  escape(accountOwner.account.name),
+                  accountOwner.account.emojis,
+                );
+                return (
+                  <label
+                    style="display:flex; gap:10px; align-items:flex-start; padding:8px 10px; border:1px solid var(--bd); cursor:pointer;"
+                  >
+                    <input
+                      type="radio"
+                      name="account_id"
+                      value={accountOwner.id}
+                      checked={i === 0}
+                      style="margin-top:2px;"
+                    />
+                    <div>
+                      <strong
+                        class="gn"
+                        dangerouslySetInnerHTML={{ __html: accountName }}
+                      />
+                      <div class="desc">{accountOwner.account.handle}</div>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        {props.accountOwners.length === 1 && (
+          <input
+            type="hidden"
+            name="account_id"
+            value={props.accountOwners[0].id}
+          />
+        )}
+
         <input
           type="hidden"
           name="application_id"
@@ -97,23 +110,55 @@ export function AuthorizationPage(props: AuthorizationPageProps) {
             />
           </>
         )}
-        <div style="display:flex; gap:9px; margin-top:14px;">
+
+        <div class="formfoot">
           {props.redirectUri !== "urn:ietf:wg:oauth:2.0:oob" && (
             <button
               type="submit"
-              class="btn"
+              class="btn-line"
               name="decision"
               value="deny"
-              style="color:var(--red);"
+              style="color:var(--red); border-color:var(--bd);"
             >
               deny
             </button>
           )}
-          <button type="submit" class="btn pri" name="decision" value="allow">
-            allow ↵
+          <span class="sp" />
+          <button
+            type="submit"
+            class="btn-pri"
+            name="decision"
+            value="allow"
+          >
+            allow →
           </button>
         </div>
       </form>
-    </PublicShellLayout>
+    </AuthLayout>
   );
+}
+
+function scopeDescription(scope: Scope): string {
+  switch (scope) {
+    case "read":
+      return "read your account, timelines, and posts";
+    case "write":
+      return "create, edit, and delete posts on your behalf";
+    case "follow":
+      return "manage who you follow / block / mute";
+    case "push":
+      return "deliver push notifications";
+    case "profile":
+      return "read your profile and identity";
+    default:
+      if (typeof scope === "string") {
+        if (scope.startsWith("read:")) {
+          return `read access to ${scope.split(":")[1]}`;
+        }
+        if (scope.startsWith("write:")) {
+          return `write access to ${scope.split(":")[1]}`;
+        }
+      }
+      return "";
+  }
 }

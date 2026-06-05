@@ -2,7 +2,7 @@ import { hash } from "argon2";
 import { count } from "drizzle-orm";
 import { type Context, Hono } from "hono";
 import { csrf } from "hono/csrf";
-import { PublicShellLayout } from "../../components/PublicShellLayout.tsx";
+import { AuthLayout } from "../../components/AuthLayout.tsx";
 import { SetupForm } from "../../components/SetupForm.tsx";
 import db from "../../db.ts";
 import { credentials } from "../../schema.ts";
@@ -82,20 +82,24 @@ interface SetupPageProps {
 
 function SetupPage(props: SetupPageProps) {
   return (
-    <PublicShellLayout
-      title="~/setup · Hollo"
-      shellPath="setup"
-      shellStatus="first run"
-      shellHints={[{ key: "Enter", label: "submit" }]}
-      shellContext="setup"
+    <AuthLayout
+      title="setup · Hollo"
+      cardSubtitle="first-run setup"
+      promptUser="root"
+      promptCommand="setup --init"
     >
-      <div class="cmdline">
-        <span class="u">hollo</span>:~$ <span class="cmd">setup</span>{" "}
-        <span class="arg">--init</span>
+      <div class="stepper">
+        <span class="st on">
+          <span class="dot">1</span>identity
+        </span>
+        <span class="bar" />
+        <span class="st">
+          <span class="dot">2</span>done
+        </span>
       </div>
       {props.proxyWarning && (
         <div
-          style="border:1px solid var(--red); padding:11px 14px; margin-bottom:18px; color:var(--red);"
+          style="margin:11px 14px; padding:11px 12px; border:1px solid var(--red); color:var(--red); font-size:12.5px;"
         >
           <strong>warning:</strong> your Hollo server runs behind a reverse
           proxy or L7 load balancer. set{" "}
@@ -108,13 +112,8 @@ function SetupPage(props: SetupPageProps) {
           to avoid federation issues.
         </div>
       )}
-      <h2 class="h-sec">Welcome to Hollo</h2>
-      <p class="muted" style="margin-bottom:18px;">
-        first-time setup · the email and password you set here will be used to
-        sign in.
-      </p>
       <SetupForm action="/setup" values={props.values} errors={props.errors} />
-    </PublicShellLayout>
+    </AuthLayout>
   );
 }
 

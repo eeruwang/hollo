@@ -1,4 +1,4 @@
-import { PublicShellLayout } from "../../components/PublicShellLayout";
+import { AuthLayout } from "../../components/AuthLayout";
 import type { Application } from "../../schema";
 
 interface AuthorizationCodePageProps {
@@ -8,26 +8,25 @@ interface AuthorizationCodePageProps {
 
 export function AuthorizationCodePage(props: AuthorizationCodePageProps) {
   return (
-    <PublicShellLayout
-      title="~/oauth · authorization code"
-      shellPath="oauth/code"
-      shellStatus="grant approved"
-      shellContext={`oauth · ${props.application.name}`}
+    <AuthLayout
+      title={`${props.application.name} · authorization code`}
+      cardSubtitle="grant approved"
+      promptCommand="oauth --code"
     >
-      <div class="cmdline">
-        <span class="u">hollo</span>:~$ <span class="cmd">oauth</span>{" "}
-        <span class="arg">--code</span>
+      <div class="ac-b">
+        <div class="field">
+          <label>authorization code</label>
+          <span class="desc">
+            copy this code and paste it into{" "}
+            <em class="gn">{props.application.name}</em>.
+          </span>
+          <pre
+            style="margin:9px 0 0; background:var(--bg2); border:1px solid var(--bd); padding:12px; color:var(--fgs); font-family:var(--mono); font-size:13px; user-select:all; word-break:break-all; white-space:pre-wrap;"
+          >
+            {props.code}
+          </pre>
+        </div>
       </div>
-      <h2 class="h-sec">Authorization code</h2>
-      <p class="muted" style="margin-bottom:14px;">
-        Copy this code and paste it into{" "}
-        <em class="gn">{props.application.name}</em>.
-      </p>
-      <pre
-        style="background:var(--bg2); border:1px solid var(--bd); padding:14px; color:var(--fgs); font-family:var(--mono); font-size:13.5px; user-select:all; word-break:break-all; white-space:pre-wrap; max-width:560px;"
-      >
-        {props.code}
-      </pre>
-    </PublicShellLayout>
+    </AuthLayout>
   );
 }
