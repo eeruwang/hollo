@@ -60,6 +60,35 @@ social.get("/", async (c) => {
     limit: 40,
   });
 
+  // For each owner-authored post in the timeline, mark whether it's
+  // the head of a self-thread (has at least one same-author reply that
+  // is itself NOT replying to another owner post — i.e. the post is
+  // the chain's root). Single batched query so we don't do N+1 work.
+  const ownPostIds = timeline
+    .filter((p) => p.accountId === owner.id && p.replyTargetId == null)
+    .map((p) => p.id);
+  let threadHeads = new Map<string, number>();
+  if (ownPostIds.length > 0) {
+    const replyRows = await db
+      .select({ replyTargetId: posts.replyTargetId })
+      .from(posts)
+      .where(
+        and(
+          eq(posts.accountId, owner.id),
+          inArray(posts.replyTargetId, ownPostIds),
+        ),
+      );
+    const counts = new Map<string, number>();
+    for (const row of replyRows) {
+      if (row.replyTargetId == null) continue;
+      counts.set(
+        row.replyTargetId,
+        (counts.get(row.replyTargetId) ?? 0) + 1,
+      );
+    }
+    threadHeads = counts;
+  }
+
   return c.html(
     <DashboardLayout
       title="~/timeline · Hollo"
@@ -92,17 +121,24 @@ social.get("/", async (c) => {
           </a>
         </div>
       ) : (
-        timeline.map((post) => (
-          <TimelineEntry
-            post={post}
-            mine={post.accountId === owner.id}
-            openHref={
-              post.sharing != null
-                ? `/@${post.sharing.account.handle.replace(/^@/, "")}/${post.sharing.id}`
-                : `/@${owner.handle}/${post.id}`
-            }
-          />
-        ))
+        timeline.map((post) => {
+          const partCount = threadHeads.get(post.id);
+          return (
+            <TimelineEntry
+              post={post}
+              mine={post.accountId === owner.id}
+              openHref={
+                post.sharing != null
+                  ? `/@${post.sharing.account.handle.replace(/^@/, "")}/${post.sharing.id}`
+                  : `/@${owner.handle}/${post.id}`
+              }
+              threadPartCount={
+                partCount != null ? partCount + 1 : undefined
+              }
+              threadHandle={owner.handle}
+            />
+          );
+        })
       )}
 
       {timeline.length > 0 && (

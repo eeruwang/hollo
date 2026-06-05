@@ -32,6 +32,14 @@ export interface TimelineEntryProps {
   /** Pre-rendered HTML link, mounted via `data-open` so `terminal.js`
    * can navigate to it on Enter / click. */
   readonly openHref?: string;
+  /** When set, render the 🧵 self-thread CTA underneath the body
+   * pointing at `/@<handle>/<id>/thread`. Indicates the post is the
+   * head of a same-author reply chain. */
+  readonly threadPartCount?: number;
+  /** Owner handle used to build the self-thread CTA href. */
+  readonly threadHandle?: string;
+  /** Show the PINNED badge before other meta. */
+  readonly pinned?: boolean;
 }
 
 export function TimelineEntry(props: TimelineEntryProps) {
@@ -43,9 +51,14 @@ export function TimelineEntry(props: TimelineEntryProps) {
   const nameHtml = renderCustomEmojis(account.name, account.emojis);
   const className = isBoost ? "entry other" : mine ? "entry mine" : "entry";
 
+  const threadHref =
+    props.threadPartCount && props.threadHandle
+      ? `/@${props.threadHandle}/${subject.id}/thread`
+      : undefined;
   return (
-    <article class={className} data-open={props.openHref}>
+    <article class={className} data-open={threadHref ?? props.openHref}>
       <div class="meta">
+        {props.pinned && <span class="badge">PINNED</span>}
         {isBoost && <span class="badge out">BOOST</span>}
         <span class="au" dangerouslySetInnerHTML={{ __html: nameHtml }} />
         <span class="ts">
@@ -57,6 +70,23 @@ export function TimelineEntry(props: TimelineEntryProps) {
           class={isBoost ? "quote" : "txt"}
           dangerouslySetInnerHTML={{ __html: subject.contentHtml }}
         />
+      )}
+      {threadHref && (
+        <a class="threadcta" href={threadHref}>
+          <span class="ic">🧵</span>
+          <span class="lab">
+            self-thread · <b>{props.threadPartCount} posts</b> → read as one
+            article
+          </span>
+          <span class="mini">
+            {Array.from({ length: Math.min(props.threadPartCount ?? 0, 8) }).map(
+              () => (
+                <i />
+              ),
+            )}
+          </span>
+          <span class="go">[↵] ▸</span>
+        </a>
       )}
       {subject.media.length > 0 && (
         <div class="media">
