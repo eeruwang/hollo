@@ -156,7 +156,7 @@ em{ font-style:italic; }
 .entry .txt{ color:var(--fgs); margin-top:5px; }
 .entry .quote{ border-left:2px solid var(--bd); padding-left:12px; margin-top:6px; color:var(--fg); }
 .entry .acts{ color:var(--faint); margin-top:7px; display:flex; gap:18px; flex-wrap:wrap; align-items:center; }
-.entry .acts .a{ cursor:pointer; white-space:nowrap; } .entry .acts .a b{ color:var(--fg); }
+.entry .acts .a{ cursor:pointer; white-space:nowrap; display:inline-flex; align-items:baseline; gap:5px; } .entry .acts .a b{ color:var(--fg); }
 .entry .acts .a:hover{ color:var(--fgs); }
 .entry .acts .a.boost.on{ color:var(--ac); } .entry .acts .a.fav.on{ color:var(--red); }
 /* inline mini reactions — on the SAME line as the action bar */
@@ -258,10 +258,10 @@ em{ font-style:italic; }
 .focus .ph{ display:flex; align-items:center; gap:10px; } .focus .av{ width:30px; height:30px; border:1px solid var(--bd); background:var(--bg); display:grid; place-items:center; color:var(--fgs); font-size:14px; flex:none; }
 .focus .au{ color:var(--ac); font-weight:600; } .focus .hn{ color:var(--faint); font-size:12px; }
 .focus .bigtx{ color:var(--fgs); margin-top:9px; font-size:15px; line-height:1.6; }
-.focus .acts{ color:var(--faint); margin-top:10px; display:flex; gap:18px; align-items:center; flex-wrap:wrap; } .focus .acts b{ color:var(--fg); }
+.focus .acts{ color:var(--faint); margin-top:10px; display:flex; gap:18px; align-items:center; flex-wrap:wrap; } .focus .acts .a{ display:inline-flex; align-items:baseline; gap:5px; } .focus .acts b{ color:var(--fg); }
 .rephead{ color:var(--dim); font-size:12px; margin:14px 0 5px; }
 .reply{ padding:8px 0 8px 16px; border-left:1px solid var(--bds); margin-left:8px; max-width:560px; }
-.reply .au{ color:var(--ac); font-weight:600; } .reply .hn{ color:var(--faint); font-size:12px; } .reply .txt{ color:var(--fgs); margin-top:3px; } .reply .acts{ color:var(--faint); font-size:12px; margin-top:4px; display:flex; gap:14px; align-items:center; }
+.reply .au{ color:var(--ac); font-weight:600; } .reply .hn{ color:var(--faint); font-size:12px; } .reply .txt{ color:var(--fgs); margin-top:3px; } .reply .acts{ color:var(--faint); font-size:12px; margin-top:4px; display:flex; gap:14px; align-items:center; } .reply .acts .a{ display:inline-flex; align-items:baseline; gap:5px; }
 .reply .reply{ margin-left:12px; }
 /* reactions */
 .reactions{ margin:10px 0 0; padding-top:11px; border-top:1px solid var(--bds); }
