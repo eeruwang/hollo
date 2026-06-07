@@ -2,7 +2,7 @@ import type { PropsWithChildren } from "hono/jsx";
 import { getPhosphorColor } from "../phosphor";
 import type { Account, AccountOwner } from "../schema";
 
-const ASSET_VERSION = "412";
+const ASSET_VERSION = "413";
 
 export interface PublicShellProps {
   title: string;

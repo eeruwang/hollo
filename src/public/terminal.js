@@ -52,9 +52,14 @@
   });
 
   /* ---------- j/k selection ---------- */
-  var items=[].slice.call(document.querySelectorAll('.entry, .notif'));
-  var sel=items.findIndex(function(el){ return el.classList.contains('sel'); });
-  if(sel<0 && items.length) sel=0;
+  var items=[], sel=-1;
+  function refreshNavItems(){
+    page = document.querySelector('.page');
+    items = [].slice.call(document.querySelectorAll('.entry, .notif'));
+    sel = items.findIndex(function(el){ return el.classList.contains('sel'); });
+    if (sel<0 && items.length) sel = 0;
+    if (items.length) paint();
+  }
   function paint(){
     items.forEach(function(el,i){ el.classList.toggle('sel', i===sel); });
     var el=items[sel]; if(!el||!page) return;
@@ -62,7 +67,7 @@
     if(r.bottom>pr.bottom-10) page.scrollTop += (r.bottom-pr.bottom)+24;
     else if(r.top<pr.top+10) page.scrollTop -= (pr.top-r.top)+24;
   }
-  if(items.length) paint();
+  refreshNavItems();
 
   document.addEventListener('keydown', function(e){
     if(/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)) return;
@@ -291,5 +296,93 @@
     if(e.key==='Escape'){ closeLB(); }
     else if(e.key==='ArrowLeft'){ navLB(-1); }
     else if(e.key==='ArrowRight'){ navLB(1); }
+  });
+
+  /* ====================================================================
+     SPA-style navigation (fetch + swap, no full page reload)
+     Intercepts clicks on internal same-origin <a> tags, fetches the
+     target HTML, and swaps document.body in place. Keeps scroll-state
+     transitions snappy and matches the "stay in the terminal" feel.
+     ==================================================================== */
+  function isInternalNav(a, ev){
+    if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return false;
+    if (a.target && a.target !== '_self') return false;
+    if (a.hasAttribute('download')) return false;
+    if (a.dataset.noSwap !== undefined) return false;
+    var href = a.getAttribute('href');
+    if (!href || href.startsWith('#')) return false;
+    var url;
+    try { url = new URL(a.href, location.href); }
+    catch(_) { return false; }
+    if (url.origin !== location.origin) return false;
+    // Skip static + API paths — the browser should follow those normally
+    if (/^\/(public|api|oauth|\.well-known|nodeinfo|users|@[^/]+\.atom|@[^/]+\.rss|assets|\.json$)/.test(url.pathname)) return false;
+    return true;
+  }
+  function runScripts(root){
+    root.querySelectorAll('script').forEach(function(old){
+      var fresh = document.createElement('script');
+      for (var i=0; i<old.attributes.length; i++){
+        var a = old.attributes[i]; fresh.setAttribute(a.name, a.value);
+      }
+      if (!old.src) fresh.textContent = old.textContent;
+      old.replaceWith(fresh);
+    });
+  }
+  var navAbort = null;
+  async function swapTo(url, push){
+    try {
+      if (navAbort) navAbort.abort();
+      navAbort = new AbortController();
+      document.body.style.cursor = 'progress';
+      var r = await fetch(url, {
+        credentials: 'same-origin',
+        signal: navAbort.signal,
+        headers: { 'Accept': 'text/html' },
+      });
+      if (!r.ok) { location.href = url; return; }
+      // Follow server redirects (fetch already does), but if the final
+      // URL is on another origin, hard-nav so cookies/etc. apply.
+      if (new URL(r.url).origin !== location.origin) { location.href = url; return; }
+      var html = await r.text();
+      var doc = new DOMParser().parseFromString(html, 'text/html');
+      if (!doc.body) { location.href = url; return; }
+      // Update title + phosphor + theme attrs from new <html>
+      if (doc.title) document.title = doc.title;
+      var newPh = doc.documentElement.getAttribute('data-phosphor');
+      if (newPh) document.documentElement.setAttribute('data-phosphor', newPh);
+      var newTheme = doc.documentElement.getAttribute('data-theme');
+      if (newTheme) document.documentElement.setAttribute('data-theme', newTheme);
+      else document.documentElement.removeAttribute('data-theme');
+      // Replace body
+      var newBody = document.adoptNode(doc.body);
+      document.body.replaceWith(newBody);
+      // Re-run inline scripts that were swapped in
+      runScripts(newBody);
+      // Reset stale DOM references that lived in the old body so
+      // they get rebuilt lazily next time they're needed.
+      lb = null; ck = null; rxpick = null;
+      refreshNavItems();
+      tick();
+      // Update history
+      if (push) history.pushState({ hollo:true }, '', r.url);
+      window.scrollTo(0, 0);
+    } catch(err) {
+      if (err && err.name === 'AbortError') return;
+      location.href = url;
+    } finally {
+      document.body.style.cursor = '';
+      navAbort = null;
+    }
+  }
+  document.addEventListener('click', function(e){
+    var a = e.target.closest('a[href]');
+    if (!a) return;
+    if (!isInternalNav(a, e)) return;
+    e.preventDefault();
+    swapTo(a.href, true);
+  });
+  window.addEventListener('popstate', function(){
+    swapTo(location.href, false);
   });
 })();

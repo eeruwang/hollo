@@ -93,11 +93,6 @@ profilePost.get("/thread", async (c) => {
   const postId = c.req.param("id") ?? "";
   if (!isUuid(postId)) return c.notFound();
   if (handle.startsWith("@")) handle = handle.substring(1);
-  const accountOwner = await db.query.accountOwners.findFirst({
-    where: eq(accountOwners.handle, handle),
-    with: { account: true },
-  });
-  if (accountOwner == null) return c.notFound();
 
   const chain = await resolveSelfThread(postId);
   if (chain.length === 0) return c.notFound();
@@ -105,6 +100,20 @@ profilePost.get("/thread", async (c) => {
   if (chain.length === 1) {
     return c.redirect(`/@${handle}/${chain[0].id}`);
   }
+
+  // Pick an accountOwner context: prefer the chain's author if local,
+  // otherwise the instance's own owner (for theme/handle plumbing).
+  let accountOwner = await db.query.accountOwners.findFirst({
+    where: eq(accountOwners.id, chain[0].accountId),
+    with: { account: true },
+  });
+  if (accountOwner == null) {
+    accountOwner = await db.query.accountOwners.findFirst({
+      with: { account: true },
+    });
+  }
+  if (accountOwner == null) return c.notFound();
+  handle = accountOwner.handle;
 
   const head = chain[0];
   const title = pickTitle(head);
@@ -335,15 +344,10 @@ function pickTitle(p: FullPost): string {
 }
 
 profilePost.get<"/:handle{@[^/]+}/:id{[-a-f0-9]+}">(async (c) => {
-  let handle = c.req.param("handle");
-  const postId = c.req.param("id");
+  let handle = c.req.param("handle") ?? "";
+  const postId = c.req.param("id") ?? "";
   if (!isUuid(postId)) return c.notFound();
   if (handle.startsWith("@")) handle = handle.substring(1);
-  const accountOwner = await db.query.accountOwners.findFirst({
-    where: eq(accountOwners.handle, handle),
-    with: { account: true },
-  });
-  if (accountOwner == null) return c.notFound();
 
   // Visitors only see public + unlisted. The signed-in owner has
   // admin access to any row already in this instance's DB — that
@@ -355,6 +359,12 @@ profilePost.get<"/:handle{@[^/]+}/:id{[-a-f0-9]+}">(async (c) => {
     ? undefined
     : or(eq(posts.visibility, "public"), eq(posts.visibility, "unlisted"));
 
+  // Resolve the post by id first, then derive the rendered
+  // "accountOwner" context. For local posts the URL handle matches a
+  // row in account_owners; for federated posts the URL handle is the
+  // remote account's canonical (e.g. nulta@mi.rerac.dev) which has a
+  // row in accounts but NOT in account_owners. Look the post up by
+  // id alone and just use the post's account to render the page.
   const root = (await db.query.posts.findFirst({
     where: and(eq(posts.id, postId), visibilityFilter),
     with: {
@@ -365,6 +375,22 @@ profilePost.get<"/:handle{@[^/]+}/:id{[-a-f0-9]+}">(async (c) => {
     },
   })) as FullPost | undefined;
   if (root == null) return c.notFound();
+
+  // We still need an accountOwner record to thread the theme/handle
+  // through the shells. Use the post's author if they are local,
+  // otherwise fall back to the instance's own owner.
+  let accountOwner = await db.query.accountOwners.findFirst({
+    where: eq(accountOwners.id, root.accountId),
+    with: { account: true },
+  });
+  if (accountOwner == null) {
+    accountOwner = await db.query.accountOwners.findFirst({
+      with: { account: true },
+    });
+  }
+  if (accountOwner == null) return c.notFound();
+  // Hand `handle` back so the rest of the handler stays unchanged.
+  handle = accountOwner.handle;
 
   // Walk up the parent chain (any account) up to a small limit
   const ancestors: FullPost[] = [];
