@@ -3,7 +3,7 @@ import { getPhosphorColor } from "../phosphor";
 import type { Account, AccountOwner } from "../schema";
 import { renderCustomEmojis } from "../text";
 
-const ASSET_VERSION = "405";
+const ASSET_VERSION = "406";
 
 export interface PublicProfileProps {
   accountOwner: AccountOwner & { account: Account };

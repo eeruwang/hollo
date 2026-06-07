@@ -2,7 +2,9 @@ import { and, asc, eq, inArray, or } from "drizzle-orm";
 import { escape } from "es-toolkit";
 import { Hono } from "hono";
 import { DashboardLayout } from "../../components/DashboardLayout.tsx";
+import { PublicShell } from "../../components/PublicShell.tsx";
 import db from "../../db.ts";
+import { isLoggedIn } from "../../login.ts";
 import {
   type Account,
   accountOwners,
@@ -128,21 +130,10 @@ profilePost.get("/thread", async (c) => {
     0,
   );
   const readMin = Math.max(1, Math.round(wordCount / 200));
+  const threadLoggedIn = await isLoggedIn(c);
 
-  return c.html(
-    <DashboardLayout
-      title={`${title} · ${accountOwner.account.name}`}
-      selectedMenu="threads"
-      shellPath={`thread/${head.id.slice(0, 8)}`}
-      shellMode="ARTICLE"
-      shellStatus={`${chain.length} posts · ${readMin} min`}
-      shellHints={[
-        { key: "a/p", label: "article/parts" },
-        { key: "s", label: "save .md" },
-        { key: "r", label: "reply" },
-      ]}
-      themeColor={accountOwner.themeColor}
-    >
+  const threadBody = (
+    <>
       <div class="cmdline">
         <span class="u">{accountOwner.handle}@hollo</span>:~${" "}
         <span class="cmd">thread read {head.id.slice(0, 4)}</span>{" "}
@@ -189,10 +180,15 @@ profilePost.get("/thread", async (c) => {
         <div class="doc seamless">
           {chain.map((part, idx) => (
             <p class={idx === 0 ? "lede" : undefined}>
-              <span class="seam">{(idx + 1).toString().padStart(2, "0")}</span>{" "}
+              <span class="seam">
+                {(idx + 1).toString().padStart(2, "0")}
+              </span>{" "}
               <span
                 dangerouslySetInnerHTML={{
-                  __html: renderCustomEmojis(part.contentHtml ?? "", part.emojis),
+                  __html: renderCustomEmojis(
+                    part.contentHtml ?? "",
+                    part.emojis,
+                  ),
                 }}
               />
             </p>
@@ -242,14 +238,22 @@ profilePost.get("/thread", async (c) => {
           ↩ <b>{totalReplies}</b>
         </span>
         <span class="sp" style="margin-left:auto;" />
-        <a
-          class="gn"
-          href={`/compose?reply_to=${chain[chain.length - 1].id}`}
-        >
-          ＋ continue thread →
-        </a>
-        <span class="gn">[s] save .md</span>
-        <span class="gn">[r] reply</span>
+        {threadLoggedIn ? (
+          <>
+            <a
+              class="gn"
+              href={`/compose?reply_to=${chain[chain.length - 1].id}`}
+            >
+              ＋ continue thread →
+            </a>
+            <span class="gn">[s] save .md</span>
+            <span class="gn">[r] reply</span>
+          </>
+        ) : (
+          <a class="gn" href={`/@${handle}`}>
+            ← back to @{handle}
+          </a>
+        )}
       </div>
 
       <script
@@ -272,14 +276,48 @@ profilePost.get("/thread", async (c) => {
     if (ev.key === 'a') setView('article');
     else if (ev.key === 'p') setView('parts');
   });
-  // honor ?view=parts on initial load
   if (new URLSearchParams(location.search).get('view') === 'parts') setView('parts');
-  // persist user's default via localStorage
   const def = localStorage.getItem('hollo-thread-default');
   if (def && new URLSearchParams(location.search).get('view') == null) setView(def);
 })();`,
         }}
       />
+    </>
+  );
+
+  if (!threadLoggedIn) {
+    const instanceHost = new URL(c.req.url).host;
+    return c.html(
+      <PublicShell
+        title={`${title} · ${accountOwner.account.name}`}
+        shortTitle={title}
+        description={head.summary ?? head.content ?? undefined}
+        imageUrl={accountOwner.account.avatarUrl}
+        url={head.url ?? head.iri}
+        accountOwner={accountOwner}
+        instanceHost={instanceHost}
+        breadcrumb={`thread · ${chain.length} posts`}
+      >
+        {threadBody}
+      </PublicShell>,
+    );
+  }
+
+  return c.html(
+    <DashboardLayout
+      title={`${title} · ${accountOwner.account.name}`}
+      selectedMenu="threads"
+      shellPath={`thread/${head.id.slice(0, 8)}`}
+      shellMode="ARTICLE"
+      shellStatus={`${chain.length} posts · ${readMin} min`}
+      shellHints={[
+        { key: "a/p", label: "article/parts" },
+        { key: "s", label: "save .md" },
+        { key: "r", label: "reply" },
+      ]}
+      themeColor={accountOwner.themeColor}
+    >
+      {threadBody}
     </DashboardLayout>,
   );
 });
@@ -400,30 +438,10 @@ profilePost.get<"/:handle{@[^/]+}/:id{[-a-f0-9]+}">(async (c) => {
   }
 
   const replyCount = countReplies(replyTree);
+  const loggedIn = await isLoggedIn(c);
 
-  return c.html(
-    <DashboardLayout
-      title={`~/post/${root.id.slice(0, 8)} · ${accountOwner.account.name}`}
-      selectedMenu="home"
-      shellPath={`post/${root.id.slice(0, 8)}`}
-      shellMode="FOCUS"
-      shellStatus={`${root.id.slice(0, 8)} · ${replyCount} repl${
-        replyCount === 1 ? "y" : "ies"
-      }`}
-      shellHints={[
-        { key: "u", label: "parent" },
-        { key: "r", label: "reply" },
-        { key: "f", label: "fav" },
-        { key: "o", label: "open author" },
-      ]}
-      themeColor={accountOwner.themeColor}
-      description={root.summary ?? root.content ?? undefined}
-      imageUrl={accountOwner.account.avatarUrl}
-      url={root.url ?? root.iri}
-      links={[
-        { rel: "alternate", type: "application/activity+json", href: root.iri },
-      ]}
-    >
+  const conversationBody = (
+    <>
       <div class="cmdline">
         <span class="u">{accountOwner.handle}@hollo</span>:~${" "}
         <span class="cmd">post open {root.id.slice(0, 4)}</span>{" "}
@@ -454,14 +472,72 @@ profilePost.get<"/:handle{@[^/]+}/:id{[-a-f0-9]+}">(async (c) => {
       ))}
 
       <div class="endcap">
-        — end of conversation · <span class="gn">[r]</span> reply ·{" "}
-        {ancestors.length > 0 && (
+        — end of conversation ·{" "}
+        {loggedIn ? (
           <>
-            <span class="gn">[u]</span> jump to parent
+            <span class="gn">[r]</span> reply
           </>
+        ) : (
+          <a class="gn" href={`/@${handle}`}>
+            back to @{handle}
+          </a>
         )}{" "}
         —
       </div>
+    </>
+  );
+
+  if (!loggedIn) {
+    const instanceHost = new URL(c.req.url).host;
+    return c.html(
+      <PublicShell
+        title={`${accountOwner.account.name}: post · ${instanceHost}`}
+        shortTitle={`${accountOwner.account.name}: post`}
+        description={root.summary ?? root.content ?? undefined}
+        imageUrl={accountOwner.account.avatarUrl}
+        url={root.url ?? root.iri}
+        links={[
+          {
+            rel: "alternate",
+            type: "application/activity+json",
+            href: root.iri,
+          },
+        ]}
+        accountOwner={accountOwner}
+        instanceHost={instanceHost}
+        breadcrumb={`post · ${replyCount} ${
+          replyCount === 1 ? "reply" : "replies"
+        }`}
+      >
+        {conversationBody}
+      </PublicShell>,
+    );
+  }
+
+  return c.html(
+    <DashboardLayout
+      title={`~/post/${root.id.slice(0, 8)} · ${accountOwner.account.name}`}
+      selectedMenu="home"
+      shellPath={`post/${root.id.slice(0, 8)}`}
+      shellMode="FOCUS"
+      shellStatus={`${root.id.slice(0, 8)} · ${replyCount} repl${
+        replyCount === 1 ? "y" : "ies"
+      }`}
+      shellHints={[
+        { key: "u", label: "parent" },
+        { key: "r", label: "reply" },
+        { key: "f", label: "fav" },
+        { key: "o", label: "open author" },
+      ]}
+      themeColor={accountOwner.themeColor}
+      description={root.summary ?? root.content ?? undefined}
+      imageUrl={accountOwner.account.avatarUrl}
+      url={root.url ?? root.iri}
+      links={[
+        { rel: "alternate", type: "application/activity+json", href: root.iri },
+      ]}
+    >
+      {conversationBody}
     </DashboardLayout>,
   );
 });
