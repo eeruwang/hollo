@@ -167,6 +167,7 @@ social.get("/", async (c) => {
         </div>
       </form>
 
+      <div data-feed>
       {timeline.length === 0 ? (
         <div class="state">
           <div class="glyph">⌂</div>
@@ -205,6 +206,7 @@ social.get("/", async (c) => {
           ActivityPub —
         </div>
       )}
+      </div>
 
       <script
         dangerouslySetInnerHTML={{
@@ -213,14 +215,15 @@ social.get("/", async (c) => {
   if (!form) return;
   const ta = form.querySelector('[data-mini-compose-ta]');
   const counter = form.querySelector('[data-mini-compose-count] b');
-  const tools = form.querySelector('[data-mini-compose-tools]');
+  const sendBtn = form.querySelector('[data-mini-compose-send]');
   const cw = form.querySelector('input[name="sensitive"]');
   const cwTool = cw && cw.closest('.tool');
   const attach = form.querySelector('input[name="media"]');
   const attachTool = attach && attach.closest('.tool');
+  const cwText = form.querySelector('input[name="spoiler_text"]');
+  const feedBox = document.querySelector('[data-feed]');
   const max = 500;
 
-  // Expand on focus or any input; collapse if empty and blurred.
   function expand(){ form.classList.add('open'); }
   function maybeCollapse(){
     if (document.activeElement && form.contains(document.activeElement)) return;
@@ -228,28 +231,43 @@ social.get("/", async (c) => {
       form.classList.remove('open');
     }
   }
-  ta.addEventListener('focus', expand);
-  ta.addEventListener('input', () => {
-    expand();
-    // Auto-grow textarea while expanded.
-    ta.style.height = 'auto';
-    ta.style.height = Math.min(ta.scrollHeight, 320) + 'px';
-    // Update counter.
+  function updateCount(){
     const left = max - ta.value.length;
     if (counter){
       counter.textContent = String(left);
       counter.style.color = left < 0 ? 'var(--red)' : 'var(--ac)';
     }
+  }
+  function resetForm(){
+    ta.value = ''; if (cwText) cwText.value = '';
+    if (cw){ cw.checked = false; if (cwTool){ cwTool.style.borderColor=''; cwTool.style.color=''; } }
+    if (attach){ attach.value=''; if (attachTool){ attachTool.style.borderColor=''; attachTool.style.color=''; } }
+    ta.style.height = '';
+    updateCount();
+    form.classList.remove('open');
+  }
+  async function refreshFeed(){
+    if (!feedBox) return;
+    try {
+      const r = await fetch('/social/feed.fragment', { credentials:'same-origin' });
+      if (r.ok) feedBox.innerHTML = await r.text();
+    } catch(_) {}
+  }
+
+  ta.addEventListener('focus', expand);
+  ta.addEventListener('input', () => {
+    expand();
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 320) + 'px';
+    updateCount();
   });
   form.addEventListener('focusout', () => setTimeout(maybeCollapse, 50));
-  // Cmd/Ctrl+Enter submits.
   ta.addEventListener('keydown', (ev) => {
     if ((ev.metaKey || ev.ctrlKey) && ev.key === 'Enter') {
       ev.preventDefault();
       form.requestSubmit();
     }
   });
-  // Highlight CW tool when checkbox is checked.
   if (cw && cwTool) {
     cw.addEventListener('change', () => {
       cwTool.style.borderColor = cw.checked ? 'var(--am)' : '';
@@ -257,7 +275,6 @@ social.get("/", async (c) => {
       expand();
     });
   }
-  // Show attached file count on the image tool.
   if (attach && attachTool) {
     attach.addEventListener('change', () => {
       const n = attach.files ? attach.files.length : 0;
@@ -272,10 +289,145 @@ social.get("/", async (c) => {
       }
     });
   }
+
+  // AJAX submit: POST → refresh feed fragment → reset form. Falls
+  // back to a normal navigation if the fetch fails (so the user's
+  // text isn't lost).
+  form.addEventListener('submit', async (ev) => {
+    if (!ta.value.trim() && (!attach || !attach.files || attach.files.length === 0)) {
+      return; // empty — let the browser handle (or do nothing)
+    }
+    ev.preventDefault();
+    if (sendBtn) sendBtn.disabled = true;
+    try {
+      const fd = new FormData(form);
+      const r = await fetch(form.action || '/social/compose', {
+        method:'POST',
+        body: fd,
+        credentials:'same-origin',
+        headers: { 'Accept': 'application/json' },
+      });
+      if (!r.ok) throw new Error('compose ' + r.status);
+      resetForm();
+      await refreshFeed();
+    } catch(err) {
+      // Fall back to old-school navigation
+      form.submit();
+    } finally {
+      if (sendBtn) sendBtn.disabled = false;
+    }
+  });
 })();`,
         }}
       />
     </DashboardLayout>,
+  );
+});
+
+/* Returns just the feed contents — the same JSX block as the GET
+ * handler's data-feed div — so the mini-composer can refresh in
+ * place after a successful AJAX post without reloading the shell. */
+social.get("/feed.fragment", async (c) => {
+  const owner = await db.query.accountOwners.findFirst({
+    with: { account: true },
+  });
+  if (owner == null) return c.body(null, 401);
+
+  const timeline = await db.query.posts.findMany({
+    where: and(
+      inArray(
+        posts.id,
+        db
+          .select({ id: timelinePosts.postId })
+          .from(timelinePosts)
+          .where(eq(timelinePosts.accountId, owner.id))
+          .orderBy(desc(timelinePosts.postId))
+          .limit(40),
+      ),
+      lte(posts.published, sql`NOW() + INTERVAL '5 minutes'`),
+    ),
+    with: {
+      account: true,
+      media: true,
+      poll: { with: { options: true } },
+      sharing: {
+        with: {
+          account: true,
+          media: true,
+          poll: { with: { options: true } },
+          replyTarget: { with: { account: true } },
+          reactions: true,
+        },
+      },
+      replyTarget: { with: { account: true } },
+      reactions: true,
+    },
+    orderBy: [desc(posts.published)],
+    limit: 40,
+  });
+
+  const ownPostIds = timeline
+    .filter((p) => p.accountId === owner.id && p.replyTargetId == null)
+    .map((p) => p.id);
+  let threadHeads = new Map<string, number>();
+  if (ownPostIds.length > 0) {
+    const replyRows = await db
+      .select({ replyTargetId: posts.replyTargetId })
+      .from(posts)
+      .where(
+        and(
+          eq(posts.accountId, owner.id),
+          inArray(posts.replyTargetId, ownPostIds),
+        ),
+      );
+    const counts = new Map<string, number>();
+    for (const row of replyRows) {
+      if (row.replyTargetId == null) continue;
+      counts.set(row.replyTargetId, (counts.get(row.replyTargetId) ?? 0) + 1);
+    }
+    threadHeads = counts;
+  }
+
+  return c.html(
+    <>
+      {timeline.length === 0 ? (
+        <div class="state">
+          <div class="glyph">⌂</div>
+          <div class="ttl">your timeline is quiet</div>
+          <div class="msg">
+            follow accounts on the fediverse and their posts will land here.
+          </div>
+          <a class="cta btn pri" href="/compose">
+            ＋ write your first post
+          </a>
+        </div>
+      ) : (
+        timeline.map((post) => {
+          const partCount = threadHeads.get(post.id);
+          return (
+            <TimelineEntry
+              post={post}
+              mine={post.accountId === owner.id}
+              openHref={
+                post.sharing != null
+                  ? `/@${post.sharing.account.handle.replace(/^@/, "")}/${post.sharing.id}`
+                  : `/@${owner.handle}/${post.id}`
+              }
+              threadPartCount={
+                partCount != null ? partCount + 1 : undefined
+              }
+              threadHandle={owner.handle}
+            />
+          );
+        })
+      )}
+      {timeline.length > 0 && (
+        <div class="endcap">
+          — end of recent · <span class="gn">[r]</span> refresh · federated via
+          ActivityPub —
+        </div>
+      )}
+    </>,
   );
 });
 
@@ -358,6 +510,15 @@ social.post("/compose", async (c) => {
     replyTargetId: inReplyToId,
   });
 
+  // Also stitch the new post into the owner's home timeline join
+  // (timeline_posts). Federation already does this for inbound posts
+  // via timeline.ts, but a directly-composed post bypasses that flow
+  // and would be invisible in /social until refetched some other way.
+  await db
+    .insert(timelinePosts)
+    .values({ accountId: owner.id, postId: id })
+    .onConflictDoNothing();
+
   // Process uploaded media after the post row is in place so the FK
   // on media.postId is satisfied. One bad file shouldn't kill the
   // post — log and skip, keep going for the rest.
@@ -372,6 +533,13 @@ social.post("/compose", async (c) => {
     }
   }
 
+  // AJAX clients (fetch from mini-compose) send `Accept: application/json`
+  // so they can skip the redirect dance — they refetch the feed
+  // fragment themselves. Browsers without JS still get the redirect.
+  const wantsJson = c.req.header("accept")?.includes("application/json");
+  if (wantsJson) {
+    return c.json({ ok: true, postId: id });
+  }
   return c.redirect("/social");
 });
 
