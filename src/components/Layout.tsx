@@ -12,7 +12,7 @@ export interface LayoutProps {
   themeColor?: ThemeColor;
 }
 
-const ASSET_VERSION = "404";
+const ASSET_VERSION = "405";
 
 export function Layout(props: PropsWithChildren<LayoutProps>) {
   const phosphor = getPhosphorColor(props.themeColor);

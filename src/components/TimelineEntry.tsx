@@ -89,9 +89,15 @@ export function TimelineEntry(props: TimelineEntryProps) {
         </a>
       )}
       {subject.media.length > 0 && (
-        <div class="media">
-          [ {subject.media.length} attachment
-          {subject.media.length === 1 ? "" : "s"} ]
+        <div class="medialist" style="margin-top:8px;">
+          {subject.media.map((m, idx) => (
+            <MediaCard
+              medium={m}
+              gallery={`post-${subject.id}`}
+              index={idx}
+              count={subject.media.length}
+            />
+          ))}
         </div>
       )}
       {subject.poll != null && <PollBlock poll={subject.poll} />}
@@ -136,6 +142,78 @@ export function TimelineEntry(props: TimelineEntryProps) {
       </div>
     </article>
   );
+}
+
+function MediaCard({
+  medium,
+  gallery,
+  index,
+  count,
+}: {
+  medium: DbMedium;
+  gallery: string;
+  index: number;
+  count: number;
+}) {
+  const isVideo = medium.type.startsWith("video/");
+  const isAudio = medium.type.startsWith("audio/");
+  const filename = filenameFromUrl(medium.url);
+  const dims = `${medium.width}×${medium.height}`;
+  const headerText = `${filename} · ${dims}`;
+  const headerPad = Math.max(0, 38 - headerText.length);
+  const header = `┌─ ${headerText} ${"─".repeat(headerPad)}`;
+  return (
+    <div
+      class="frameb"
+      style="max-width:520px; margin-top:6px;"
+    >
+      <div class="fh">{header}</div>
+      <div class="fc" style="padding:6px 8px;">
+        {isVideo ? (
+          <video
+            controls
+            preload="metadata"
+            src={medium.url}
+            style="width:100%; max-height:360px; background:var(--bg);"
+          />
+        ) : isAudio ? (
+          <audio
+            controls
+            preload="metadata"
+            src={medium.url}
+            style="width:100%;"
+          />
+        ) : (
+          <a
+            href={medium.url}
+            data-lightbox={gallery}
+            data-lightbox-alt={medium.description ?? ""}
+            data-lightbox-meta={`${filename} · ${dims} · ${
+              index + 1
+            }/${count}`}
+            style="display:block; line-height:0;"
+          >
+            <img
+              src={medium.thumbnailUrl}
+              alt={medium.description ?? ""}
+              loading="lazy"
+              style="max-width:100%; max-height:360px; object-fit:contain; background:var(--bg2);"
+            />
+          </a>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function filenameFromUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    const last = u.pathname.split("/").filter(Boolean).pop() ?? "media";
+    return decodeURIComponent(last).slice(0, 60);
+  } catch {
+    return "media";
+  }
 }
 
 function PollBlock({
