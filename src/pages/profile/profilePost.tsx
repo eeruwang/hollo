@@ -345,19 +345,14 @@ profilePost.get<"/:handle{@[^/]+}/:id{[-a-f0-9]+}">(async (c) => {
   });
   if (accountOwner == null) return c.notFound();
 
-  // Visitors only see public + unlisted. The signed-in owner ALSO
-  // sees their own private/direct posts — without this they couldn't
-  // open a post they just composed with followers-only visibility.
+  // Visitors only see public + unlisted. The signed-in owner has
+  // admin access to any row already in this instance's DB — that
+  // includes private/direct posts the instance was a recipient of
+  // (own posts + federated posts the owner had visibility into),
+  // so they can open any URL that resolves to a stored row.
   const viewerIsOwner = await isLoggedIn(c);
   const visibilityFilter = viewerIsOwner
-    ? or(
-        eq(posts.visibility, "public"),
-        eq(posts.visibility, "unlisted"),
-        and(
-          eq(posts.accountId, accountOwner.id),
-          or(eq(posts.visibility, "private"), eq(posts.visibility, "direct")),
-        ),
-      )
+    ? undefined
     : or(eq(posts.visibility, "public"), eq(posts.visibility, "unlisted"));
 
   const root = (await db.query.posts.findFirst({
@@ -389,11 +384,11 @@ profilePost.get<"/:handle{@[^/]+}/:id{[-a-f0-9]+}">(async (c) => {
     cursor = parent.replyTargetId ?? null;
   }
 
-  // Direct + nested replies (any account, public+unlisted)
+  // Direct + nested replies. Owner sees every stored row regardless
+  // of visibility (the same admin-level lookup as the root post);
+  // visitors stay limited to public+unlisted.
   const allDescendants = (await db.query.posts.findMany({
-    where: and(
-      or(eq(posts.visibility, "public"), eq(posts.visibility, "unlisted")),
-    ),
+    where: viewerIsOwner ? undefined : visibilityFilter,
     orderBy: asc(posts.published),
     with: {
       account: true,

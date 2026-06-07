@@ -391,11 +391,13 @@ em{ font-style:italic; }
   font-family:var(--mono);
 }
 .mini-compose .mc-cw{
+  display:none;
   flex:1; min-width:120px; background:transparent;
   border:1px solid var(--bd); padding:5px 9px;
   color:var(--fg); font-family:var(--mono); font-size:12px;
   outline:none;
 }
+.mini-compose.cw-on .mc-cw{ display:block; }
 .mini-compose .mc-cw:focus{ border-color:var(--am); color:var(--am); }
 .mini-compose .sp{ margin-left:auto; }
 .mini-compose .count{ color:var(--faint); font-size:12px; }

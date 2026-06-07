@@ -245,6 +245,7 @@ social.get("/", async (c) => {
     ta.style.height = '';
     updateCount();
     form.classList.remove('open');
+    form.classList.remove('cw-on');
   }
   async function refreshFeed(){
     if (!feedBox) return;
@@ -272,7 +273,10 @@ social.get("/", async (c) => {
     cw.addEventListener('change', () => {
       cwTool.style.borderColor = cw.checked ? 'var(--am)' : '';
       cwTool.style.color = cw.checked ? 'var(--am)' : '';
+      form.classList.toggle('cw-on', cw.checked);
       expand();
+      if (cw.checked && cwText) setTimeout(() => cwText.focus(), 0);
+      else if (!cw.checked && cwText) cwText.value = '';
     });
   }
   if (attach && attachTool) {

@@ -178,7 +178,8 @@ composePage.get("/", async (c) => {
             type="text"
             name="spoiler_text"
             placeholder="content warning…"
-            style="background:transparent; border:1px solid var(--bd); padding:5px 9px; color:var(--fg); font-family:var(--mono); font-size:12px; flex:1; min-width:120px; outline:none;"
+            data-compose-cw
+            style="display:none; background:transparent; border:1px solid var(--bd); padding:5px 9px; color:var(--fg); font-family:var(--mono); font-size:12px; flex:1; min-width:120px; outline:none;"
           />
           <span class="count" data-compose-count>
             <b>10000</b> left
@@ -263,10 +264,16 @@ composePage.get("/", async (c) => {
   });
   const cw = form.querySelector('input[name="sensitive"]');
   const cwTool = cw && cw.closest('.tool');
+  const cwText = form.querySelector('[data-compose-cw]');
   if (cw && cwTool) {
     cw.addEventListener('change', () => {
       cwTool.style.borderColor = cw.checked ? 'var(--am)' : '';
       cwTool.style.color = cw.checked ? 'var(--am)' : '';
+      if (cwText) {
+        cwText.style.display = cw.checked ? 'inline-block' : 'none';
+        if (cw.checked) setTimeout(() => cwText.focus(), 0);
+        else cwText.value = '';
+      }
     });
   }
   const attach = form.querySelector('input[name="media"]');
