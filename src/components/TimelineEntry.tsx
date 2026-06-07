@@ -110,9 +110,19 @@ export function TimelineEntry(props: TimelineEntryProps) {
             <span class="rsep">·</span>
             <span class="rxn-mini">
               {Object.entries(groupReactions(subject.reactions)).map(
-                ([emoji, count]) => (
+                ([emoji, { count, src }]) => (
                   <span class="chip">
-                    <span class="em">{emoji}</span>
+                    <span class="em">
+                      {src ? (
+                        <img
+                          src={src}
+                          alt={emoji}
+                          style="width:14px; height:14px; object-fit:contain; vertical-align:middle;"
+                        />
+                      ) : (
+                        emoji
+                      )}
+                    </span>
                     <span class="n">{count}</span>
                   </span>
                 ),
@@ -167,10 +177,21 @@ function PollBlock({
   );
 }
 
-function groupReactions(reactions: Reaction[]): Record<string, number> {
-  const result: Record<string, number> = {};
-  for (const reaction of reactions) {
-    result[reaction.emoji] = (result[reaction.emoji] ?? 0) + 1;
+function groupReactions(
+  reactions: Reaction[],
+): Record<string, { count: number; src?: string }> {
+  const result: Record<string, { count: number; src?: string }> = {};
+  for (const r of reactions) {
+    // `customEmoji` is the image URL when the reaction is a custom
+    // (shortcoded) emoji; for unicode emoji it's null and we just
+    // render the glyph as text.
+    const src = r.customEmoji ?? undefined;
+    if (result[r.emoji] == null) {
+      result[r.emoji] = { count: 1, src };
+    } else {
+      result[r.emoji].count++;
+      if (src && !result[r.emoji].src) result[r.emoji].src = src;
+    }
   }
   return result;
 }
