@@ -238,7 +238,12 @@
     lb.querySelector('[data-lb-close]').addEventListener('click', closeLB);
     lb.querySelector('[data-lb-prev]').addEventListener('click', function(){ navLB(-1); });
     lb.querySelector('[data-lb-next]').addEventListener('click', function(){ navLB(1); });
-    lb.addEventListener('click', function(ev){ if(ev.target===lb) closeLB(); });
+    // Close on any click outside the image and outside interactive
+    // controls (prev/next arrows, close ✕, "open original" link).
+    lb.addEventListener('click', function(ev){
+      if (ev.target.closest('img, button, a')) return;
+      closeLB();
+    });
   }
   function navLB(d){
     if(!lbList.length) return;
