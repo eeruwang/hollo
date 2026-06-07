@@ -345,11 +345,23 @@ profilePost.get<"/:handle{@[^/]+}/:id{[-a-f0-9]+}">(async (c) => {
   });
   if (accountOwner == null) return c.notFound();
 
+  // Visitors only see public + unlisted. The signed-in owner ALSO
+  // sees their own private/direct posts — without this they couldn't
+  // open a post they just composed with followers-only visibility.
+  const viewerIsOwner = await isLoggedIn(c);
+  const visibilityFilter = viewerIsOwner
+    ? or(
+        eq(posts.visibility, "public"),
+        eq(posts.visibility, "unlisted"),
+        and(
+          eq(posts.accountId, accountOwner.id),
+          or(eq(posts.visibility, "private"), eq(posts.visibility, "direct")),
+        ),
+      )
+    : or(eq(posts.visibility, "public"), eq(posts.visibility, "unlisted"));
+
   const root = (await db.query.posts.findFirst({
-    where: and(
-      eq(posts.id, postId),
-      or(eq(posts.visibility, "public"), eq(posts.visibility, "unlisted")),
-    ),
+    where: and(eq(posts.id, postId), visibilityFilter),
     with: {
       account: true,
       media: true,
@@ -438,7 +450,7 @@ profilePost.get<"/:handle{@[^/]+}/:id{[-a-f0-9]+}">(async (c) => {
   }
 
   const replyCount = countReplies(replyTree);
-  const loggedIn = await isLoggedIn(c);
+  const loggedIn = viewerIsOwner;
 
   const conversationBody = (
     <>

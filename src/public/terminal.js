@@ -79,7 +79,7 @@
   /* ---------- compose char counter ---------- */
   var ta=document.querySelector('.composer textarea');
   if(ta){
-    var cnt=document.querySelector('.composer .count b'); var max=500;
+    var cnt=document.querySelector('.composer .count b'); var max=10000;
     function upd(){ var n=ta.value.length; if(cnt){ cnt.textContent=(max-n); cnt.style.color=(max-n)<0?'var(--red)':'var(--ac)'; } }
     ta.addEventListener('input',upd); upd();
   }

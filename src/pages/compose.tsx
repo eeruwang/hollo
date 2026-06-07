@@ -181,7 +181,7 @@ composePage.get("/", async (c) => {
             style="background:transparent; border:1px solid var(--bd); padding:5px 9px; color:var(--fg); font-family:var(--mono); font-size:12px; flex:1; min-width:120px; outline:none;"
           />
           <span class="count" data-compose-count>
-            <b>500</b> left
+            <b>10000</b> left
           </span>
           <button type="submit" class="send">
             post ↵
@@ -247,7 +247,7 @@ composePage.get("/", async (c) => {
   const counter = form.querySelector('[data-compose-count] b');
   const spoiler = form.querySelector('input[name="spoiler_text"]');
   if (!ta || !counter) return;
-  const max = 500;
+  const max = 10000;
   const update = () => {
     const left = max - ta.value.length;
     counter.textContent = String(left);

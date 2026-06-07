@@ -162,7 +162,7 @@ social.get("/", async (c) => {
           />
           <span class="sp" />
           <span class="count" data-mini-compose-count>
-            <b>500</b> left
+            <b>10000</b> left
           </span>
         </div>
       </form>
@@ -222,7 +222,7 @@ social.get("/", async (c) => {
   const attachTool = attach && attach.closest('.tool');
   const cwText = form.querySelector('input[name="spoiler_text"]');
   const feedBox = document.querySelector('[data-feed]');
-  const max = 500;
+  const max = 10000;
 
   function expand(){ form.classList.add('open'); }
   function maybeCollapse(){
