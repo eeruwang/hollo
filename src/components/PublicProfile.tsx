@@ -3,7 +3,7 @@ import { getPhosphorColor } from "../phosphor";
 import type { Account, AccountOwner } from "../schema";
 import { renderCustomEmojis } from "../text";
 
-const ASSET_VERSION = "403";
+const ASSET_VERSION = "404";
 
 export interface PublicProfileProps {
   accountOwner: AccountOwner & { account: Account };
@@ -86,6 +86,11 @@ export function PublicProfile({
           href={`/@${accountOwner.handle}`}
         />
         {account.url && <link rel="me" href={account.url} />}
+        <link
+          rel="icon"
+          type="image/svg+xml"
+          href={`/public/favicon.svg?v=${ASSET_VERSION}`}
+        />
         <link
           rel="stylesheet"
           href={`/public/terminal.css?v=${ASSET_VERSION}`}

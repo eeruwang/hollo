@@ -12,7 +12,7 @@ export interface LayoutProps {
   themeColor?: ThemeColor;
 }
 
-const ASSET_VERSION = "403";
+const ASSET_VERSION = "404";
 
 export function Layout(props: PropsWithChildren<LayoutProps>) {
   const phosphor = getPhosphorColor(props.themeColor);
@@ -51,17 +51,14 @@ export function Layout(props: PropsWithChildren<LayoutProps>) {
         />
         <link
           rel="icon"
+          type="image/svg+xml"
+          href={`/public/favicon.svg?v=${ASSET_VERSION}`}
+        />
+        <link
+          rel="alternate icon"
           type="image/png"
           sizes="500x500"
           href="/public/favicon.png"
-          media="(prefers-color-scheme: light)"
-        />
-        <link
-          rel="icon"
-          type="image/png"
-          sizes="500x500"
-          href="/public/favicon-white.png"
-          media="(prefers-color-scheme: dark)"
         />
         <script src={`/public/terminal.js?v=${ASSET_VERSION}`} defer />
       </head>

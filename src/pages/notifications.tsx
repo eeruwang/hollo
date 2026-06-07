@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { DashboardLayout } from "../components/DashboardLayout.tsx";
 import db from "../db.ts";
@@ -28,6 +28,21 @@ notificationsPage.get("/", async (c) => {
   });
 
   const unreadCount = rows.filter((r) => r.readAt == null).length;
+
+  // Mark everything visible on this load as read AFTER computing the
+  // unread badge so the page still shows which rows were freshly new.
+  // The rail badge / mode chip on the next render will be 0.
+  if (unreadCount > 0) {
+    await db
+      .update(notifications)
+      .set({ readAt: sql`CURRENT_TIMESTAMP` })
+      .where(
+        and(
+          eq(notifications.accountOwnerId, owner.id),
+          isNull(notifications.readAt),
+        ),
+      );
+  }
   const today: typeof rows = [];
   const earlier: typeof rows = [];
   const cutoff = Date.now() - 24 * 60 * 60 * 1000;
