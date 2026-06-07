@@ -109,6 +109,64 @@ social.get("/", async (c) => {
         <span class="cmd">timeline</span> <span class="arg">--home</span>
       </div>
 
+      <form
+        method="post"
+        action="/social/compose"
+        enctype="multipart/form-data"
+        class="mini-compose"
+        data-mini-compose
+      >
+        <div class="mc-row">
+          <textarea
+            name="content"
+            spellcheck={false}
+            rows={1}
+            placeholder="✎ what's happening?  ·  ⌘↵ post  ·  [c] full editor"
+            data-mini-compose-ta
+          />
+          <button type="submit" class="send" data-mini-compose-send>
+            post ↵
+          </button>
+        </div>
+        <div class="mc-tools" data-mini-compose-tools>
+          <label class="tool" title="content warning">
+            ⚠
+            <input
+              type="checkbox"
+              name="sensitive"
+              value="true"
+              style="display:none;"
+            />
+          </label>
+          <label class="tool" title="attach image/video">
+            🖼
+            <input
+              type="file"
+              name="media"
+              multiple
+              accept="image/png,image/jpeg,image/gif,image/webp,video/mp4,video/webm"
+              style="display:none;"
+            />
+          </label>
+          <select name="visibility" class="vis">
+            <option value="public">▾ public</option>
+            <option value="unlisted">▾ unlisted</option>
+            <option value="private">▾ followers</option>
+            <option value="direct">▾ direct</option>
+          </select>
+          <input
+            type="text"
+            name="spoiler_text"
+            placeholder="content warning…"
+            class="mc-cw"
+          />
+          <span class="sp" />
+          <span class="count" data-mini-compose-count>
+            <b>500</b> left
+          </span>
+        </div>
+      </form>
+
       {timeline.length === 0 ? (
         <div class="state">
           <div class="glyph">⌂</div>
@@ -147,6 +205,76 @@ social.get("/", async (c) => {
           ActivityPub —
         </div>
       )}
+
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `(() => {
+  const form = document.querySelector('[data-mini-compose]');
+  if (!form) return;
+  const ta = form.querySelector('[data-mini-compose-ta]');
+  const counter = form.querySelector('[data-mini-compose-count] b');
+  const tools = form.querySelector('[data-mini-compose-tools]');
+  const cw = form.querySelector('input[name="sensitive"]');
+  const cwTool = cw && cw.closest('.tool');
+  const attach = form.querySelector('input[name="media"]');
+  const attachTool = attach && attach.closest('.tool');
+  const max = 500;
+
+  // Expand on focus or any input; collapse if empty and blurred.
+  function expand(){ form.classList.add('open'); }
+  function maybeCollapse(){
+    if (document.activeElement && form.contains(document.activeElement)) return;
+    if (ta.value.trim() === '' && !cw.checked && (!attach.files || attach.files.length === 0)) {
+      form.classList.remove('open');
+    }
+  }
+  ta.addEventListener('focus', expand);
+  ta.addEventListener('input', () => {
+    expand();
+    // Auto-grow textarea while expanded.
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 320) + 'px';
+    // Update counter.
+    const left = max - ta.value.length;
+    if (counter){
+      counter.textContent = String(left);
+      counter.style.color = left < 0 ? 'var(--red)' : 'var(--ac)';
+    }
+  });
+  form.addEventListener('focusout', () => setTimeout(maybeCollapse, 50));
+  // Cmd/Ctrl+Enter submits.
+  ta.addEventListener('keydown', (ev) => {
+    if ((ev.metaKey || ev.ctrlKey) && ev.key === 'Enter') {
+      ev.preventDefault();
+      form.requestSubmit();
+    }
+  });
+  // Highlight CW tool when checkbox is checked.
+  if (cw && cwTool) {
+    cw.addEventListener('change', () => {
+      cwTool.style.borderColor = cw.checked ? 'var(--am)' : '';
+      cwTool.style.color = cw.checked ? 'var(--am)' : '';
+      expand();
+    });
+  }
+  // Show attached file count on the image tool.
+  if (attach && attachTool) {
+    attach.addEventListener('change', () => {
+      const n = attach.files ? attach.files.length : 0;
+      if (n > 0) {
+        attachTool.style.borderColor = 'var(--ac)';
+        attachTool.style.color = 'var(--ac)';
+        attachTool.title = n + ' file' + (n > 1 ? 's' : '') + ' attached';
+        expand();
+      } else {
+        attachTool.style.borderColor = '';
+        attachTool.style.color = '';
+      }
+    });
+  }
+})();`,
+        }}
+      />
     </DashboardLayout>,
   );
 });
